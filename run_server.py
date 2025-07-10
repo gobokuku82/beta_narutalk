@@ -50,24 +50,38 @@ def check_requirements():
 
 def check_directories():
     """필요한 디렉토리 확인"""
-    required_dirs = [
+    essential_dirs = [
         "backend",
         "frontend",
-        "database",
-        "models",
+        "database"
+    ]
+    optional_dirs = [
+        "models",  # 허깅페이스 모델 사용 시 선택사항
         "tests"
     ]
     
-    missing_dirs = []
-    for dir_name in required_dirs:
-        if not (project_root / dir_name).exists():
-            missing_dirs.append(dir_name)
+    missing_essential = []
+    missing_optional = []
     
-    if missing_dirs:
-        print("❌ 다음 디렉토리가 없습니다:")
-        for dir_name in missing_dirs:
+    for dir_name in essential_dirs:
+        if not (project_root / dir_name).exists():
+            missing_essential.append(dir_name)
+    
+    for dir_name in optional_dirs:
+        if not (project_root / dir_name).exists():
+            missing_optional.append(dir_name)
+    
+    if missing_essential:
+        print("❌ 다음 필수 디렉토리가 없습니다:")
+        for dir_name in missing_essential:
             print(f"  - {dir_name}")
         return False
+    
+    if missing_optional:
+        print("⚠️  다음 선택 디렉토리가 없습니다:")
+        for dir_name in missing_optional:
+            print(f"  - {dir_name}")
+        print("선택 디렉토리는 시스템 작동에 필수가 아닙니다.")
     
     return True
 

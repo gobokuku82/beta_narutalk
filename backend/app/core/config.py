@@ -20,7 +20,14 @@ class Settings(BaseSettings):
     openai_max_tokens: int = 1000
     openai_timeout: int = 30
     
-    # 모델 경로 (절대 경로)
+    # HuggingFace 설정
+    huggingface_token: Optional[str] = None
+    
+    # 허깅페이스 모델 ID (기존 로컬 모델 대신)
+    embedding_model_id: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"  # 가벼운 다국어 임베딩 모델
+    reranker_model_id: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"  # 가벼운 리랭커 모델
+    
+    # 모델 경로 (호환성 유지용 - 허깅페이스 모델 사용 시 무시됨)
     embedding_model_path: str = str(project_root / "models" / "KURE-V1")
     reranker_model_path: str = str(project_root / "models" / "bge-reranker-v2-m3-ko")
     
