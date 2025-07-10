@@ -28,7 +28,15 @@ try:
     api_router.include_router(chat_router, prefix="/agents", tags=["4개 전문 에이전트"])
     logger.info("4개 전문 에이전트 채팅 라우터 로드 완료")
 except Exception as e:
-    logger.warning(f"4개 전문 에이전트 라우터 로드 실패: {str(e)}")
+    logger.warning(f"4개 전문 에이전트 채팅 라우터 로드 실패: {str(e)}")
+
+# 🎯 LangGraph 라우터 시스템 추가
+try:
+    from .v1.langgraph_chat import router as langgraph_router
+    api_router.include_router(langgraph_router, prefix="/langgraph", tags=["LangGraph 라우터"])
+    logger.info("LangGraph 라우터 시스템 로드 완료")
+except Exception as e:
+    logger.warning(f"LangGraph 라우터 시스템 로드 실패: {str(e)}")
     
     # 기본 채팅 엔드포인트 생성
     @api_router.post("/agents/chat")
