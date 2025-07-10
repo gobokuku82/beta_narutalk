@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NaruTalk 프론트엔드 테스트</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .test-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .test-button {
+            background: #4f46e5;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 0.9rem;
+        }
+        .test-button:hover {
+            background: #4338ca;
+        }
+        .test-result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        .success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+        .test-input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .response-display {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            border: 1px solid #e2e8f0;
+        }
+        .router-info {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>NaruTalk 프론트엔드 테스트</h1>
+        
+        <!-- API 연결 테스트 -->
+        <div class="test-section">
+            <div class="test-title">1. API 연결 테스트</div>
+            <button class="test-button" onclick="testHealthCheck()">헬스 체크</button>
+            <button class="test-button" onclick="testRouterTypes()">라우터 타입 조회</button>
+            <div id="apiTestResult" class="test-result"></div>
+        </div>
+
+        <!-- 채팅 기능 테스트 -->
+        <div class="test-section">
+            <div class="test-title">2. 채팅 기능 테스트</div>
+            <input type="text" id="testMessage" class="test-input" placeholder="테스트 메시지를 입력하세요" value="안녕하세요">
+            <button class="test-button" onclick="testChat()">메시지 전송</button>
+            <div id="chatTestResult" class="test-result"></div>
+        </div>
+
+        <!-- 라우터 테스트 -->
+        <div class="test-section">
+            <div class="test-title">3. 라우터 기능 테스트</div>
+            <button class="test-button" onclick="testQARouter()">질문답변 라우터</button>
+            <button class="test-button" onclick="testDocumentRouter()">문서검색 라우터</button>
+            <button class="test-button" onclick="testEmployeeRouter()">직원정보 라우터</button>
+            <button class="test-button" onclick="testGeneralRouter()">일반대화 라우터</button>
+            <div id="routerTestResult" class="test-result"></div>
+        </div>
+
+        <!-- 임베딩 검색 테스트 -->
+        <div class="test-section">
+            <div class="test-title">4. 임베딩 검색 테스트</div>
+            <input type="text" id="searchQuery" class="test-input" placeholder="검색할 키워드를 입력하세요" value="회사 정책">
+            <button class="test-button" onclick="testEmbeddingSearch()">문서 검색</button>
+            <div id="embeddingTestResult" class="test-result"></div>
+        </div>
+
+        <!-- 챗봇 UI 테스트 -->
+        <div class="test-section">
+            <div class="test-title">5. 챗봇 UI 테스트</div>
+            <button class="test-button" onclick="testChatbotToggle()">챗봇 토글</button>
+            <button class="test-button" onclick="testChatbotKeyboard()">키보드 단축키 (Ctrl+/)</button>
+            <div id="uiTestResult" class="test-result"></div>
+        </div>
+
+        <!-- 성능 테스트 -->
+        <div class="test-section">
+            <div class="test-title">6. 성능 테스트</div>
+            <button class="test-button" onclick="testPerformance()">응답 시간 측정</button>
+            <button class="test-button" onclick="testMultipleRequests()">다중 요청 테스트</button>
+            <div id="performanceTestResult" class="test-result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = '/api/v1';
+        
+        // 결과 표시 함수
+        function displayResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `test-result ${type}`;
+            element.innerHTML = message;
+        }
+
+        // 1. API 연결 테스트
+        async function testHealthCheck() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    displayResult('apiTestResult', '✅ 헬스 체크 성공: ' + data.message, 'success');
+                } else {
+                    displayResult('apiTestResult', '❌ 헬스 체크 실패', 'error');
+                }
+            } catch (error) {
+                displayResult('apiTestResult', '❌ 헬스 체크 오류: ' + error.message, 'error');
+            }
+        }
+
+        async function testRouterTypes() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/router/types`);
+                const data = await response.json();
+                
+                if (data.router_types && data.router_types.length === 4) {
+                    const types = data.router_types.map(type => type.name).join(', ');
+                    displayResult('apiTestResult', `✅ 라우터 타입 조회 성공: ${types}`, 'success');
+                } else {
+                    displayResult('apiTestResult', '❌ 라우터 타입 조회 실패', 'error');
+                }
+            } catch (error) {
+                displayResult('apiTestResult', '❌ 라우터 타입 조회 오류: ' + error.message, 'error');
+            }
+        }
+
+        // 2. 채팅 기능 테스트
+        async function testChat() {
+            const message = document.getElementById('testMessage').value;
+            if (!message) {
+                displayResult('chatTestResult', '❌ 메시지를 입력해주세요', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        user_id: 'test_user',
+                        session_id: 'test_session'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const result = `
+                        <div class="response-display">
+                            <strong>응답:</strong> ${data.response}<br>
+                            <div class="router-info">라우터: ${data.router_type} (신뢰도: ${Math.round(data.confidence * 100)}%)</div>
+                        </div>
+                    `;
+                    displayResult('chatTestResult', '✅ 채팅 테스트 성공' + result, 'success');
+                } else {
+                    displayResult('chatTestResult', '❌ 채팅 테스트 실패: ' + data.detail, 'error');
+                }
+            } catch (error) {
+                displayResult('chatTestResult', '❌ 채팅 테스트 오류: ' + error.message, 'error');
+            }
+        }
+
+        // 3. 라우터 기능 테스트
+        async function testQARouter() {
+            await testSpecificRouter('회사 정책에 대해 알려주세요', 'qa');
+        }
+
+        async function testDocumentRouter() {
+            await testSpecificRouter('문서를 검색해주세요', 'document_search');
+        }
+
+        async function testEmployeeRouter() {
+            await testSpecificRouter('김현성 직원 정보를 알려주세요', 'employee_info');
+        }
+
+        async function testGeneralRouter() {
+            await testSpecificRouter('안녕하세요', 'general_chat');
+        }
+
+        async function testSpecificRouter(message, expectedType) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        user_id: 'test_user',
+                        session_id: 'test_session'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.router_type === expectedType) {
+                    displayResult('routerTestResult', `✅ ${expectedType} 라우터 테스트 성공: "${message}" → ${data.router_type}`, 'success');
+                } else {
+                    displayResult('routerTestResult', `❌ ${expectedType} 라우터 테스트 실패: 예상 ${expectedType}, 실제 ${data.router_type}`, 'error');
+                }
+            } catch (error) {
+                displayResult('routerTestResult', `❌ ${expectedType} 라우터 테스트 오류: ` + error.message, 'error');
+            }
+        }
+
+        // 4. 임베딩 검색 테스트
+        async function testEmbeddingSearch() {
+            const query = document.getElementById('searchQuery').value;
+            if (!query) {
+                displayResult('embeddingTestResult', '❌ 검색 키워드를 입력해주세요', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/embedding/search?query=${encodeURIComponent(query)}&limit=3`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const resultCount = data.results.length;
+                    displayResult('embeddingTestResult', `✅ 임베딩 검색 성공: ${resultCount}개 결과 발견`, 'success');
+                } else {
+                    displayResult('embeddingTestResult', '❌ 임베딩 검색 실패', 'error');
+                }
+            } catch (error) {
+                displayResult('embeddingTestResult', '❌ 임베딩 검색 오류: ' + error.message, 'error');
+            }
+        }
+
+        // 5. 챗봇 UI 테스트
+        function testChatbotToggle() {
+            // 실제 챗봇 UI가 로드되어 있는지 확인
+            if (parent.document.getElementById('chatbotToggle')) {
+                parent.document.getElementById('chatbotToggle').click();
+                displayResult('uiTestResult', '✅ 챗봇 토글 테스트 성공', 'success');
+            } else {
+                displayResult('uiTestResult', '❌ 챗봇 UI를 찾을 수 없습니다', 'error');
+            }
+        }
+
+        function testChatbotKeyboard() {
+            displayResult('uiTestResult', '💡 메인 페이지에서 Ctrl+/ 키를 눌러 챗봇을 토글해보세요', 'info');
+        }
+
+        // 6. 성능 테스트
+        async function testPerformance() {
+            const startTime = performance.now();
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: '성능 테스트 메시지',
+                        user_id: 'test_user',
+                        session_id: 'performance_test'
+                    })
+                });
+
+                const endTime = performance.now();
+                const responseTime = Math.round(endTime - startTime);
+
+                if (response.ok) {
+                    displayResult('performanceTestResult', `✅ 응답 시간: ${responseTime}ms`, 'success');
+                } else {
+                    displayResult('performanceTestResult', `❌ 성능 테스트 실패 (응답 시간: ${responseTime}ms)`, 'error');
+                }
+            } catch (error) {
+                const endTime = performance.now();
+                const responseTime = Math.round(endTime - startTime);
+                displayResult('performanceTestResult', `❌ 성능 테스트 오류: ${error.message} (${responseTime}ms)`, 'error');
+            }
+        }
+
+        async function testMultipleRequests() {
+            const startTime = performance.now();
+            const promises = [];
+
+            for (let i = 0; i < 5; i++) {
+                promises.push(fetch(`${API_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: `다중 요청 테스트 ${i + 1}`,
+                        user_id: 'test_user',
+                        session_id: `multi_test_${i}`
+                    })
+                }));
+            }
+
+            try {
+                const responses = await Promise.all(promises);
+                const endTime = performance.now();
+                const totalTime = Math.round(endTime - startTime);
+
+                const successCount = responses.filter(r => r.ok).length;
+                displayResult('performanceTestResult', `✅ 다중 요청 테스트: ${successCount}/5 성공 (총 시간: ${totalTime}ms)`, 'success');
+            } catch (error) {
+                displayResult('performanceTestResult', '❌ 다중 요청 테스트 실패: ' + error.message, 'error');
+            }
+        }
+
+        // 페이지 로드 시 초기 테스트
+        document.addEventListener('DOMContentLoaded', function() {
+            displayResult('apiTestResult', '테스트 준비 완료. 버튼을 클릭하여 테스트를 시작하세요.', 'info');
+        });
+    </script>
+</body>
+</html> 
