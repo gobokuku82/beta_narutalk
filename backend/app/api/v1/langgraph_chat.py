@@ -5,13 +5,12 @@ LangGraph 기반 라우터 시스템을 사용하는 채팅 API입니다.
 기존 커스텀 라우터를 완전히 대체하는 새로운 시스템입니다.
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Dict, List, Any, Optional
 import logging
 
 from ...services.langgraph_router import LangGraphRouter
-from ...core.dependencies import get_current_user, get_database_service, get_openai_service, get_embedding_service
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +18,19 @@ router = APIRouter()
 
 # 전역 LangGraph 라우터
 langgraph_router = None
+
+# 더미 의존성 함수들 (임시)
+def get_current_user():
+    return {"id": "default_user", "name": "Test User"}
+
+def get_database_service():
+    return None
+
+def get_openai_service():
+    return None
+
+def get_embedding_service():
+    return None
 
 class LangGraphChatRequest(BaseModel):
     message: str
@@ -56,10 +68,7 @@ async def initialize_langgraph_system():
         raise
 
 @router.post("/langgraph/chat", response_model=LangGraphChatResponse)
-async def chat_with_langgraph_router(
-    request: LangGraphChatRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
+async def chat_with_langgraph_router(request: LangGraphChatRequest):
     """
     LangGraph 라우터와 채팅
     
@@ -79,6 +88,7 @@ async def chat_with_langgraph_router(
         if not langgraph_router:
             raise HTTPException(status_code=500, detail="LangGraph 라우터 시스템이 초기화되지 않았습니다.")
         
+        current_user = get_current_user()
         user_id = current_user.get("id", "anonymous")
         session_id = request.session_id or f"langgraph_session_{user_id}"
         
@@ -142,13 +152,13 @@ async def get_workflow_structure():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/langgraph/test")
-async def test_langgraph_router(
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
+async def test_langgraph_router():
     """LangGraph 라우터 테스트"""
     try:
         if not langgraph_router:
             raise HTTPException(status_code=500, detail="라우터가 초기화되지 않았습니다.")
+        
+        current_user = get_current_user()
         
         # 각 에이전트별 테스트 메시지
         test_messages = [

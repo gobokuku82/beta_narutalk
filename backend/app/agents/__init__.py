@@ -7,7 +7,7 @@
 4. 거래처분석 에이전트 (client_analysis) - 고객/파트너 분석
 """
 
-from .base_agent import BaseAgent, AgentContext, AgentResult
+from .base_agent import BaseAgent, AgentContext, AgentResult, AgentAction
 from .document_search.agent import DocumentSearchAgent
 from .document_draft.agent import DocumentDraftAgent
 from .performance_analysis.agent import PerformanceAnalysisAgent
@@ -17,6 +17,7 @@ __all__ = [
     "BaseAgent",
     "AgentContext", 
     "AgentResult",
+    "AgentAction",
     "DocumentSearchAgent",
     "DocumentDraftAgent",
     "PerformanceAnalysisAgent",
