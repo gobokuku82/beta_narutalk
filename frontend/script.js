@@ -66,8 +66,8 @@ async function sendMessage() {
     showLoading();
 
     try {
-        // API 호출
-        const response = await fetch('/api/v1/chat', {
+        // API 호출 - LangGraph 라우터 사용
+        const response = await fetch('/langgraph/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -85,8 +85,8 @@ async function sendMessage() {
 
         const data = await response.json();
         
-        // 봇 응답 표시
-        addMessage(data.response, 'bot', data.router_type, data.confidence);
+        // 봇 응답 표시 - LangGraph API 응답 스키마에 맞게 수정
+        addMessage(data.response, 'bot', data.agent_type, data.confidence);
         
         // 소스 정보가 있으면 표시
         if (data.sources && data.sources.length > 0) {
