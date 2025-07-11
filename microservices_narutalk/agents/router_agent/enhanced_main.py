@@ -57,22 +57,26 @@ AGENT_TOOLS = [
         "type": "function",
         "function": {
             "name": "search_documents",
-            "description": "좋은제약 내부 문서, 정책, 규정, 윤리강령, 복리후생 등을 검색합니다. 문서 관련 질문이나 회사 정책에 대한 문의, 규정 확인이 필요할 때 사용합니다.",
+            "description": (
+                "회사 내부 문서, 정책, 규정, 윤리강령, 복리후생 등을 검색합니다. "
+                "예: '회사 윤리강령 알려줘', '휴가 규정 어디 있어?', '복리후생 제도 정리해줘'. "
+                "고객 정보, 직원 분석, 일반 대화가 아닌 **정책/문서 중심 질문**에 사용됩니다."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "query": {
-                        "type": "string", 
-                        "description": "검색할 키워드나 질문 (예: 윤리강령, 복리후생, 행동강령)"
+                        "type": "string",
+                        "description": "검색할 키워드 또는 문장 (예: 윤리강령, 복리후생 등)"
                     },
                     "top_k": {
-                        "type": "integer", 
-                        "description": "검색 결과 개수", 
+                        "type": "integer",
+                        "description": "검색 결과 개수",
                         "default": 5
                     },
                     "filters": {
                         "type": "object",
-                        "description": "검색 필터 (문서 타입 등)"
+                        "description": "검색 필터 (문서 유형, 날짜 등)"
                     }
                 },
                 "required": ["query"]
@@ -80,25 +84,29 @@ AGENT_TOOLS = [
         }
     },
     {
-        "type": "function", 
+        "type": "function",
         "function": {
             "name": "analyze_employee_data",
-            "description": "직원 정보, 성과 분석, 출근 현황, 부서별 통계, 인사 데이터 등을 분석합니다. 인사 관련 질문이나 직원 데이터 분석, 성과 평가, 출근 통계가 필요할 때 사용합니다.",
+            "description": (
+                "직원 정보, 성과 분석, 출근 현황, 부서 통계, 인사 데이터를 분석합니다. "
+                "예: '김민수의 최근 성과 분석해줘', '영업부 출근율 알려줘', '부서별 실적 요약해줘'. "
+                "**직원 개개인 혹은 부서 단위 인사 관련 질문**에만 사용됩니다."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "employee_id": {
-                        "type": "string", 
-                        "description": "특정 직원 ID (선택적, 전체 분석시 null)"
+                        "type": "string",
+                        "description": "직원 ID (선택적)"
                     },
                     "analysis_type": {
-                        "type": "string", 
+                        "type": "string",
                         "enum": ["general", "performance", "attendance", "department"],
-                        "description": "분석 유형: 일반정보, 성과분석, 출근현황, 부서통계"
+                        "description": "분석 유형: 일반정보, 성과, 출근, 부서통계"
                     },
                     "filters": {
                         "type": "object",
-                        "description": "분석 필터 (부서, 기간 등)"
+                        "description": "필터 조건 (부서, 기간 등)"
                     }
                 },
                 "required": ["analysis_type"]
@@ -108,23 +116,27 @@ AGENT_TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "get_client_information", 
-            "description": "고객사 정보, 거래 내역, 계약 현황, 매출 분석, 비즈니스 관계 등을 조회합니다. 고객 관련 문의나 영업 데이터 분석, 거래처 정보 확인이 필요할 때 사용합니다.",
+            "name": "get_client_information",
+            "description": (
+                "고객사 정보, 거래 내역, 계약 현황, 매출 분석, 영업 데이터를 조회합니다. "
+                "예: '삼성전자 거래 내역 보여줘', '올해 가장 매출 높은 거래처는?', '계약된 고객사 리스트 줘'. "
+                "**고객 또는 거래처 중심 질문**에만 사용하며, 직원/문서/일반 대화와는 무관합니다."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "client_id": {
-                        "type": "string", 
-                        "description": "특정 고객 ID (선택적, 전체 조회시 null)"
+                        "type": "string",
+                        "description": "고객 ID (선택적)"
                     },
                     "info_type": {
-                        "type": "string", 
+                        "type": "string",
                         "enum": ["basic", "transactions", "contracts", "analytics"],
-                        "description": "정보 유형: 기본정보, 거래내역, 계약현황, 분석데이터"
+                        "description": "조회 유형: 기본정보, 거래내역, 계약현황, 분석데이터"
                     },
                     "filters": {
                         "type": "object",
-                        "description": "조회 필터 (기간, 거래유형 등)"
+                        "description": "필터 조건 (기간, 유형 등)"
                     }
                 },
                 "required": ["info_type"]
@@ -135,21 +147,25 @@ AGENT_TOOLS = [
         "type": "function",
         "function": {
             "name": "general_conversation",
-            "description": "일반적인 대화, 인사말, 간단한 질문 답변, 회사 소개를 처리합니다. 위의 전문 영역(문서검색, 직원분석, 고객정보)에 해당하지 않는 일반적인 대화나 질문시 사용합니다.",
+            "description": (
+                "인사말, 회사 소개, 업무 외 잡담 등 일반적인 대화에 대응합니다. "
+                "예: '안녕 GPT야', '좋은제약은 어떤 회사야?', '오늘 날씨 어때?'. "
+                "**문서/직원/고객 관련이 아닌 모든 일반 질문이나 대화**에 사용됩니다."
+            ),
             "parameters": {
-                "type": "object", 
+                "type": "object",
                 "properties": {
                     "message": {
-                        "type": "string", 
-                        "description": "사용자 메시지"
+                        "type": "string",
+                        "description": "사용자의 일반 메시지"
                     },
                     "context": {
                         "type": "object",
-                        "description": "대화 맥락 정보 (선택적)"
+                        "description": "대화 컨텍스트 (선택)"
                     },
                     "conversation_id": {
                         "type": "string",
-                        "description": "대화 ID (선택적)"
+                        "description": "대화 ID (선택)"
                     }
                 },
                 "required": ["message"]
@@ -157,6 +173,7 @@ AGENT_TOOLS = [
         }
     }
 ]
+
 
 
 class EnhancedRouterAgent:
