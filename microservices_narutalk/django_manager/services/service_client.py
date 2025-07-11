@@ -76,13 +76,17 @@ class ServiceClient:
         return results
     
     # 각 에이전트별 특화 메소드들
-    async def analyze_intent(self, message: str) -> Dict[str, Any]:
-        """라우터 에이전트에서 의도 분석"""
+    async def analyze_intent(self, message: str, context: Optional[Dict] = None) -> Dict[str, Any]:
+        """고도화된 라우터 에이전트에서 의도 분석 (GPT-4o 기반)"""
+        payload = {"message": message}
+        if context:
+            payload["context"] = context
+            
         return await self.call_service(
             'ROUTER_AGENT', 
             '/analyze', 
             'POST', 
-            {"message": message}
+            payload
         )
     
     async def search_documents(self, query: str, top_k: int = 5) -> Dict[str, Any]:

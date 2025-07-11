@@ -33,11 +33,11 @@ SERVICES = [
         "health_check": "http://localhost:8000/health"
     },
     {
-        "name": "Router Agent",
+        "name": "Enhanced Router Agent",
         "type": "fastapi",
         "port": 8001,
         "path": "agents/router_agent",
-        "command": ["python", "main.py"],
+        "command": ["python", "enhanced_main.py"],
         "health_check": "http://localhost:8001/health"
     },
     {

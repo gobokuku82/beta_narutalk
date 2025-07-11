@@ -41,38 +41,60 @@ class ChatAPIView(View):
             if not message:
                 return JsonResponse({'error': 'Message is required'}, status=400)
             
-            # 1. 라우터 에이전트에서 의도 분석
-            logger.info(f"Processing message: {message}")
+            # 1. 고도화된 라우터 에이전트에서 의도 분석 (GPT-4o 기반)
+            logger.info(f"Processing message with GPT-4o router: {message}")
             intent_result = await service_client.analyze_intent(message)
             
             if 'error' in intent_result:
                 logger.error(f"Intent analysis failed: {intent_result['error']}")
                 return JsonResponse({'error': 'Intent analysis failed'}, status=500)
             
-            # 2. 의도에 따른 적절한 서비스 호출
-            intent = intent_result.get('intent', 'general')
+            # 2. GPT-4o 분석 결과 파싱
+            intent = intent_result.get('intent', 'general_conversation')
             confidence = intent_result.get('confidence', 0.0)
+            service_name = intent_result.get('service', 'general_agent')
+            function_call = intent_result.get('function_call', {})
+            reasoning = intent_result.get('reasoning', 'AI 분석 결과')
             
-            logger.info(f"Intent: {intent}, Confidence: {confidence}")
+            logger.info(f"GPT-4o Analysis - Intent: {intent}, Confidence: {confidence}, Service: {service_name}")
+            logger.info(f"Reasoning: {reasoning}")
             
-            # 서비스 호출
-            if intent == 'document_search':
-                result = await service_client.search_documents(message)
-            elif intent == 'employee_analysis':
-                result = await service_client.analyze_employee()
-            elif intent == 'client_info':
-                result = await service_client.get_client_info()
-            else:
-                # 일반 대화
-                result = await service_client.general_chat(message)
+            # 3. Function Call 기반 서비스 호출
+            if intent == 'search_documents':
+                args = function_call.get('arguments', {})
+                result = await service_client.search_documents(
+                    args.get('query', message), 
+                    args.get('top_k', 5)
+                )
+            elif intent == 'analyze_employee_data':
+                args = function_call.get('arguments', {})
+                result = await service_client.analyze_employee(
+                    args.get('employee_id'),
+                    args.get('analysis_type', 'general')
+                )
+            elif intent == 'get_client_information':
+                args = function_call.get('arguments', {})
+                result = await service_client.get_client_info(
+                    args.get('client_id'),
+                    args.get('info_type', 'basic')
+                )
+            else:  # general_conversation
+                args = function_call.get('arguments', {})
+                result = await service_client.general_chat(
+                    args.get('message', message),
+                    args.get('context')
+                )
             
-            # 3. 응답 생성
+            # 4. 응답 생성
             response_data = {
                 'response': result.get('response', '죄송합니다. 처리 중 오류가 발생했습니다.'),
                 'intent': intent,
                 'confidence': confidence,
-                'service_used': intent_result.get('service', 'unknown'),
+                'service_used': service_name,
+                'reasoning': reasoning,
+                'function_call': function_call,
                 'timestamp': intent_result.get('timestamp', ''),
+                'router_version': '2.0.0 (GPT-4o)'
             }
             
             # 에러가 있는 경우 포함

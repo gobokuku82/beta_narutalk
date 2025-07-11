@@ -34,6 +34,18 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+### 1-1. 환경 변수 설정 (중요!)
+```bash
+# .env 파일 생성
+echo "OPENAI_API_KEY=your_api_key_here" > .env
+echo "OPENAI_MODEL=gpt-4o" >> .env
+
+# OpenAI API 키 설정
+# 1. https://platform.openai.com/ 접속
+# 2. API Keys 메뉴에서 새 키 생성
+# 3. .env 파일에 실제 키 입력
+```
+
 ### 2. 서비스 실행
 ```bash
 # 모든 서비스 한번에 시작
