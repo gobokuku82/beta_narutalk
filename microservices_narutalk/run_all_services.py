@@ -120,16 +120,23 @@ class ServiceManager:
                 logger.error(f"Service path not found: {service_path}")
                 return False
             
-            # 환경변수 설정
+            # 환경변수 설정 - 가상환경 경로 포함
             env = os.environ.copy()
-            env['PYTHONPATH'] = str(self.project_root)
+            env['PYTHONPATH'] = str(self.project_root.parent)  # 상위 디렉토리로 설정
+            
+            # 가상환경의 Python 실행 파일 경로 설정
+            venv_python = self.project_root.parent / "venv" / "Scripts" / "python.exe"
+            if venv_python.exists():
+                python_cmd = str(venv_python)
+            else:
+                python_cmd = "python"
             
             # Django 서비스 특별 처리
             if service['type'] == 'django':
                 # Django 데이터베이스 마이그레이션
                 try:
                     subprocess.run(
-                        ["python", "manage.py", "migrate"],
+                        [python_cmd, "manage.py", "migrate"],
                         cwd=service_path,
                         env=env,
                         capture_output=True,
@@ -139,11 +146,14 @@ class ServiceManager:
                 except Exception as e:
                     logger.warning(f"Django migration failed: {e}")
             
-            # 서비스 시작
+            # 서비스 시작 - 가상환경 Python 사용
             logger.info(f"Starting {service['name']} on port {service['port']}")
             
+            # 명령어에서 python을 가상환경 python으로 교체
+            command = [python_cmd if cmd == "python" else cmd for cmd in service['command']]
+            
             process = subprocess.Popen(
-                service['command'],
+                command,
                 cwd=service_path,
                 env=env,
                 stdout=subprocess.PIPE,
