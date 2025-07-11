@@ -2,7 +2,7 @@
 let sessionId = generateSessionId();
 let userId = generateUserId();
 let isLoading = false;
-let currentRouter = 'langgraph'; // 'langgraph' 또는 'simple'
+let currentRouter = 'tool-calling'; // 'tool-calling', 'simple', 또는 'langgraph'
 
 // DOM 요소들
 const chatInput = document.getElementById('chatInput');
@@ -42,7 +42,20 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('라우터 변경:', currentRouter);
             
             // 라우터 변경 알림 메시지
-            const routerName = currentRouter === 'langgraph' ? 'LangGraph (복잡)' : 'Simple (간단)';
+            let routerName;
+            switch(currentRouter) {
+                case 'tool-calling':
+                    routerName = 'Tool Calling (도구 호출)';
+                    break;
+                case 'simple':
+                    routerName = 'Simple (간단)';
+                    break;
+                case 'langgraph':
+                    routerName = 'LangGraph (복잡)';
+                    break;
+                default:
+                    routerName = currentRouter;
+            }
             addMessage(`라우터가 ${routerName}로 변경되었습니다.`, 'system');
         });
     }
@@ -82,9 +95,20 @@ async function sendMessage() {
 
     try {
         // 라우터에 따른 API 엔드포인트 선택
-        const endpoint = currentRouter === 'langgraph' 
-            ? '/langgraph/chat'
-            : '/api/simple/chat';
+        let endpoint;
+        switch(currentRouter) {
+            case 'tool-calling':
+                endpoint = '/tool-calling/chat';
+                break;
+            case 'simple':
+                endpoint = '/api/simple/chat';
+                break;
+            case 'langgraph':
+                endpoint = '/langgraph/chat';
+                break;
+            default:
+                endpoint = '/tool-calling/chat';
+        }
             
         console.log('API 호출:', endpoint);
         
