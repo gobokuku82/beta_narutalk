@@ -1,0 +1,15 @@
+마이크로서비스 NaruTalk 프로젝트 구조
+
+microservices_narutalk/
+├── django_manager/          # Django 관리 시스템 (포트: 8000)
+├── agents/                  # 5개 FastAPI 에이전트 서비스
+│   ├── router_agent/        # 라우터 에이전트 (포트: 8001)
+│   ├── document_agent/      # 문서검색 에이전트 (포트: 8002)  
+│   ├── employee_agent/      # 직원분석 에이전트 (포트: 8003)
+│   ├── client_agent/        # 고객정보 에이전트 (포트: 8004)
+│   └── general_agent/       # 일반대화 에이전트 (포트: 8005)
+├── shared/                  # 공통 라이브러리 및 설정
+├── data/                    # 데이터 파일들
+├── requirements.txt         # 의존성 목록
+├── run_all_services.py      # 전체 서비스 실행 스크립트
+└── README.md               # 프로젝트 설명 
