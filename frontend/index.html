@@ -99,9 +99,18 @@
         <main class="chat-area">
             <div class="chat-header">
                 <h1>AI Assistant</h1>
-                <div class="chat-status">
-                    <div class="status-indicator online"></div>
-                    <span>온라인</span>
+                <div class="header-controls">
+                    <div class="router-selector">
+                        <label for="routerSelect">라우터:</label>
+                        <select id="routerSelect">
+                            <option value="langgraph">LangGraph (복잡)</option>
+                            <option value="simple">Simple (간단)</option>
+                        </select>
+                    </div>
+                    <div class="chat-status">
+                        <div class="status-indicator online"></div>
+                        <span>온라인</span>
+                    </div>
                 </div>
             </div>
             

@@ -2,6 +2,7 @@
 let sessionId = generateSessionId();
 let userId = generateUserId();
 let isLoading = false;
+let currentRouter = 'langgraph'; // 'langgraph' 또는 'simple'
 
 // DOM 요소들
 const chatInput = document.getElementById('chatInput');
@@ -11,6 +12,7 @@ const chatbotToggle = document.getElementById('chatbotToggle');
 const clearChatBtn = document.getElementById('clearChat');
 const exportChatBtn = document.getElementById('exportChat');
 const loadingOverlay = document.getElementById('loadingOverlay');
+const routerSelect = document.getElementById('routerSelect');
 
 // 세션 ID 생성
 function generateSessionId() {
@@ -33,6 +35,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // 라우터 선택 이벤트
+    if (routerSelect) {
+        routerSelect.addEventListener('change', function(e) {
+            currentRouter = e.target.value;
+            console.log('라우터 변경:', currentRouter);
+            
+            // 라우터 변경 알림 메시지
+            const routerName = currentRouter === 'langgraph' ? 'LangGraph (복잡)' : 'Simple (간단)';
+            addMessage(`라우터가 ${routerName}로 변경되었습니다.`, 'system');
+        });
+    }
+
     // 챗봇 토글 버튼 (현재 페이지이므로 사실상 필요 없지만 일단 구현)
     chatbotToggle.addEventListener('click', function() {
         // 현재 페이지에 이미 있으므로 스크롤을 채팅 영역으로 이동
@@ -51,6 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('NaruTalk AI Assistant 초기화 완료');
     console.log('Session ID:', sessionId);
     console.log('User ID:', userId);
+    console.log('Current Router:', currentRouter);
 });
 
 // 메시지 전송 함수
@@ -66,8 +81,14 @@ async function sendMessage() {
     showLoading();
 
     try {
-        // API 호출 - LangGraph 라우터 사용
-        const response = await fetch('/langgraph/chat', {
+        // 라우터에 따른 API 엔드포인트 선택
+        const endpoint = currentRouter === 'langgraph' 
+            ? '/langgraph/chat'
+            : '/api/simple/chat';
+            
+        console.log('API 호출:', endpoint);
+        
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -85,12 +106,22 @@ async function sendMessage() {
 
         const data = await response.json();
         
-        // 봇 응답 표시 - LangGraph API 응답 스키마에 맞게 수정
-        addMessage(data.response, 'bot', data.agent_type, data.confidence);
+        // 응답 스키마가 다를 수 있으므로 체크
+        const responseText = data.response || data.message || '응답을 받지 못했습니다.';
+        const agentType = data.agent_type || data.router_type || 'unknown';
+        const confidence = data.confidence || 0;
+        
+        // 봇 응답 표시
+        addMessage(responseText, 'bot', agentType, confidence);
         
         // 소스 정보가 있으면 표시
         if (data.sources && data.sources.length > 0) {
             addSourcesInfo(data.sources);
+        }
+
+        // 처리 시간 표시 (간단한 라우터에만 있음)
+        if (data.processing_time_ms) {
+            console.log(`처리 시간: ${data.processing_time_ms}ms`);
         }
 
     } catch (error) {
@@ -111,7 +142,15 @@ function addMessage(text, sender, routerType = null, confidence = null) {
 
     const avatar = document.createElement('div');
     avatar.className = 'message-avatar';
-    avatar.innerHTML = sender === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+    
+    // 아바타 아이콘 설정
+    if (sender === 'user') {
+        avatar.innerHTML = '<i class="fas fa-user"></i>';
+    } else if (sender === 'system') {
+        avatar.innerHTML = '<i class="fas fa-cog"></i>';
+    } else {
+        avatar.innerHTML = '<i class="fas fa-robot"></i>';
+    }
 
     const content = document.createElement('div');
     content.className = 'message-content';
