@@ -53,3 +53,11 @@ mkdocs-material==9.5.0
 python-dateutil==2.9.0
 pytz==2024.1
 orjson==3.10.0
+
+# HuggingFace 모델 사용 (Kure-v1, bge-reranker-ko)
+sentence-transformers==2.7.0
+transformers==4.44.0
+torch==2.4.0
+FlagEmbedding==1.2.0
+accelerate==0.33.0
+safetensors==0.4.4

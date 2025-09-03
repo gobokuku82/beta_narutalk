@@ -10,11 +10,16 @@ from langchain_anthropic import ChatAnthropic
 from loguru import logger
 
 from app.langgraph.state import AgentState, initialize_state
-from app.langgraph.agents.info_retrieval import InfoRetrievalAgent
 from app.langgraph.agents.doc_generation import DocGenerationAgent
 from app.langgraph.agents.compliance import ComplianceAgent
 from app.langgraph.agents.analytics import AnalyticsAgent
 from app.core.config import settings
+
+# HuggingFace 사용 여부에 따라 다른 Agent 임포트
+if settings.USE_HUGGINGFACE:
+    from app.langgraph.agents.info_retrieval_hf import InfoRetrievalAgentHF as InfoRetrievalAgent
+else:
+    from app.langgraph.agents.info_retrieval import InfoRetrievalAgent
 
 
 class SupervisorAgent:

@@ -55,8 +55,13 @@ class Settings(BaseSettings):
     
     # 모델 설정 (GPT-4o 사용)
     OPENAI_MODEL: str = "gpt-4o"
-    EMBEDDING_MODEL: str = "text-embedding-3-small"
     SQL_MODEL: str = "gpt-4o"
+    
+    # HuggingFace 모델 설정
+    USE_HUGGINGFACE: bool = True
+    EMBEDDING_MODEL: str = "nlpai-lab/KURE-v1"  # HuggingFace Kure-v1 임베딩
+    RERANKER_MODEL: str = "dragonkue/bge-reranker-v2-m3-ko"  # 한국어 리랭커
+    OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"  # OpenAI 임베딩 (대체용)
     
     # 벡터 DB 설정
     VECTOR_DB_TYPE: str = "chromadb"  # chromadb, pinecone
