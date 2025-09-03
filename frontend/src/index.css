@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --gradient-accent: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-light-bg text-light-text;
+  }
+
+  .dark body {
+    @apply bg-dark-bg text-dark-text;
+  }
+}
+
+@layer components {
+  .glassmorphism {
+    @apply backdrop-blur-xl bg-white/10 border border-white/20 shadow-xl;
+  }
+
+  .glassmorphism-dark {
+    @apply backdrop-blur-xl bg-gray-900/30 border border-gray-700/30 shadow-2xl;
+  }
+
+  .neumorphism {
+    @apply bg-light-surface shadow-[20px_20px_60px_#bebebe,-20px_-20px_60px_#ffffff];
+  }
+
+  .neumorphism-dark {
+    @apply bg-dark-surface shadow-[20px_20px_60px_#0a0f1a,-20px_-20px_60px_#14203a];
+  }
+
+  .gradient-border {
+    @apply relative;
+    background: linear-gradient(var(--tw-gradient-stops));
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 2px;
+    background: var(--gradient-primary);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  .chat-bubble {
+    @apply px-4 py-3 rounded-2xl max-w-[80%] break-words;
+  }
+
+  .chat-bubble-user {
+    @apply bg-gradient-to-r from-primary-500 to-primary-600 text-white ml-auto;
+  }
+
+  .chat-bubble-bot {
+    @apply bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg 
+           hover:from-primary-600 hover:to-primary-700 transition-all duration-300 
+           active:scale-95 shadow-lg hover:shadow-xl;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-gradient-to-r from-secondary-500 to-secondary-600 text-white rounded-lg 
+           hover:from-secondary-600 hover:to-secondary-700 transition-all duration-300 
+           active:scale-95 shadow-lg hover:shadow-xl;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 rounded-lg border border-light-border dark:border-dark-border 
+           bg-light-surface dark:bg-dark-surface focus:outline-none focus:ring-2 
+           focus:ring-primary-500 transition-all duration-300;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.primary.500') transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: theme('colors.primary.500');
+    border-radius: 3px;
+  }
+
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+}
