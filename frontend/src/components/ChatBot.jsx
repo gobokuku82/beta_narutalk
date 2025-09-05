@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Message from './Message';
 import Spinner from './Spinner';
 import ProcessingStatus from './ProcessingStatus';
+import MultiStepSpinner from './MultiStepSpinner';
 import { chatService } from '../services/api';
 
 const ChatBot = () => {
@@ -16,6 +17,15 @@ const ChatBot = () => {
   const [processingStatus, setProcessingStatus] = useState(null);
   const [activeAgents, setActiveAgents] = useState([]);
   const [activeTools, setActiveTools] = useState([]);
+  const [progressData, setProgressData] = useState({
+    currentStep: 0,
+    totalSteps: 0,
+    agents: [],
+    activeAgent: null,
+    message: '',
+    isVisible: false
+  });
+  const [eventSource, setEventSource] = useState(null);
   const messagesEndRef = useRef(null);
 
   // 메시지 영역 스크롤
@@ -60,18 +70,64 @@ const ChatBot = () => {
     setProcessingStatus('processing');
     setActiveAgents([]);
     setActiveTools([]);
+    setProgressData({
+      currentStep: 0,
+      totalSteps: 0,
+      agents: [],
+      activeAgent: null,
+      message: '',
+      isVisible: false
+    });
 
+    // SSE 연결 설정
+    let currentEventSource = null;
+    const currentSessionId = sessionId || uuidv4();
+    
     try {
+      // SSE 연결 시작
+      if (isComplexMode && selectedAgents.length > 0) {
+        // 복합 모드일 때 SSE 연결
+        currentEventSource = new EventSource(`http://localhost:8000/api/v1/chat/stream/${currentSessionId}`);
+        setEventSource(currentEventSource);
+        
+        currentEventSource.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === 'progress') {
+            setProgressData({
+              currentStep: data.current_step || 0,
+              totalSteps: data.total_steps || selectedAgents.length,
+              agents: data.agents || selectedAgents,
+              activeAgent: data.active_agent,
+              message: data.message || '',
+              isVisible: true
+            });
+            
+            if (data.active_agent) {
+              setActiveAgents([data.active_agent]);
+            }
+          } else if (data.type === 'completed' || data.type === 'error') {
+            currentEventSource.close();
+            setEventSource(null);
+          }
+        };
+        
+        currentEventSource.onerror = () => {
+          currentEventSource.close();
+          setEventSource(null);
+        };
+      }
+
       let response;
       
       // 복합 모드인 경우
       if (isComplexMode && selectedAgents.length > 0) {
         // 선택된 에이전트 표시
         setActiveAgents(selectedAgents);
-        response = await chatService.sendComplexQuery(inputValue, sessionId, selectedAgents);
+        response = await chatService.sendComplexQuery(inputValue, currentSessionId, selectedAgents);
       } else {
         // 일반 모드
-        response = await chatService.sendMessage(inputValue, sessionId);
+        response = await chatService.sendMessage(inputValue, currentSessionId);
       }
       
       // 사용된 에이전트와 도구 업데이트
@@ -120,10 +176,16 @@ const ChatBot = () => {
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
+      // SSE 연결 종료
+      if (currentEventSource) {
+        currentEventSource.close();
+      }
+      setEventSource(null);
       setIsLoading(false);
       setProcessingStatus(null);
       setActiveAgents([]);
       setActiveTools([]);
+      setProgressData(prev => ({ ...prev, isVisible: false }));
     }
   };
 
@@ -227,11 +289,25 @@ const ChatBot = () => {
           />
         )}
         
-        {isLoading && !processingStatus && (
-          <Spinner 
-            show={true} 
-            text="AI가 응답을 생성하고 있습니다..." 
-          />
+        {/* 로딩 상태 표시 */}
+        {isLoading && (
+          progressData.isVisible && progressData.totalSteps > 1 ? (
+            <MultiStepSpinner 
+              currentStep={progressData.currentStep}
+              totalSteps={progressData.totalSteps}
+              agents={progressData.agents}
+              activeAgent={progressData.activeAgent}
+              message={progressData.message}
+              isVisible={progressData.isVisible}
+            />
+          ) : (
+            !processingStatus && (
+              <Spinner 
+                show={true} 
+                text="AI가 응답을 생성하고 있습니다..." 
+              />
+            )
+          )
         )}
         
         <div ref={messagesEndRef} />

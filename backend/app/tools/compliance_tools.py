@@ -51,6 +51,7 @@ class ComplianceCheckTool(StructuredTool):
     name: str = "compliance_check"
     description: str = "의약품 규정, 임상시험, 마케팅 등의 컴플라이언스를 확인합니다."
     args_schema: type[BaseModel] = ComplianceCheckInput
+    regulations_db: Any = Field(default=None, exclude=True)
     
     def __init__(self):
         super().__init__()

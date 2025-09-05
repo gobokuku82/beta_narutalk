@@ -6,8 +6,9 @@ Search Tools
 from typing import Any, Dict, Optional, List
 from pydantic import BaseModel, Field
 from langchain.callbacks.manager import AsyncCallbackManagerForToolRun
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_chroma import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain.schema import Document
 import logging
 logger = logging.getLogger(__name__)
@@ -47,13 +48,24 @@ class VectorSearchTool(StructuredTool, CachedTool):
     description: str = "벡터 데이터베이스에서 유사한 문서를 검색합니다."
     args_schema: type[BaseModel] = VectorSearchInput
     cache_ttl: int = 600  # 10분 캐싱
+    embeddings: Any = Field(default=None, exclude=True)
+    vector_store: Any = Field(default=None, exclude=True)
     
     def __init__(self):
         super().__init__()
-        self.embeddings = OpenAIEmbeddings(
-            model=settings.EMBEDDING_MODEL,
-            openai_api_key=settings.OPENAI_API_KEY
-        )
+        # HuggingFace 임베딩 사용 여부 확인
+        if settings.USE_HUGGINGFACE:
+            self.embeddings = HuggingFaceEmbeddings(
+                model_name=settings.EMBEDDING_MODEL,  # "nlpai-lab/KURE-v1"
+                model_kwargs={'device': 'cpu'},  # GPU 있으면 'cuda'로 변경
+                encode_kwargs={'normalize_embeddings': True}
+            )
+        else:
+            # OpenAI 임베딩 사용 (fallback)
+            self.embeddings = OpenAIEmbeddings(
+                model=settings.OPENAI_EMBEDDING_MODEL,  # "text-embedding-3-small"
+                openai_api_key=settings.OPENAI_API_KEY
+            )
         self.vector_store = self._initialize_vector_store()
     
     def _initialize_vector_store(self):
@@ -333,6 +345,8 @@ class SemanticSearchTool(BaseTool):
     
     name: str = "semantic_search"
     description: str = "자연어 쿼리를 이해하여 가장 관련성 높은 정보를 검색합니다."
+    vector_tool: Any = Field(default=None, exclude=True)
+    literature_tool: Any = Field(default=None, exclude=True)
     
     def __init__(self):
         super().__init__()

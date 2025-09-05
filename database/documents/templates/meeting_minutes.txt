@@ -1,0 +1,17 @@
+## 회의록
+
+**일시**: {date}
+**장소**: {location}
+**참석자**: {attendees}
+**주제**: {topic}
+
+### 논의 사항
+{discussions}
+
+### 결정 사항
+{decisions}
+
+### 액션 아이템
+{action_items}
+
+**다음 회의**: {next_meeting}

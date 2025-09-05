@@ -10,7 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-from app.api.v1 import chat, session, database, upload
+from app.api.v1 import chat, session, database, chat_stream, upload
 from app.core.config import settings
 from app.langgraph.supervisor_multi_agent import create_multi_agent_supervisor_graph
 
@@ -44,17 +44,20 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS 설정
+# CORS 설정 - 더 명시적으로
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=["*"],  # 테스트를 위해 모든 origin 허용
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS", "DELETE", "PUT"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
 # API 라우터 등록
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["Chat"])
+app.include_router(chat_stream.router, prefix="/api/v1/chat", tags=["Chat Stream"])
 app.include_router(session.router, prefix="/api/v1/session", tags=["Session"])
 app.include_router(database.router, prefix="/api/v1/database", tags=["Database"])
 app.include_router(upload.router, prefix="/api/v1/upload", tags=["Upload"])

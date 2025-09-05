@@ -58,6 +58,8 @@ class DocumentGeneratorTool(StructuredTool):
     name: str = "document_generator"
     description: str = "다양한 유형의 문서를 생성합니다. 제안서, 보고서, 이메일, 프레젠테이션 등을 만들 수 있습니다."
     args_schema: type[BaseModel] = DocumentGeneratorInput
+    templates_dir: Any = Field(default=None, exclude=True)
+    generated_dir: Any = Field(default=None, exclude=True)
     
     def __init__(self):
         super().__init__()
@@ -354,6 +356,7 @@ class TemplateManagerTool(StructuredTool):
     name: str = "template_manager"
     description: str = "템플릿을 관리하고 변수를 채워 문서를 생성합니다."
     args_schema: type[BaseModel] = TemplateManagerInput
+    templates_dir: Any = Field(default=None, exclude=True)
     
     def __init__(self):
         super().__init__()

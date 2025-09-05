@@ -6,9 +6,11 @@ Enhanced Supervisor with Multi-Agent Coordination
 from typing import Dict, Any, List, Optional, Literal
 from langgraph.graph import StateGraph, START, END
 from langchain_openai import ChatOpenAI
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 import logging
 import asyncio
 import json
+from app.api.v1.chat_stream import update_progress
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +128,17 @@ class MultiAgentSupervisor:
         """병렬 작업 실행"""
         logger.info(f"Executing {len(tasks)} tasks in parallel")
         
+        # 진행 상황 업데이트
+        session_id = state.get("session_id", "unknown")
+        agent_list = [t["agent"] for t in tasks]
+        update_progress(session_id, {
+            "status": "processing",
+            "message": f"{len(tasks)}개 작업을 병렬로 처리 중...",
+            "total_steps": len(tasks),
+            "current_step": 0,
+            "agents": agent_list
+        })
+        
         # 병렬 실행할 작업들
         async_tasks = []
         for task in tasks:
@@ -154,10 +167,24 @@ class MultiAgentSupervisor:
             agent_name = tasks[i]["agent"]
             combined_outputs[agent_name] = result.get("agent_outputs", {})
             
+            # 진행 상황 업데이트
+            update_progress(session_id, {
+                "current_step": i + 1,
+                "active_agent": agent_name,
+                "message": f"{agent_name} 작업 완료"
+            })
+            
             # 메시지 수집
             if "messages" in result:
                 for msg in result["messages"]:
-                    if msg.get("role") == "assistant":
+                    # Handle both dict and Message objects
+                    if isinstance(msg, (HumanMessage, AIMessage)):
+                        if isinstance(msg, AIMessage):
+                            combined_messages.append({
+                                "agent": agent_name,
+                                "content": msg.content
+                            })
+                    elif isinstance(msg, dict) and msg.get("role") == "assistant":
                         combined_messages.append({
                             "agent": agent_name,
                             "content": msg.get("content", "")
@@ -199,7 +226,14 @@ class MultiAgentSupervisor:
                 # 메시지 수집
                 if "messages" in result:
                     for msg in result["messages"]:
-                        if msg.get("role") == "assistant":
+                        # Handle both dict and Message objects
+                        if isinstance(msg, (HumanMessage, AIMessage)):
+                            if isinstance(msg, AIMessage):
+                                combined_messages.append({
+                                    "agent": agent_name,
+                                    "content": msg.content
+                                })
+                        elif isinstance(msg, dict) and msg.get("role") == "assistant":
                             combined_messages.append({
                                 "agent": agent_name,
                                 "content": msg.get("content", "")
@@ -283,7 +317,7 @@ class MultiAgentSupervisor:
             }
         
         last_message = state["messages"][-1]
-        user_query = last_message.get("content", "")
+        user_query = last_message.content if isinstance(last_message, (HumanMessage, AIMessage)) else str(last_message)
         
         # 복합 질의 분석
         plan = await self.analyze_complex_query(user_query)
@@ -433,8 +467,14 @@ async def run_multi_agent_supervisor(user_input: str, session_id: str, user_id: 
     try:
         result = await app.ainvoke(initial_state)
         
-        # 결과 추출
-        assistant_messages = [msg for msg in result.get("messages", []) if msg.get("role") == "assistant"]
+        # 결과 추출 - Handle both dict and Message objects
+        assistant_messages = []
+        for msg in result.get("messages", []):
+            if isinstance(msg, AIMessage):
+                assistant_messages.append({"role": "assistant", "content": msg.content})
+            elif isinstance(msg, dict) and msg.get("role") == "assistant":
+                assistant_messages.append(msg)
+        
         final_message = assistant_messages[-1].get("content") if assistant_messages else "처리 완료"
         
         return {

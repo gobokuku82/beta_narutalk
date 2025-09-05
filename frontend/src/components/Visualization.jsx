@@ -47,9 +47,7 @@ const Visualization = ({ data }) => {
   
   // 컴플라이언스 결과 포맷팅
   const formatComplianceResult = (result) => {
-    const status = result.compliant ? 
-      '<span style="color: green; font-weight: bold;">✓ 준수</span>' : 
-      '<span style="color: red; font-weight: bold;">✗ 미준수</span>';
+    const status = result.compliant ? '<span style="color: green; font-weight: bold;">✓ 준수</span>' : '<span style="color: red; font-weight: bold;">✗ 미준수</span>';
     
     let html = `<div>
       <p><strong>상태:</strong> ${status}</p>`;

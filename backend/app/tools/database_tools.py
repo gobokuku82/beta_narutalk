@@ -4,7 +4,7 @@ Mock 데이터베이스와 상호작용하는 도구들
 """
 
 from typing import Any, Dict, Optional, List
-from pydantic import BaseModel, Field, Any
+from pydantic import BaseModel, Field
 from langchain.callbacks.manager import AsyncCallbackManagerForToolRun
 import logging
 logger = logging.getLogger(__name__)
@@ -16,15 +16,39 @@ import time
 try:
     sys.path.append(str(Path(__file__).parent.parent.parent.parent.parent / "database" / "test"))
     from mock_data import get_mock_db
-except ImportError:
-    # If import fails, create a simple mock function
+except ImportError as e:
+    logger.warning(f"Failed to import mock_data: {e}")
+    # If import fails, create a simple mock class
+    class SimpleMockDB:
+        def get_drug_by_name(self, name):
+            return None
+        def search_drugs(self, keyword, category=None):
+            return []
+        def get_sales_summary(self, period):
+            return {"total": 0, "period": period}
+        def generate_mock_trend(self, metric, periods):
+            return []
+        def get_team_performance(self):
+            return {"teams": []}
+        def get_monthly_sales(self, year, month):
+            return {"sales": 0}
+        def get_regulations(self, agency, category=None):
+            return []
+        def get_recent_updates(self, limit):
+            return []
+        def get_risk_assessment(self):
+            return {"risk_level": "low"}
+        def search_customers(self, keyword, customer_type=None):
+            return []
+        def get_customer_purchases(self, customer_id):
+            return []
+        def get_kpi_metrics(self):
+            return {"revenue": {"achievement": 0}, "customer_retention": {"achievement": 0}, "market_share": {"actual": 0}}
+        def get_product_ranking(self, limit):
+            return []
+    
     def get_mock_db():
-        return {
-            "drug_database": [],
-            "sales_data": [],
-            "compliance_data": [],
-            "customer_data": []
-        }
+        return SimpleMockDB()
 
 from .base import BaseTool, ToolResult, StructuredTool
 

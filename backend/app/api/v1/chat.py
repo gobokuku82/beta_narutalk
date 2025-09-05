@@ -2,7 +2,8 @@
 채팅 API 엔드포인트
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.responses import Response, JSONResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import logging
@@ -29,6 +30,23 @@ class ChatResponse(BaseModel):
     agent_used: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
+
+@router.options("/")
+async def chat_options(request: Request):
+    """OPTIONS 요청 처리 - 디버깅 로그 포함"""
+    logger.info(f"OPTIONS request received: {request.url}")
+    logger.info(f"Headers: {dict(request.headers)}")
+    
+    return Response(
+        content="",
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Max-Age": "3600",
+        }
+    )
 
 @router.post("/", response_model=ChatResponse)
 async def chat(
@@ -194,6 +212,22 @@ class ComplexQueryRequest(BaseModel):
     user_id: Optional[str] = None
     agents: Optional[List[str]] = None  # 특정 에이전트 지정
 
+
+@router.options("/complex")
+async def complex_options(request: Request):
+    """OPTIONS 요청 처리 - 디버깅 로그 포함"""
+    logger.info(f"OPTIONS request received for /complex: {request.url}")
+    
+    return Response(
+        content="",
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Max-Age": "3600",
+        }
+    )
 
 @router.post("/complex", response_model=ChatResponse)
 async def complex_query(

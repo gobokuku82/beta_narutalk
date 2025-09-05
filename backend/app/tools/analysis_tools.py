@@ -60,6 +60,7 @@ class DataAnalysisTool(MultiStepTool):
     description: str = "매출, 성과, 고객 데이터를 분석합니다."
     args_schema: type[BaseModel] = DataAnalysisInput
     steps: List[str] = ["collect", "process", "analyze", "summarize"]
+    db: Any = Field(default=None, exclude=True)
     
     def __init__(self):
         super().__init__()
@@ -186,6 +187,7 @@ class TrendAnalysisTool(StructuredTool):
     name: str = "trend_analysis"
     description: str = "시계열 데이터의 트렌드를 분석하고 예측합니다."
     args_schema: type[BaseModel] = TrendAnalysisInput
+    db: Any = Field(default=None, exclude=True)
     
     def __init__(self):
         super().__init__()
@@ -379,6 +381,7 @@ class ComparativeAnalysisTool(BaseTool):
     
     name: str = "comparative_analysis"
     description: str = "여러 데이터셋이나 기간을 비교 분석합니다."
+    db: Any = Field(default=None, exclude=True)
     
     def __init__(self):
         super().__init__()
