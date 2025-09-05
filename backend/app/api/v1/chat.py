@@ -8,7 +8,7 @@ from typing import Optional, List, Dict, Any
 from loguru import logger
 import uuid
 
-from app.langgraph.supervisor import run_supervisor
+from app.langgraph.supervisor_graph import run_supervisor
 from app.core.session import get_session, create_session
 
 router = APIRouter()

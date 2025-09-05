@@ -10,7 +10,7 @@ from loguru import logger
 
 from app.api.v1 import chat, session, database, upload
 from app.core.config import settings
-from app.langgraph.supervisor import create_supervisor_graph
+from app.langgraph.supervisor_graph import create_supervisor_graph
 
 # Supervisor 그래프 전역 변수
 supervisor_app = None

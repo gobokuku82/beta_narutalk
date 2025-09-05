@@ -10,7 +10,8 @@
       "Bash(npx tailwindcss init:*)",
       "Bash(npm uninstall:*)",
       "Bash(tree:*)",
-      "WebFetch(domain:langchain-ai.github.io)"
+      "WebFetch(domain:langchain-ai.github.io)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
