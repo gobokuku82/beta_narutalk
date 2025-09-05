@@ -37,7 +37,7 @@ const Message = ({ message }) => {
   return (
     <div className={`message ${message.role}`}>
       <div className="message-content">
-        {/* 에이전트/도구 정보 표시 */}
+        {/* 에이전트/도구 정보 표시 - 주석 처리
         {message.role === 'assistant' && (agents.length > 0 || tools.length > 0) && (
           <div className="message-metadata">
             {agents.length > 0 && (
@@ -58,6 +58,7 @@ const Message = ({ message }) => {
             )}
           </div>
         )}
+        */}
         
         <div className="message-text">{message.content}</div>
         

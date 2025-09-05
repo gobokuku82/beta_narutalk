@@ -7,8 +7,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 import logging
+import sys
+
+# 로깅 포맷 설정
+LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+logging.basicConfig(
+    level=logging.INFO,
+    format=LOG_FORMAT,
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler("app.log", encoding='utf-8')
+    ]
+)
+
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+
+# 특정 모듈에 대한 상세 로깅
+logging.getLogger("app.langgraph").setLevel(logging.DEBUG)
+logging.getLogger("app.api.v1.chat_stream").setLevel(logging.DEBUG)
 
 from app.api.v1 import chat, session, database, chat_stream, upload
 from app.core.config import settings

@@ -378,6 +378,20 @@ class InfoRetrievalWithTools:
         """Supervisor에서 호출하는 메인 처리 함수"""
         logger.info("InfoRetrieval with Tools processing")
         
+        # 진행 상황 보고를 위한 정보 추출
+        progress_info = state.get("progress_info", {})
+        session_id = progress_info.get("session_id") or state.get("session_id")
+        
+        # 진행 상황 업데이트 가능 여부 확인
+        if session_id:
+            from app.api.v1.chat_stream import update_progress
+            
+            # 도구 검색 시작 알림
+            update_progress(session_id, {
+                "message": "의약품 및 관련 정보 검색 중...",
+                "active_agent": "info_retrieval"
+            })
+        
         # 입력 state를 subgraph state로 변환
         subgraph_state = InfoRetrievalToolState(
             messages=state.get("messages", []),
@@ -392,6 +406,14 @@ class InfoRetrievalWithTools:
         # Subgraph 실행
         try:
             result = await self.graph.ainvoke(subgraph_state)
+            
+            # 진행 상황 업데이트
+            if session_id:
+                tools_used = result.get("context", {}).get("tools_used", [])
+                update_progress(session_id, {
+                    "message": f"정보 검색 완료 (도구 {len(tools_used)}개 사용)",
+                    "active_agent": "info_retrieval"
+                })
             
             return {
                 "messages": result.get("messages", []),
@@ -409,6 +431,15 @@ class InfoRetrievalWithTools:
             
         except Exception as e:
             logger.error(f"InfoRetrieval with Tools error: {e}")
+            
+            # 오류 상황 보고
+            if session_id:
+                update_progress(session_id, {
+                    "message": "정보 검색 중 오류 발생",
+                    "active_agent": "info_retrieval",
+                    "status": "error"
+                })
+            
             return {
                 "messages": [AIMessage(content=f"정보 검색 중 오류가 발생했습니다: {str(e)}")],
                 "agent_outputs": {"info_retrieval": {"error": str(e)}},

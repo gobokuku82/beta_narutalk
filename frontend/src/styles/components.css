@@ -34,6 +34,7 @@
 .message-text {
   margin: 10px 0;
   line-height: 1.5;
+  color: inherit;  /* 부모 요소의 색상을 상속받도록 설정 */
 }
 
 .analytics-results {

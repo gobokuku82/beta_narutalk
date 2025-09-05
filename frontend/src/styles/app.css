@@ -99,6 +99,7 @@ body {
 
 .message.assistant .message-content {
   background: white;
+  color: #333;  /* AI 응답 텍스트를 어두운 회색으로 설정 */
   border: 1px solid #e0e0e0;
   border-bottom-left-radius: 4px;
 }

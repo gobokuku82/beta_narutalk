@@ -1,0 +1,5 @@
+# Document
+
+Type: tailored_product_proposal
+
+{'role': 'user', 'content': 'generate a tailored product proposal'}

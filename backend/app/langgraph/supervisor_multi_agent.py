@@ -124,6 +124,42 @@ class MultiAgentSupervisor:
         
         return "info_retrieval"  # 기본값
     
+    async def _execute_agent_with_progress(self, agent, state: AgentState, agent_name: str, 
+                                           session_id: str, step: int, total_steps: int) -> Dict[str, Any]:
+        """에이전트 실행과 진행 상황 업데이트를 함께 처리"""
+        try:
+            # 시작 알림
+            update_progress(session_id, {
+                "current_step": step - 1,
+                "active_agent": agent_name,
+                "message": f"{agent_name} 처리 시작... ({step}/{total_steps})",
+                "status": "processing"
+            })
+            
+            # 에이전트 실행
+            result = await agent.process(state)
+            
+            # 완료 알림
+            update_progress(session_id, {
+                "current_step": step,
+                "active_agent": None,
+                "message": f"{agent_name} 완료 ({step}/{total_steps})",
+                "status": "processing" if step < total_steps else "finalizing"
+            })
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Agent {agent_name} execution failed: {e}")
+            update_progress(session_id, {
+                "current_step": step,
+                "active_agent": None,
+                "message": f"{agent_name} 처리 실패",
+                "status": "error",
+                "error_message": str(e)
+            })
+            raise e
+    
     async def execute_parallel_tasks(self, tasks: List[Dict], state: AgentState) -> Dict[str, Any]:
         """병렬 작업 실행"""
         logger.info(f"Executing {len(tasks)} tasks in parallel")
@@ -131,17 +167,23 @@ class MultiAgentSupervisor:
         # 진행 상황 업데이트
         session_id = state.get("session_id", "unknown")
         agent_list = [t["agent"] for t in tasks]
+        
+        # 초기 진행 상황 설정
         update_progress(session_id, {
             "status": "processing",
-            "message": f"{len(tasks)}개 작업을 병렬로 처리 중...",
+            "message": f"{len(tasks)}개 작업을 병렬로 처리 준비 중...",
             "total_steps": len(tasks),
             "current_step": 0,
-            "agents": agent_list
+            "agents": agent_list,
+            "active_agent": None
         })
+        
+        # 짧은 대기로 프론트엔드가 업데이트를 받을 시간 제공
+        await asyncio.sleep(0.1)
         
         # 병렬 실행할 작업들
         async_tasks = []
-        for task in tasks:
+        for i, task in enumerate(tasks):
             agent_name = task["agent"]
             if agent_name in self.agents:
                 agent = self.agents[agent_name]
@@ -149,8 +191,14 @@ class MultiAgentSupervisor:
                 # 각 에이전트에 전달할 state 수정
                 task_state = state.copy()
                 task_state["messages"] = [{"role": "user", "content": task["action"]}]
+                task_state["progress_info"] = {
+                    "session_id": session_id,
+                    "agent_index": i,
+                    "total_agents": len(tasks),
+                    "agent_name": agent_name
+                }
                 
-                async_tasks.append(agent.process(task_state))
+                async_tasks.append(self._execute_agent_with_progress(agent, task_state, agent_name, session_id, i + 1, len(tasks)))
         
         # 모든 작업 병렬 실행
         results = await asyncio.gather(*async_tasks, return_exceptions=True)
@@ -167,11 +215,12 @@ class MultiAgentSupervisor:
             agent_name = tasks[i]["agent"]
             combined_outputs[agent_name] = result.get("agent_outputs", {})
             
-            # 진행 상황 업데이트
+            # 완료 진행 상황 업데이트
             update_progress(session_id, {
                 "current_step": i + 1,
-                "active_agent": agent_name,
-                "message": f"{agent_name} 작업 완료"
+                "active_agent": None,
+                "message": f"{agent_name} 작업 완료 ({i + 1}/{len(tasks)})",
+                "status": "processing" if (i + 1) < len(tasks) else "finalizing"
             })
             
             # 메시지 수집
@@ -200,17 +249,40 @@ class MultiAgentSupervisor:
         """순차 작업 실행"""
         logger.info(f"Executing {len(tasks)} tasks sequentially")
         
+        session_id = state.get("session_id", "unknown")
+        agent_list = [t["agent"] for t in tasks]
+        
+        # 초기 진행 상황 설정
+        update_progress(session_id, {
+            "status": "processing",
+            "message": "순차 작업 시작...",
+            "total_steps": len(tasks),
+            "current_step": 0,
+            "agents": agent_list,
+            "active_agent": None
+        })
+        
+        await asyncio.sleep(0.1)
+        
         combined_outputs = {}
         combined_messages = []
         current_state = state.copy()
         
-        for task in tasks:
+        for idx, task in enumerate(tasks):
             agent_name = task["agent"]
             if agent_name not in self.agents:
                 logger.warning(f"Agent {agent_name} not found")
                 continue
             
             agent = self.agents[agent_name]
+            
+            # 시작 진행 상황 업데이트
+            update_progress(session_id, {
+                "current_step": idx,
+                "active_agent": agent_name,
+                "message": f"{agent_name} 처리 중... ({idx + 1}/{len(tasks)})",
+                "status": "processing"
+            })
             
             # 이전 결과를 context에 추가
             current_state["context"]["previous_outputs"] = combined_outputs
@@ -242,8 +314,23 @@ class MultiAgentSupervisor:
                 # State 업데이트
                 current_state["agent_outputs"] = combined_outputs
                 
+                # 완료 진행 상황 업데이트
+                update_progress(session_id, {
+                    "current_step": idx + 1,
+                    "active_agent": None,
+                    "message": f"{agent_name} 완료 ({idx + 1}/{len(tasks)})",
+                    "status": "processing" if (idx + 1) < len(tasks) else "finalizing"
+                })
+                
             except Exception as e:
                 logger.error(f"Task execution failed for {agent_name}: {e}")
+                update_progress(session_id, {
+                    "current_step": idx + 1,
+                    "active_agent": None,
+                    "message": f"{agent_name} 처리 중 오류 발생",
+                    "status": "error",
+                    "error_message": str(e)
+                })
         
         return {
             "agent_outputs": combined_outputs,
@@ -343,6 +430,16 @@ class MultiAgentSupervisor:
         
         # 최종 응답 생성
         final_response = await self.synthesize_response(result, plan)
+        
+        # 완료 진행 상황 업데이트
+        session_id = state.get("session_id", "unknown")
+        update_progress(session_id, {
+            "status": "completed",
+            "message": "모든 작업 완료",
+            "current_step": len(tasks),
+            "total_steps": len(tasks),
+            "agents": list(result.get("agent_outputs", {}).keys())
+        })
         
         return {
             "messages": [{"role": "assistant", "content": final_response}],

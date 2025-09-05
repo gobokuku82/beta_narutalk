@@ -5,6 +5,7 @@ import Spinner from './Spinner';
 import ProcessingStatus from './ProcessingStatus';
 import MultiStepSpinner from './MultiStepSpinner';
 import { chatService } from '../services/api';
+import '../styles/components.css';
 
 const ChatBot = () => {
   const [messages, setMessages] = useState([]);
@@ -27,22 +28,44 @@ const ChatBot = () => {
   });
   const [eventSource, setEventSource] = useState(null);
   const messagesEndRef = useRef(null);
+  const eventSourceRef = useRef(null);  // SSE 참조를 안전하게 관리
 
   // 메시지 영역 스크롤
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // SSE 연결 정리
+  const cleanupSSE = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    if (eventSource) {
+      eventSource.close();
+      setEventSource(null);
+    }
+  };
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // 컴포넌트 언마운트 시 SSE 정리
+  useEffect(() => {
+    return () => {
+      cleanupSSE();
+    };
+  }, []);
 
   // 에이전트 목록 로드
   useEffect(() => {
     const loadAgents = async () => {
       try {
         const response = await chatService.getAgents();
-        setAvailableAgents(response.agents || []);
+        // Extract agent names from the response
+        const agentNames = response.agents ? response.agents.map(agent => agent.name) : [];
+        setAvailableAgents(agentNames);
       } catch (error) {
         console.error('Failed to load agents:', error);
       }
@@ -83,38 +106,75 @@ const ChatBot = () => {
     let currentEventSource = null;
     const currentSessionId = sessionId || uuidv4();
     
+    // 기존 SSE 연결 정리
+    cleanupSSE();
+    
     try {
-      // SSE 연결 시작
-      if (isComplexMode && selectedAgents.length > 0) {
-        // 복합 모드일 때 SSE 연결
+      // SSE 연결 시작 - 단일 모드에서도 활성화
+      if (true) {  // 모든 모드에서 SSE 사용
+        // SSE 연결 생성
         currentEventSource = new EventSource(`http://localhost:8000/api/v1/chat/stream/${currentSessionId}`);
+        eventSourceRef.current = currentEventSource;
         setEventSource(currentEventSource);
+        
+        let connectionEstablished = false;
+        
+        currentEventSource.onopen = () => {
+          console.log('SSE connection opened');
+          connectionEstablished = true;
+        };
         
         currentEventSource.onmessage = (event) => {
           const data = JSON.parse(event.data);
           
-          if (data.type === 'progress') {
-            setProgressData({
-              currentStep: data.current_step || 0,
-              totalSteps: data.total_steps || selectedAgents.length,
-              agents: data.agents || selectedAgents,
+          console.log('SSE message:', data);
+          
+          if (data.type === 'connection') {
+            console.log('SSE connected:', data.session_id);
+          } else if (data.type === 'progress') {
+            // 진행 상황 업데이트 개선
+            const agents = data.agents || selectedAgents || [];
+            setProgressData(prev => ({
+              currentStep: data.current_step || prev.currentStep,
+              totalSteps: data.total_steps || agents.length || prev.totalSteps,
+              agents: agents,
               activeAgent: data.active_agent,
               message: data.message || '',
-              isVisible: true
-            });
+              isVisible: data.total_steps > 1 || agents.length > 1
+            }));
             
             if (data.active_agent) {
               setActiveAgents([data.active_agent]);
             }
-          } else if (data.type === 'completed' || data.type === 'error') {
-            currentEventSource.close();
-            setEventSource(null);
+            
+            // 상태가 finalizing이면 마지막 단계 표시
+            if (data.status === 'finalizing') {
+              setProcessingStatus('finalizing');
+            }
+          } else if (data.type === 'completed') {
+            console.log('Processing completed');
+            // 완료 후 짧은 대기
+            setTimeout(() => {
+              cleanupSSE();
+            }, 1000);
+          } else if (data.type === 'error') {
+            console.error('SSE error:', data.message);
+            cleanupSSE();
+          } else if (data.type === 'heartbeat') {
+            console.debug('Heartbeat received:', data.timestamp);
           }
         };
         
-        currentEventSource.onerror = () => {
-          currentEventSource.close();
-          setEventSource(null);
+        currentEventSource.onerror = (error) => {
+          console.error('SSE error:', error);
+          
+          // 연결이 실패한 경우만 종료
+          if (currentEventSource.readyState === EventSource.CLOSED) {
+            console.log('SSE connection closed');
+            cleanupSSE();
+          } else if (currentEventSource.readyState === EventSource.CONNECTING) {
+            console.log('SSE reconnecting...');
+          }
         };
       }
 
@@ -176,16 +236,15 @@ const ChatBot = () => {
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
-      // SSE 연결 종료
-      if (currentEventSource) {
-        currentEventSource.close();
-      }
-      setEventSource(null);
       setIsLoading(false);
-      setProcessingStatus(null);
-      setActiveAgents([]);
-      setActiveTools([]);
-      setProgressData(prev => ({ ...prev, isVisible: false }));
+      
+      // 지연된 상태 초기화 (마지막 메시지 표시를 위해)
+      setTimeout(() => {
+        setProcessingStatus(null);
+        setActiveAgents([]);
+        setActiveTools([]);
+        setProgressData(prev => ({ ...prev, isVisible: false }));
+      }, 2000);
     }
   };
 
