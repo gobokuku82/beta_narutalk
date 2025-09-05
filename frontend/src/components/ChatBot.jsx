@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import Message from './Message';
 import Spinner from './Spinner';
+import ProcessingStatus from './ProcessingStatus';
 import { chatService } from '../services/api';
 
 const ChatBot = () => {
@@ -9,6 +10,12 @@ const ChatBot = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState(null);
+  const [isComplexMode, setIsComplexMode] = useState(false);
+  const [selectedAgents, setSelectedAgents] = useState([]);
+  const [availableAgents, setAvailableAgents] = useState([]);
+  const [processingStatus, setProcessingStatus] = useState(null);
+  const [activeAgents, setActiveAgents] = useState([]);
+  const [activeTools, setActiveTools] = useState([]);
   const messagesEndRef = useRef(null);
 
   // 메시지 영역 스크롤
@@ -19,6 +26,19 @@ const ChatBot = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // 에이전트 목록 로드
+  useEffect(() => {
+    const loadAgents = async () => {
+      try {
+        const response = await chatService.getAgents();
+        setAvailableAgents(response.agents || []);
+      } catch (error) {
+        console.error('Failed to load agents:', error);
+      }
+    };
+    loadAgents();
+  }, []);
 
   // 메시지 전송
   const sendMessage = async () => {
@@ -35,10 +55,38 @@ const ChatBot = () => {
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
+    
+    // 처리 상태 초기화
+    setProcessingStatus('processing');
+    setActiveAgents([]);
+    setActiveTools([]);
 
     try {
-      // API 호출
-      const response = await chatService.sendMessage(inputValue, sessionId);
+      let response;
+      
+      // 복합 모드인 경우
+      if (isComplexMode && selectedAgents.length > 0) {
+        // 선택된 에이전트 표시
+        setActiveAgents(selectedAgents);
+        response = await chatService.sendComplexQuery(inputValue, sessionId, selectedAgents);
+      } else {
+        // 일반 모드
+        response = await chatService.sendMessage(inputValue, sessionId);
+      }
+      
+      // 사용된 에이전트와 도구 업데이트
+      if (response.metadata?.agent_outputs) {
+        const agents = Object.keys(response.metadata.agent_outputs);
+        setActiveAgents(agents);
+        
+        const tools = [];
+        Object.values(response.metadata.agent_outputs).forEach(output => {
+          if (output.tools_used) {
+            tools.push(...output.tools_used);
+          }
+        });
+        setActiveTools([...new Set(tools)]);
+      }
       
       // 세션 ID 업데이트
       if (response.session_id) {
@@ -73,7 +121,20 @@ const ChatBot = () => {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      setProcessingStatus(null);
+      setActiveAgents([]);
+      setActiveTools([]);
     }
+  };
+
+  // 에이전트 선택 토글
+  const toggleAgentSelection = (agent) => {
+    setSelectedAgents(prev => {
+      if (prev.includes(agent)) {
+        return prev.filter(a => a !== agent);
+      }
+      return [...prev, agent];
+    });
   };
 
   // Enter 키 처리
@@ -95,11 +156,53 @@ const ChatBot = () => {
       {/* 헤더 */}
       <div className="chat-header">
         <h1>AI Assistant</h1>
-        <div className="status-indicator">
-          <span className="status-dot"></span>
-          <span>온라인</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <button 
+            className="complex-query-button"
+            onClick={() => setIsComplexMode(!isComplexMode)}
+            disabled={isLoading}
+          >
+            {isComplexMode ? '일반 모드' : '복합 질의'}
+          </button>
+          <div className="status-indicator">
+            <span className="status-dot"></span>
+            <span>온라인</span>
+          </div>
         </div>
       </div>
+      
+      {/* 복합 모드 에이전트 선택 */}
+      {isComplexMode && (
+        <div style={{ 
+          padding: '10px 20px', 
+          background: '#f8f9fa',
+          borderBottom: '1px solid #e0e0e0'
+        }}>
+          <div style={{ fontSize: '14px', marginBottom: '8px', color: '#666' }}>
+            사용할 에이전트 선택:
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {availableAgents.map(agent => (
+              <button
+                key={agent}
+                onClick={() => toggleAgentSelection(agent)}
+                style={{
+                  padding: '5px 12px',
+                  border: '1px solid #007bff',
+                  borderRadius: '15px',
+                  background: selectedAgents.includes(agent) ? '#007bff' : 'white',
+                  color: selectedAgents.includes(agent) ? 'white' : '#007bff',
+                  cursor: 'pointer',
+                  fontSize: '13px'
+                }}
+                disabled={isLoading}
+              >
+                {agent}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 메시지 영역 */}
       <div className="messages-container">
@@ -116,7 +219,15 @@ const ChatBot = () => {
           <Message key={message.id} message={message} />
         ))}
         
-        {isLoading && (
+        {isLoading && processingStatus && (
+          <ProcessingStatus 
+            status={processingStatus}
+            agents={activeAgents}
+            tools={activeTools}
+          />
+        )}
+        
+        {isLoading && !processingStatus && (
           <Spinner 
             show={true} 
             text="AI가 응답을 생성하고 있습니다..." 

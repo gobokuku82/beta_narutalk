@@ -8,6 +8,76 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const Visualization = ({ data }) => {
   if (!data) return null;
+  
+  // 도구별 결과 처리
+  const processToolResult = (toolData) => {
+    // 데이터베이스 쿼리 결과
+    if (toolData.tool === 'database_query') {
+      return {
+        type: 'table',
+        title: toolData.query || '데이터베이스 조회 결과',
+        data: {
+          columns: toolData.columns || [],
+          rows: toolData.results || []
+        }
+      };
+    }
+    
+    // 분석 도구 결과
+    if (toolData.tool === 'analytics') {
+      return {
+        type: 'chart',
+        title: toolData.title || '분석 결과',
+        chartType: toolData.chartType || 'bar',
+        data: toolData.data || []
+      };
+    }
+    
+    // 컴플라이언스 체크 결과
+    if (toolData.tool === 'compliance_check') {
+      return {
+        type: 'html',
+        title: '컴플라이언스 체크 결과',
+        data: formatComplianceResult(toolData)
+      };
+    }
+    
+    return toolData;
+  };
+  
+  // 컴플라이언스 결과 포맷팅
+  const formatComplianceResult = (result) => {
+    const status = result.compliant ? 
+      '<span style="color: green; font-weight: bold;">✓ 준수</span>' : 
+      '<span style="color: red; font-weight: bold;">✗ 미준수</span>';
+    
+    let html = `<div>
+      <p><strong>상태:</strong> ${status}</p>`;
+    
+    if (result.issues && result.issues.length > 0) {
+      html += '<p><strong>문제점:</strong></p><ul>';
+      result.issues.forEach(issue => {
+        html += `<li>${issue}</li>`;
+      });
+      html += '</ul>';
+    }
+    
+    if (result.recommendations) {
+      html += '<p><strong>권장사항:</strong></p><ul>';
+      result.recommendations.forEach(rec => {
+        html += `<li>${rec}</li>`;
+      });
+      html += '</ul>';
+    }
+    
+    html += '</div>';
+    return html;
+  };
+  
+  // 도구 결과인 경우 처리
+  if (data.toolResult) {
+    data = processToolResult(data.toolResult);
+  }
 
   // 차트 렌더링
   const renderChart = (chartData, type) => {
@@ -110,7 +180,7 @@ const Visualization = ({ data }) => {
       {data.title && <div className="visualization-title">{data.title}</div>}
       
       {data.type === 'chart' && (
-        <div className="chart-container">
+        <div className="chart-container" style={{ height: '300px' }}>
           {renderChart(data.data, data.chartType || 'bar')}
         </div>
       )}
@@ -123,7 +193,14 @@ const Visualization = ({ data }) => {
         <div style={{ padding: '10px' }}>
           {typeof data.data === 'string' 
             ? data.data 
-            : JSON.stringify(data.data, null, 2)}
+            : <pre style={{ 
+                background: '#f5f5f5', 
+                padding: '10px', 
+                borderRadius: '4px',
+                overflow: 'auto'
+              }}>
+                {JSON.stringify(data.data, null, 2)}
+              </pre>}
         </div>
       )}
     </div>

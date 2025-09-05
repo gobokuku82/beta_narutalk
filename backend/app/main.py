@@ -6,11 +6,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
-from loguru import logger
+import logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 from app.api.v1 import chat, session, database, upload
 from app.core.config import settings
-from app.langgraph.supervisor_graph import create_supervisor_graph
+from app.langgraph.supervisor_multi_agent import create_multi_agent_supervisor_graph
 
 # Supervisor 그래프 전역 변수
 supervisor_app = None
@@ -25,9 +27,9 @@ async def lifespan(app: FastAPI):
     logger.info(f"LangGraph 버전: 0.6.6")
     logger.info(f"Python 버전: 3.12")
     
-    # Supervisor 그래프 초기화
-    supervisor_app = create_supervisor_graph()
-    logger.info("✅ Supervisor 그래프 초기화 완료")
+    # Multi-Agent Supervisor 그래프 초기화
+    supervisor_app = create_multi_agent_supervisor_graph()
+    logger.info("Supervisor graph initialized")
     
     yield
     

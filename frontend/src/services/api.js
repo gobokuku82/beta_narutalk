@@ -25,10 +25,36 @@ export const chatService = {
     }
   },
 
+  // 복합 질의 전송 (여러 에이전트 사용)
+  sendComplexQuery: async (query, sessionId = null, agents = null) => {
+    try {
+      const response = await api.post('/api/v1/chat/complex', {
+        query: query,
+        session_id: sessionId,
+        agents: agents
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Complex Query Error:', error);
+      throw error;
+    }
+  },
+
   // 에이전트 목록 조회
   getAgents: async () => {
     try {
       const response = await api.get('/api/v1/chat/agents');
+      return response.data;
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
+    }
+  },
+
+  // 도구 목록 조회
+  getTools: async () => {
+    try {
+      const response = await api.get('/api/v1/chat/tools');
       return response.data;
     } catch (error) {
       console.error('API Error:', error);

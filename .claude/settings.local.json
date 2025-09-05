@@ -11,7 +11,12 @@
       "Bash(npm uninstall:*)",
       "Bash(tree:*)",
       "WebFetch(domain:langchain-ai.github.io)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(python:*)",
+      "Bash(for:*)",
+      "Bash(do echo \"Checking $file\")",
+      "Bash(echo:*)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

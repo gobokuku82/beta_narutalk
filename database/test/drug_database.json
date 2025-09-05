@@ -1,0 +1,244 @@
+{
+  "drugs": [
+    {
+      "id": "D001",
+      "generic_name": "Aspirin",
+      "korean_name": "아스피린",
+      "brand_names": ["바이엘 아스피린", "아스트릭스", "프로텍트"],
+      "category": "해열진통제",
+      "indication": ["해열", "진통", "혈전 예방", "심근경색 예방"],
+      "dosage": {
+        "adult": "100-500mg, 1일 1-3회",
+        "child": "체중 1kg당 10-15mg"
+      },
+      "side_effects": ["위장 장애", "출혈 위험 증가", "알레르기 반응"],
+      "contraindications": ["위궤양", "혈우병", "아스피린 과민증"],
+      "price": 5000,
+      "manufacturer": "바이엘코리아"
+    },
+    {
+      "id": "D002",
+      "generic_name": "Metformin",
+      "korean_name": "메트포르민",
+      "brand_names": ["글루코파지", "다이아벡스", "메트포민정"],
+      "category": "당뇨병 치료제",
+      "indication": ["제2형 당뇨병"],
+      "dosage": {
+        "adult": "500-2000mg, 1일 2-3회",
+        "child": "10세 이상: 500mg 1일 2회"
+      },
+      "side_effects": ["구역", "설사", "복부 불편감", "비타민 B12 결핍"],
+      "contraindications": ["신부전", "간부전", "심부전", "젖산혈증"],
+      "price": 8000,
+      "manufacturer": "한독약품"
+    },
+    {
+      "id": "D003",
+      "generic_name": "Atorvastatin",
+      "korean_name": "아토르바스타틴",
+      "brand_names": ["리피토", "아토르바", "리피논"],
+      "category": "고지혈증 치료제",
+      "indication": ["고콜레스테롤혈증", "이상지질혈증", "심혈관 질환 예방"],
+      "dosage": {
+        "adult": "10-80mg, 1일 1회",
+        "child": "10세 이상: 10mg 1일 1회"
+      },
+      "side_effects": ["근육통", "간수치 상승", "소화불량"],
+      "contraindications": ["임신", "수유", "활동성 간질환"],
+      "price": 15000,
+      "manufacturer": "화이자"
+    },
+    {
+      "id": "D004",
+      "generic_name": "Amlodipine",
+      "korean_name": "암로디핀",
+      "brand_names": ["노바스크", "암로핀", "로디핀"],
+      "category": "고혈압 치료제",
+      "indication": ["고혈압", "협심증"],
+      "dosage": {
+        "adult": "5-10mg, 1일 1회",
+        "child": "6세 이상: 2.5-5mg 1일 1회"
+      },
+      "side_effects": ["부종", "두통", "어지러움", "안면홍조"],
+      "contraindications": ["중증 대동맥 협착증", "쇼크", "불안정 협심증"],
+      "price": 10000,
+      "manufacturer": "한미약품"
+    },
+    {
+      "id": "D005",
+      "generic_name": "Omeprazole",
+      "korean_name": "오메프라졸",
+      "brand_names": ["로섹", "오메프라", "오엠피"],
+      "category": "위산분비억제제",
+      "indication": ["위궤양", "십이지장궤양", "역류성 식도염", "헬리코박터 제균"],
+      "dosage": {
+        "adult": "20-40mg, 1일 1회",
+        "child": "10kg 이상: 10-20mg 1일 1회"
+      },
+      "side_effects": ["두통", "설사", "변비", "복통"],
+      "contraindications": ["오메프라졸 과민증"],
+      "price": 12000,
+      "manufacturer": "아스트라제네카"
+    },
+    {
+      "id": "D006",
+      "generic_name": "Losartan",
+      "korean_name": "로사르탄",
+      "brand_names": ["코자", "로사탄", "사르탄"],
+      "category": "고혈압 치료제",
+      "indication": ["고혈압", "당뇨병성 신증", "심부전"],
+      "dosage": {
+        "adult": "50-100mg, 1일 1회",
+        "child": "6세 이상: 0.7mg/kg 1일 1회"
+      },
+      "side_effects": ["어지러움", "고칼륨혈증", "기침"],
+      "contraindications": ["임신", "양측 신동맥 협착", "고칼륨혈증"],
+      "price": 9000,
+      "manufacturer": "MSD"
+    },
+    {
+      "id": "D007",
+      "generic_name": "Levothyroxine",
+      "korean_name": "레보티록신",
+      "brand_names": ["씬지로이드", "레보티록", "티로신"],
+      "category": "갑상선호르몬제",
+      "indication": ["갑상선기능저하증", "갑상선종", "갑상선암 수술 후"],
+      "dosage": {
+        "adult": "25-200mcg, 1일 1회 공복",
+        "child": "연령별 용량 조절 필요"
+      },
+      "side_effects": ["심계항진", "체중감소", "불면증", "발한증가"],
+      "contraindications": ["급성 심근경색", "부신기능부전", "갑상선중독증"],
+      "price": 7000,
+      "manufacturer": "부광약품"
+    },
+    {
+      "id": "D008",
+      "generic_name": "Clopidogrel",
+      "korean_name": "클로피도그렐",
+      "brand_names": ["플라빅스", "플래리스", "클로픽스"],
+      "category": "항혈소판제",
+      "indication": ["심근경색", "뇌졸중", "말초동맥질환"],
+      "dosage": {
+        "adult": "75mg, 1일 1회",
+        "child": "사용 권장하지 않음"
+      },
+      "side_effects": ["출혈", "멍", "소화불량"],
+      "contraindications": ["활동성 출혈", "중증 간장애"],
+      "price": 20000,
+      "manufacturer": "사노피"
+    },
+    {
+      "id": "D009",
+      "generic_name": "Rosuvastatin",
+      "korean_name": "로수바스타틴",
+      "brand_names": ["크레스토", "로수젯", "비바스트"],
+      "category": "고지혈증 치료제",
+      "indication": ["고콜레스테롤혈증", "이상지질혈증"],
+      "dosage": {
+        "adult": "5-20mg, 1일 1회",
+        "child": "10세 이상: 5-10mg 1일 1회"
+      },
+      "side_effects": ["근육통", "두통", "복통"],
+      "contraindications": ["임신", "수유", "활동성 간질환"],
+      "price": 18000,
+      "manufacturer": "아스트라제네카"
+    },
+    {
+      "id": "D010",
+      "generic_name": "Sitagliptin",
+      "korean_name": "시타글립틴",
+      "brand_names": ["자누비아", "시타글립", "글립틴"],
+      "category": "당뇨병 치료제",
+      "indication": ["제2형 당뇨병"],
+      "dosage": {
+        "adult": "100mg, 1일 1회",
+        "child": "18세 미만 사용 권장하지 않음"
+      },
+      "side_effects": ["상기도감염", "두통", "저혈당"],
+      "contraindications": ["제1형 당뇨병", "당뇨병성 케톤산증"],
+      "price": 25000,
+      "manufacturer": "MSD"
+    },
+    {
+      "id": "D011",
+      "generic_name": "Empagliflozin",
+      "korean_name": "엠파글리플로진",
+      "brand_names": ["자디앙", "엠파글리", "글리플로진"],
+      "category": "당뇨병 치료제(SGLT2 억제제)",
+      "indication": ["제2형 당뇨병", "심부전", "만성신장질환"],
+      "dosage": {
+        "adult": "10-25mg, 1일 1회",
+        "child": "18세 미만 사용 권장하지 않음"
+      },
+      "side_effects": ["요로감염", "생식기 감염", "탈수", "케톤산증"],
+      "contraindications": ["제1형 당뇨병", "중증 신장애", "투석 환자"],
+      "price": 30000,
+      "manufacturer": "베링거인겔하임"
+    },
+    {
+      "id": "D012",
+      "generic_name": "Rivaroxaban",
+      "korean_name": "리바록사반",
+      "brand_names": ["자렐토", "리바록스", "록사반"],
+      "category": "항응고제",
+      "indication": ["심방세동", "정맥혈전증", "폐색전증"],
+      "dosage": {
+        "adult": "10-20mg, 1일 1-2회",
+        "child": "체중별 용량 조절"
+      },
+      "side_effects": ["출혈", "빈혈", "혈종"],
+      "contraindications": ["활동성 출혈", "중증 간장애", "임신"],
+      "price": 35000,
+      "manufacturer": "바이엘"
+    },
+    {
+      "id": "D013",
+      "generic_name": "Candesartan",
+      "korean_name": "칸데사르탄",
+      "brand_names": ["아타칸", "칸데사", "블로프레스"],
+      "category": "고혈압 치료제",
+      "indication": ["고혈압", "심부전"],
+      "dosage": {
+        "adult": "8-32mg, 1일 1회",
+        "child": "6세 이상: 2-16mg 1일 1회"
+      },
+      "side_effects": ["어지러움", "두통", "고칼륨혈증"],
+      "contraindications": ["임신", "양측 신동맥 협착", "중증 간장애"],
+      "price": 11000,
+      "manufacturer": "아스트라제네카"
+    },
+    {
+      "id": "D014",
+      "generic_name": "Duloxetine",
+      "korean_name": "둘록세틴",
+      "brand_names": ["심발타", "둘록스", "사이발타"],
+      "category": "항우울제",
+      "indication": ["우울증", "당뇨병성 신경병증", "섬유근육통"],
+      "dosage": {
+        "adult": "30-60mg, 1일 1-2회",
+        "child": "7세 이상: 30mg 1일 1회"
+      },
+      "side_effects": ["구역", "구갈", "변비", "어지러움"],
+      "contraindications": ["MAO 억제제 병용", "중증 신장애", "조절되지 않는 녹내장"],
+      "price": 22000,
+      "manufacturer": "한국릴리"
+    },
+    {
+      "id": "D015",
+      "generic_name": "Pregabalin",
+      "korean_name": "프레가발린",
+      "brand_names": ["리리카", "프레가", "뉴론틴"],
+      "category": "항경련제/진통제",
+      "indication": ["신경병증성 통증", "간질", "섬유근육통"],
+      "dosage": {
+        "adult": "75-600mg, 1일 2-3회 분할",
+        "child": "체중별 용량 조절"
+      },
+      "side_effects": ["어지러움", "졸림", "체중증가", "부종"],
+      "contraindications": ["프레가발린 과민증"],
+      "price": 28000,
+      "manufacturer": "화이자"
+    }
+  ]
+}
