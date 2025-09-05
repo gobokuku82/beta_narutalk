@@ -8,7 +8,9 @@
       "Bash(npm install)",
       "Bash(npm install:*)",
       "Bash(npx tailwindcss init:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(tree:*)",
+      "WebFetch(domain:langchain-ai.github.io)"
     ],
     "deny": [],
     "ask": []
