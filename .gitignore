@@ -38,12 +38,12 @@ models/
 .env.*.local
 
 # Data
-data/sqlite/*.db
-data/sqlite/*.db-journal
-data/chroma/
-data/checkpoints/
-data/storage/
-logs/
+# data/sqlite/*.db
+# data/sqlite/*.db-journal
+# data/chroma/
+# data/checkpoints/
+# data/storage/
+# logs/
 
 # IDE
 .vscode/
