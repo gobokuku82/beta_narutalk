@@ -1,9 +1,0 @@
-## 의약품 정보
-
-**제품명**: {product_name}
-**성분명**: {generic_name}
-**제조사**: {manufacturer}
-**적응증**: {indication}
-**용법용량**: {dosage}
-**부작용**: {side_effects}
-**주의사항**: {precautions}
