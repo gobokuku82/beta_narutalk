@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir prompts agents strategies)",
+      "Bash(python database/raw_data/realtion_db/merge_excel.py)",
+      "Bash(python:*)",
+      "Bash(dir:*)",
+      "Bash(cp:*)",
+      "WebSearch"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
