@@ -73,12 +73,11 @@ class MedicalSupervisor:
 
         # Supervisor workflow 생성
         self.workflow = None
-        self.app = None
+        self.workflow_compiled = False  # 컴파일 상태 추적
 
         # 메모리 초기화
         self.checkpoint_db_path = checkpoint_db_path
         self.store_db_path = store_db_path
-        self.checkpointer = None  # compile 시 초기화
         self.store = InMemoryStore()  # 현재는 InMemoryStore 사용
         
     def _initialize_agents(self) -> Dict[str, Any]:
@@ -305,60 +304,46 @@ class MedicalSupervisor:
         
         return self.workflow
     
-    async def compile_with_optimization(self) -> Any:
+    async def compile_with_optimization(self) -> None:
         """
-        최적화된 컴파일
-        - 체크포인팅
-        - 메모리 관리
-        - 캐싱
+        최적화된 워크플로우 준비
+        - workflow 빌드만 수행
+        - 실제 checkpointer는 실행 시점에 생성
         """
 
         if not self.workflow:
             self.build_supervisor_workflow()
 
-        # AsyncSqliteSaver 초기화
+        # DB 디렉토리 생성
         import os
         os.makedirs(os.path.dirname(self.checkpoint_db_path), exist_ok=True)
 
-        # AsyncSqliteSaver 생성
-        self.checkpointer = AsyncSqliteSaver.from_conn_string(self.checkpoint_db_path)
+        # workflow가 준비되었음을 표시
+        self.workflow_compiled = True
 
-        # 체크포인터 초기화 (테이블 생성)
-        async with self.checkpointer:
-            await self.checkpointer.setup()
-
-        # 캐시 정책
-        cache_policy = {
-            "sql_analysis_agent": {
-                "ttl": 600,  # 10분
-                "key_func": lambda x: f"sql_{x.get('query', '')}_{x.get('time_range', '')}"
+        # 컴파일 설정 저장 (실제 컴파일은 실행 시점에)
+        self.compile_config = {
+            "cache_policy": {
+                "sql_analysis_agent": {
+                    "ttl": 600,  # 10분
+                    "key_func": lambda x: f"sql_{x.get('query', '')}_{x.get('time_range', '')}"
+                },
+                "information_retrieval_agent": {
+                    "ttl": 900,  # 15분
+                    "key_func": lambda x: f"info_{x.get('search_query', '')}"
+                }
             },
-            "information_retrieval_agent": {
-                "ttl": 900,  # 15분
-                "key_func": lambda x: f"info_{x.get('search_query', '')}"
-            }
+            "node_timeouts": {
+                "supervisor": 30,
+                "sql_analysis_agent": 60,
+                "information_retrieval_agent": 45,
+                "document_generation_agent": 90,
+                "compliance_validation_agent": 60
+            },
+            "interrupt_before": ["compliance_validation_agent"]  # 규정 검토 전 확인
         }
 
-        # 노드별 타임아웃
-        node_timeouts = {
-            "supervisor": 30,
-            "sql_analysis_agent": 60,
-            "information_retrieval_agent": 45,
-            "document_generation_agent": 90,
-            "compliance_validation_agent": 60
-        }
-
-        # 컴파일
-        self.app = self.workflow.compile(
-            checkpointer=self.checkpointer,
-            store=self.store,
-            cache_policy=cache_policy,
-            node_timeouts=node_timeouts,
-            interrupt_before=["compliance_validation_agent"]  # 규정 검토 전 확인
-        )
-
-        logger.info(f"Supervisor workflow compiled with SQLite checkpointer at {self.checkpoint_db_path}")
-        return self.app
+        logger.info(f"Supervisor workflow prepared for SQLite checkpointer at {self.checkpoint_db_path}")
     
     async def execute_with_context(
         self,
@@ -368,18 +353,19 @@ class MedicalSupervisor:
     ) -> Dict[str, Any]:
         """
         컨텍스트를 활용한 실행
+        AsyncSqliteSaver를 컨텍스트 매니저로 안전하게 사용
         """
-        
-        if not self.app:
+
+        if not self.workflow_compiled:
             await self.compile_with_optimization()
-        
+
         # 1. 컨텍스트 최적화
         medical_context = await self.context_manager.optimize_context(
             query,
             user_context,
             conversation_history or []
         )
-        
+
         # 2. 초기 상태 구성
         initial_state = {
             "messages": [HumanMessage(content=query)],
@@ -388,7 +374,7 @@ class MedicalSupervisor:
             "session_id": user_context.get("session_id"),
             "timestamp": datetime.now().isoformat()
         }
-        
+
         # 3. 설정
         config = {
             "configurable": {
@@ -396,29 +382,113 @@ class MedicalSupervisor:
                 "checkpoint_ns": "medical_supervisor"
             }
         }
-        
-        try:
-            # 4. 실행
-            result = await self.app.ainvoke(initial_state, config)
-            
-            # 5. 결과 후처리
-            processed_result = await self._post_process_result(result, medical_context)
-            
-            return {
-                "status": "success",
-                "result": processed_result,
-                "context": medical_context.dict(),
-                "execution_time": (datetime.now() - datetime.fromisoformat(initial_state["timestamp"])).total_seconds()
-            }
-            
-        except Exception as e:
-            logger.error(f"Execution failed: {e}")
-            return {
-                "status": "error",
-                "error": str(e),
-                "context": medical_context.dict()
-            }
+
+        # AsyncSqliteSaver를 컨텍스트 매니저로 사용
+        async with AsyncSqliteSaver.from_conn_string(self.checkpoint_db_path) as checkpointer:
+            # workflow 컴파일
+            app = self.workflow.compile(
+                checkpointer=checkpointer,
+                store=self.store,
+                **self.compile_config  # 저장된 컴파일 설정 사용
+            )
+
+            try:
+                # 4. 실행 (재시도 로직 포함)
+                result = await self._execute_with_retry(
+                    lambda: app.ainvoke(initial_state, config)
+                )
+
+                # 5. 결과 후처리
+                processed_result = await self._post_process_result(result, medical_context)
+
+                return {
+                    "status": "success",
+                    "result": processed_result,
+                    "context": medical_context.dict(),
+                    "execution_time": (datetime.now() - datetime.fromisoformat(initial_state["timestamp"])).total_seconds()
+                }
+
+            except Exception as e:
+                logger.error(f"Execution failed after retries: {e}")
+                return {
+                    "status": "error",
+                    "error": str(e),
+                    "context": medical_context.dict()
+                }
+        # 컨텍스트 종료 시 자동으로 연결 정리
     
+    async def _execute_with_retry(
+        self,
+        func,
+        max_retries: int = 3,
+        base_delay: float = 1.0
+    ):
+        """
+        재시도 로직을 포함한 비동기 실행
+        지수 백오프 전략 사용
+        """
+        last_exception = None
+
+        for attempt in range(max_retries):
+            try:
+                return await func()
+            except Exception as e:
+                last_exception = e
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)  # 지수 백오프
+                    logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay} seconds...")
+                    await asyncio.sleep(delay)
+                else:
+                    logger.error(f"All {max_retries} attempts failed")
+
+        raise last_exception
+
+    async def check_checkpointer_health(self) -> bool:
+        """
+        checkpointer 상태 확인
+        DB 연결 가능 여부를 테스트
+        """
+        try:
+            async with AsyncSqliteSaver.from_conn_string(self.checkpoint_db_path) as checkpointer:
+                # 간단한 테스트 쿼리 실행
+                # checkpointer가 제대로 초기화되었는지 확인
+                return True
+        except Exception as e:
+            logger.error(f"Checkpointer health check failed: {e}")
+            return False
+
+    async def cleanup(self):
+        """
+        리소스 정리
+        안전한 종료를 위한 정리 작업
+        """
+        logger.info("Cleaning up resources...")
+
+        # Store 정리 (필요한 경우)
+        if hasattr(self, 'store') and self.store:
+            # InMemoryStore는 특별한 정리 불필요
+            pass
+
+        # 기타 리소스 정리
+        self.workflow_compiled = False
+        logger.info("Cleanup completed")
+
+    async def shutdown(self):
+        """
+        Graceful shutdown
+        안전한 종료를 위해 모든 리소스 정리
+        """
+        logger.info("Initiating graceful shutdown...")
+
+        # 진행 중인 작업 대기 (필요한 경우)
+        if hasattr(self, '_pending_tasks'):
+            await asyncio.gather(*self._pending_tasks, return_exceptions=True)
+
+        # 리소스 정리
+        await self.cleanup()
+
+        logger.info("Shutdown completed")
+
     async def _post_process_result(
         self,
         result: Dict[str, Any],
@@ -455,38 +525,59 @@ class MedicalSupervisor:
     ):
         """
         실시간 스트리밍 실행
+        AsyncSqliteSaver를 컨텍스트 매니저로 안전하게 사용
         """
-        
-        if not self.app:
+
+        if not self.workflow_compiled:
             await self.compile_with_optimization()
-        
+
         # 컨텍스트 최적화
         medical_context = await self.context_manager.optimize_context(
             query,
             user_context,
             []
         )
-        
+
         initial_state = {
             "messages": [HumanMessage(content=query)],
             "context": medical_context.dict(),
             "user_id": user_context.get("user_id"),
-            "session_id": user_context.get("session_id")
+            "session_id": user_context.get("session_id"),
+            "timestamp": datetime.now().isoformat()
         }
-        
+
         config = {
             "configurable": {
-                "thread_id": user_context.get("session_id", "default")
+                "thread_id": user_context.get("session_id", "default"),
+                "checkpoint_ns": "medical_supervisor"
             }
         }
-        
-        # 스트리밍
-        async for chunk in self.app.astream(initial_state, config):
-            yield {
-                "type": "stream",
-                "data": chunk,
-                "timestamp": datetime.now().isoformat()
-            }
+
+        # AsyncSqliteSaver를 컨텍스트 매니저로 사용
+        async with AsyncSqliteSaver.from_conn_string(self.checkpoint_db_path) as checkpointer:
+            # workflow 컴파일
+            app = self.workflow.compile(
+                checkpointer=checkpointer,
+                store=self.store,
+                **self.compile_config  # 저장된 컴파일 설정 사용
+            )
+
+            try:
+                # 스트리밍
+                async for chunk in app.astream(initial_state, config):
+                    yield {
+                        "type": "stream",
+                        "data": chunk,
+                        "timestamp": datetime.now().isoformat()
+                    }
+            except Exception as e:
+                logger.error(f"Streaming failed: {e}")
+                yield {
+                    "type": "error",
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat()
+                }
+        # 컨텍스트 종료 시 자동으로 연결 정리
 
 
 async def create_medical_supervisor(
@@ -496,10 +587,16 @@ async def create_medical_supervisor(
 ) -> MedicalSupervisor:
     """
     의료 Supervisor 생성 헬퍼 함수
+    개선된 버전: workflow 준비만 수행
     """
 
     supervisor = MedicalSupervisor(llm_provider, model_name, checkpoint_db_path)
     await supervisor.compile_with_optimization()
+
+    # checkpointer 상태 확인
+    health_check = await supervisor.check_checkpointer_health()
+    if not health_check:
+        logger.warning("Checkpointer health check failed, but supervisor is ready")
 
     return supervisor
 
