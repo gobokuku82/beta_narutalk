@@ -1,6 +1,87 @@
 {
+  "metadata": {
+    "generated_at": "2025-01-17",
+    "total_databases": 5,
+    "total_tables": 6,
+    "total_records": 9011,
+    "description": "Medical Sales CRM System Database Schema",
+    "version": "1.1"
+  },
+  "relationships": {
+    "primary_keys": {
+      "인사자료": ["사번"],
+      "거래처정보": ["ID"],
+      "sales_performance": ["사번", "거래처ID", "품목"],
+      "거래처자료": ["거래처ID", "월"],
+      "지점별목표": ["지점", "담당자"],
+      "지점연락처": ["본부", "부서", "지점"]
+    },
+    "foreign_keys": [
+      {
+        "from_table": "sales_performance",
+        "from_column": "사번",
+        "to_table": "인사자료",
+        "to_column": "사번",
+        "relationship": "many_to_one"
+      },
+      {
+        "from_table": "sales_performance",
+        "from_column": "거래처ID",
+        "to_table": "거래처정보",
+        "to_column": "ID",
+        "relationship": "many_to_one"
+      },
+      {
+        "from_table": "거래처자료",
+        "from_column": "거래처ID",
+        "to_table": "거래처정보",
+        "to_column": "ID",
+        "relationship": "many_to_one"
+      },
+      {
+        "from_table": "거래처자료",
+        "from_column": "담당자",
+        "to_table": "인사자료",
+        "to_column": "성명",
+        "relationship": "many_to_one",
+        "note": "weak_reference_by_name"
+      },
+      {
+        "from_table": "지점별목표",
+        "from_column": "지점",
+        "to_table": "지점연락처",
+        "to_column": "지점",
+        "relationship": "many_to_one"
+      },
+      {
+        "from_table": "지점별목표",
+        "from_column": "담당자",
+        "to_table": "인사자료",
+        "to_column": "성명",
+        "relationship": "many_to_one",
+        "note": "weak_reference_by_name"
+      },
+      {
+        "from_table": "인사자료",
+        "from_column": "지점",
+        "to_table": "지점연락처",
+        "to_column": "지점",
+        "relationship": "many_to_one"
+      }
+    ],
+    "indexes_recommended": [
+      "sales_performance.사번",
+      "sales_performance.거래처ID",
+      "sales_performance.담당자",
+      "거래처자료.거래처ID",
+      "거래처자료.월",
+      "거래처자료.담당자",
+      "거래처정보.지역구"
+    ]
+  },
   "hr_data.db": {
     "path": "database\\hr_information\\hr_data.db",
+    "description": "Human Resources Management Database",
     "tables": {
       "인사자료": {
         "columns": [
@@ -145,6 +226,7 @@
   },
   "sales_performance_db.db": {
     "path": "database\\sales_performance_db\\sales_performance_db.db",
+    "description": "Sales Performance Tracking Database",
     "tables": {
       "sales_performance": {
         "columns": [
@@ -380,6 +462,7 @@
   },
   "clients_db.db": {
     "path": "database\\sales_performance_db\\clients_db.db",
+    "description": "Client Transaction History Database",
     "tables": {
       "거래처자료": {
         "columns": [
@@ -447,6 +530,7 @@
   },
   "sales_target_db.db": {
     "path": "database\\sales_performance_db\\sales_target_db.db",
+    "description": "Sales Target Management Database",
     "tables": {
       "지점별목표": {
         "columns": [
@@ -570,6 +654,7 @@
   },
   "clients_info.db": {
     "path": "database\\sales_performance_db\\clients_info.db",
+    "description": "Client Master Information Database",
     "tables": {
       "거래처정보": {
         "columns": [
