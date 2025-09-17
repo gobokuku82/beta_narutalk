@@ -15,8 +15,8 @@ from datetime import datetime
 import aiofiles
 import asyncio
 
-from .database import get_db
-from .db_manager import DatabaseManager
+from ..system.connection import get_db
+from ..system.db_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)
 

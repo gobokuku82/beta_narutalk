@@ -168,7 +168,7 @@ async def main():
         # 1. Database API 시작 (Port 8002)
         manager.start_server(
             "Database API",
-            "database.main:app",
+            "database.api.main:app",
             8002
         )
 

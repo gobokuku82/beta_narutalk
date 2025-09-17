@@ -27,22 +27,22 @@ class DatabaseManager:
         # Database configuration
         self.databases = {
             "hr": {
-                "path": "database/hr_information/hr_data.db",
+                "path": "database/storage/hr_information/hr_data.db",
                 "description": "인사정보 데이터베이스",
                 "tables": ["인사자료", "지점연락처"]
             },
             "sales": {
-                "path": "database/sales_performance_db/sales_performance_db.db",
+                "path": "database/storage/sales_performance/sales_performance_db.db",
                 "description": "영업실적 데이터베이스",
                 "tables": ["sales_performance", "monthly_summary", "employee_targets"]
             },
             "hr_rules": {
-                "path": "database/hr_rules_db/hr_rules.db",
+                "path": "database/storage/hr_rules/hr_rules.db",
                 "description": "HR 규정 데이터베이스",
                 "tables": ["hr_rules", "policy_documents"]
             },
             "rules": {
-                "path": "database/rules_DB/rules.db",
+                "path": "database/storage/rules_compliance/rules.db",
                 "description": "일반 규정 데이터베이스",
                 "tables": ["rules", "medical_laws", "rebate_laws", "fair_trade_rules"]
             }

@@ -10,15 +10,15 @@ from typing import List, Optional, Dict, Any
 import logging
 from datetime import datetime
 
-from .database import get_db, init_db
-from .schemas import (
+from ..system.connection import get_db, init_db
+from ..system.schemas import (
     ConversationCreate, ConversationResponse,
     MessageCreate, MessageResponse,
     AgentStateCreate, AgentStateResponse,
     AnalysisResultCreate, AnalysisResultResponse
 )
-from . import crud
-from .api_routes import router as api_router  # Worker Agent API routes
+from ..system import crud
+from .routes import router as api_router  # Worker Agent API routes
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
