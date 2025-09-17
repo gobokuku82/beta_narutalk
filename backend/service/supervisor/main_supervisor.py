@@ -12,8 +12,8 @@ from langgraph_supervisor import (
     create_forward_message_tool
 )
 from langgraph.prebuilt import create_react_agent, ToolNode
-from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.store.memory import InMemoryStore
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from langgraph.store.memory import InMemoryStore  # Store는 아직 메모리 사용 가능
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
@@ -37,16 +37,20 @@ class MedicalSupervisor:
     def __init__(
         self,
         llm_provider: str = "openai",
-        model_name: Optional[str] = None
+        model_name: Optional[str] = None,
+        checkpoint_db_path: str = "data/checkpoints.db",
+        store_db_path: Optional[str] = None  # SQLite Store 경로 (향후 구현)
     ):
         """
         Initialize Medical Supervisor
-        
+
         Args:
             llm_provider: LLM provider (openai, anthropic)
             model_name: 모델 이름 (기본: gpt-4o or claude-3-opus)
+            checkpoint_db_path: SQLite 체크포인트 DB 경로
+            store_db_path: SQLite Store DB 경로 (optional)
         """
-        
+
         # LLM 초기화
         if llm_provider == "openai":
             self.llm = ChatOpenAI(
@@ -60,20 +64,22 @@ class MedicalSupervisor:
             )
         else:
             raise ValueError(f"Unsupported LLM provider: {llm_provider}")
-        
+
         # Context Manager 초기화
         self.context_manager = ContextManager()
-        
+
         # 에이전트 초기화
         self.agents = self._initialize_agents()
-        
+
         # Supervisor workflow 생성
         self.workflow = None
         self.app = None
-        
+
         # 메모리 초기화
-        self.checkpointer = InMemorySaver()
-        self.store = InMemoryStore()
+        self.checkpoint_db_path = checkpoint_db_path
+        self.store_db_path = store_db_path
+        self.checkpointer = None  # compile 시 초기화
+        self.store = InMemoryStore()  # 현재는 InMemoryStore 사용
         
     def _initialize_agents(self) -> Dict[str, Any]:
         """
@@ -299,17 +305,28 @@ class MedicalSupervisor:
         
         return self.workflow
     
-    def compile_with_optimization(self) -> Any:
+    async def compile_with_optimization(self) -> Any:
         """
         최적화된 컴파일
         - 체크포인팅
         - 메모리 관리
         - 캐싱
         """
-        
+
         if not self.workflow:
             self.build_supervisor_workflow()
-        
+
+        # AsyncSqliteSaver 초기화
+        import os
+        os.makedirs(os.path.dirname(self.checkpoint_db_path), exist_ok=True)
+
+        # AsyncSqliteSaver 생성
+        self.checkpointer = AsyncSqliteSaver.from_conn_string(self.checkpoint_db_path)
+
+        # 체크포인터 초기화 (테이블 생성)
+        async with self.checkpointer:
+            await self.checkpointer.setup()
+
         # 캐시 정책
         cache_policy = {
             "sql_analysis_agent": {
@@ -321,7 +338,7 @@ class MedicalSupervisor:
                 "key_func": lambda x: f"info_{x.get('search_query', '')}"
             }
         }
-        
+
         # 노드별 타임아웃
         node_timeouts = {
             "supervisor": 30,
@@ -330,7 +347,7 @@ class MedicalSupervisor:
             "document_generation_agent": 90,
             "compliance_validation_agent": 60
         }
-        
+
         # 컴파일
         self.app = self.workflow.compile(
             checkpointer=self.checkpointer,
@@ -339,8 +356,8 @@ class MedicalSupervisor:
             node_timeouts=node_timeouts,
             interrupt_before=["compliance_validation_agent"]  # 규정 검토 전 확인
         )
-        
-        logger.info("Supervisor workflow compiled with optimizations")
+
+        logger.info(f"Supervisor workflow compiled with SQLite checkpointer at {self.checkpoint_db_path}")
         return self.app
     
     async def execute_with_context(
@@ -354,7 +371,7 @@ class MedicalSupervisor:
         """
         
         if not self.app:
-            self.compile_with_optimization()
+            await self.compile_with_optimization()
         
         # 1. 컨텍스트 최적화
         medical_context = await self.context_manager.optimize_context(
@@ -441,7 +458,7 @@ class MedicalSupervisor:
         """
         
         if not self.app:
-            self.compile_with_optimization()
+            await self.compile_with_optimization()
         
         # 컨텍스트 최적화
         medical_context = await self.context_manager.optimize_context(
@@ -472,17 +489,18 @@ class MedicalSupervisor:
             }
 
 
-def create_medical_supervisor(
+async def create_medical_supervisor(
     llm_provider: str = "openai",
-    model_name: Optional[str] = None
+    model_name: Optional[str] = None,
+    checkpoint_db_path: str = "data/checkpoints.db"
 ) -> MedicalSupervisor:
     """
     의료 Supervisor 생성 헬퍼 함수
     """
-    
-    supervisor = MedicalSupervisor(llm_provider, model_name)
-    supervisor.compile_with_optimization()
-    
+
+    supervisor = MedicalSupervisor(llm_provider, model_name, checkpoint_db_path)
+    await supervisor.compile_with_optimization()
+
     return supervisor
 
 
@@ -493,7 +511,7 @@ async def main():
     """
     
     # Supervisor 생성
-    supervisor = create_medical_supervisor()
+    supervisor = await create_medical_supervisor()
     
     # 사용자 컨텍스트
     user_context = {

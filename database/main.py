@@ -18,6 +18,7 @@ from .schemas import (
     AnalysisResultCreate, AnalysisResultResponse
 )
 from . import crud
+from .api_routes import router as api_router  # Import new API routes
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -26,8 +27,8 @@ logger = logging.getLogger(__name__)
 # Create FastAPI app
 app = FastAPI(
     title="Pharma Chatbot Database API",
-    description="Database management API for LangGraph multi-agent chatbot",
-    version="1.0.0"
+    description="Database management API for LangGraph multi-agent chatbot with Worker Agent support",
+    version="1.1.0"
 )
 
 # Configure CORS
@@ -39,12 +40,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include Worker Agent API routes
+app.include_router(api_router)
+
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on startup"""
     await init_db()
     logger.info("Database initialized successfully")
+    logger.info("Worker Agent APIs registered at /api/v1")
 
 
 @app.get("/")
