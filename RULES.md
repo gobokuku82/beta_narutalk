@@ -312,45 +312,6 @@ if os.getenv("DEBUG_MODE") == "true":
 
 ---
 
-## 🚦 **Testing Rules**
-
-### 8. **Test Standards**
-
-#### 8.1 Unit Tests
-```python
-# 각 에이전트별 단위 테스트
-async def test_data_analysis_agent():
-    agent = DataAnalysisAgent()
-    result = await agent.execute(
-        task={"query": "SELECT * FROM sales"},
-        context=mock_context()
-    )
-    assert result.status == "success"
-```
-
-#### 8.2 Integration Tests
-```python
-# Supervisor 통합 테스트
-async def test_supervisor_workflow():
-    supervisor = create_medical_supervisor()
-    result = await supervisor.execute_with_context(
-        query="지난달 실적 분석",
-        user_context=test_user_context()
-    )
-    assert "data_analysis_expert" in result["agents_used"]
-```
-
-#### 8.3 Compliance Tests
-```python
-# 규정 준수 테스트 (필수)
-async def test_compliance_validation():
-    document = generate_test_document()
-    violations = await compliance_agent.check_violations(document)
-    assert len(violations) == 0, f"규정 위반 발견: {violations}"
-```
-
----
-
 ## 🎨 **VS Code Claude Desktop Settings**
 
 ### 9. **Development Environment**
@@ -369,21 +330,6 @@ async def test_compliance_validation():
 }
 ```
 
-#### 9.2 Claude Desktop Configuration
-```json
-// .vscode/settings.json
-{
-  "claude.contextWindow": 200000,
-  "claude.model": "claude-3-opus",
-  "claude.temperature": 0.1,
-  "claude.autoSuggest": true,
-  "claude.codeContext": {
-    "includeImports": true,
-    "includeDocstrings": true,
-    "maxDepth": 3
-  }
-}
-```
 ---
 
 ## 🚨 **Critical Rules (절대 규칙)**

@@ -1,0 +1,614 @@
+{
+  "hr_data.db": {
+    "path": "database\\hr_information\\hr_data.db",
+    "tables": {
+      "인사자료": {
+        "columns": [
+          {
+            "id": 0,
+            "name": "사번",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 1,
+            "name": "성명",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 2,
+            "name": "본부",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 3,
+            "name": "직급",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 4,
+            "name": "부서",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 5,
+            "name": "지점",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 6,
+            "name": "연락처",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 7,
+            "name": "월평균사용예산",
+            "type": "REAL",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 8,
+            "name": "최근 평가",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 9,
+            "name": "기본급(₩)",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 10,
+            "name": "성과급(₩)",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 11,
+            "name": "책임업무",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          }
+        ],
+        "row_count": 80
+      },
+      "지점연락처": {
+        "columns": [
+          {
+            "id": 0,
+            "name": "본부",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 1,
+            "name": "부서",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 2,
+            "name": "지점",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 3,
+            "name": "지점 연락처",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          }
+        ],
+        "row_count": 14
+      }
+    },
+    "total_tables": 2
+  },
+  "sales_performance_db.db": {
+    "path": "database\\sales_performance_db\\sales_performance_db.db",
+    "tables": {
+      "sales_performance": {
+        "columns": [
+          {
+            "id": 0,
+            "name": "사번",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 1,
+            "name": "담당자",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 2,
+            "name": "거래처ID",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 3,
+            "name": "품목",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 4,
+            "name": "202212",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 5,
+            "name": "202301",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 6,
+            "name": "202302",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 7,
+            "name": "202303",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 8,
+            "name": "202304",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 9,
+            "name": "202305",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 10,
+            "name": "202306",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 11,
+            "name": "202307",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 12,
+            "name": "202308",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 13,
+            "name": "202309",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 14,
+            "name": "202310",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 15,
+            "name": "202311",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 16,
+            "name": "202312",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 17,
+            "name": "202401",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 18,
+            "name": "202402",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 19,
+            "name": "202403",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 20,
+            "name": "202404",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 21,
+            "name": "202405",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 22,
+            "name": "202406",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 23,
+            "name": "202407",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 24,
+            "name": "202408",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 25,
+            "name": "202409",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 26,
+            "name": "202410",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 27,
+            "name": "202411",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          }
+        ],
+        "row_count": 1711
+      }
+    },
+    "total_tables": 1
+  },
+  "clients_db.db": {
+    "path": "database\\sales_performance_db\\clients_db.db",
+    "tables": {
+      "거래처자료": {
+        "columns": [
+          {
+            "id": 0,
+            "name": "거래처ID",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 1,
+            "name": "월",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 2,
+            "name": "매출",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 3,
+            "name": "월방문횟수",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 4,
+            "name": "사용 예산",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 5,
+            "name": "총환자수",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 6,
+            "name": "담당자",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          }
+        ],
+        "row_count": 6912
+      }
+    },
+    "total_tables": 1
+  },
+  "sales_target_db.db": {
+    "path": "database\\sales_performance_db\\sales_target_db.db",
+    "tables": {
+      "지점별목표": {
+        "columns": [
+          {
+            "id": 0,
+            "name": "지점",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 1,
+            "name": "담당자",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 2,
+            "name": "202312",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 3,
+            "name": "202401",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 4,
+            "name": "202402",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 5,
+            "name": "202403",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 6,
+            "name": "202404",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 7,
+            "name": "202405",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 8,
+            "name": "202406",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 9,
+            "name": "202407",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 10,
+            "name": "202408",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 11,
+            "name": "202409",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 12,
+            "name": "202410",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 13,
+            "name": "202411",
+            "type": "INTEGER",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          }
+        ],
+        "row_count": 6
+      }
+    },
+    "total_tables": 1
+  },
+  "clients_info.db": {
+    "path": "database\\sales_performance_db\\clients_info.db",
+    "tables": {
+      "거래처정보": {
+        "columns": [
+          {
+            "id": 0,
+            "name": "ID",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 1,
+            "name": "원장명",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 2,
+            "name": "지역구",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          },
+          {
+            "id": 3,
+            "name": "병원연락처",
+            "type": "TEXT",
+            "not_null": false,
+            "default": null,
+            "primary_key": false
+          }
+        ],
+        "row_count": 288
+      }
+    },
+    "total_tables": 1
+  }
+}
