@@ -19,6 +19,7 @@ from .schemas import (
 )
 from . import crud
 from .api_routes import router as api_router  # Import new API routes
+from .chat_api import router as chat_router  # Import chat API routes
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -43,6 +44,9 @@ app.add_middleware(
 # Include Worker Agent API routes
 app.include_router(api_router)
 
+# Include Chat API routes
+app.include_router(chat_router)
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -50,6 +54,7 @@ async def startup_event():
     await init_db()
     logger.info("Database initialized successfully")
     logger.info("Worker Agent APIs registered at /api/v1")
+    logger.info("Chat APIs registered at /api/v1/chat")
 
 
 @app.get("/")
