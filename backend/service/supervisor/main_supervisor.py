@@ -82,22 +82,22 @@ class MedicalSupervisor:
         
         agents = {}
         
-        # 1. 데이터 분석 에이전트 (실적분석, 트렌드 분석)
-        agents["data_analysis"] = create_react_agent(
+        # 1. SQL 분석 에이전트 (실적분석, 트렌드 분석)
+        agents["sql_analysis"] = create_react_agent(
             self.llm,
             tools=[
                 self._create_sql_query_tool(),
                 self._create_data_aggregation_tool(),
                 self._create_trend_analysis_tool()
             ],
-            name="data_analysis_expert",
+            name="sql_analysis_agent",
             system_message="""당신은 의료/제약 데이터 분석 전문가입니다.
             직원 실적 분석, 거래처 트렌드 분석을 수행합니다.
             복잡한 칼럼에 대한 메타데이터를 활용하여 정확한 분석을 제공합니다."""
         )
         
         # 2. 정보 검색 에이전트
-        agents["info_retrieval"] = create_react_agent(
+        agents["information_retrieval"] = create_react_agent(
             self.llm,
             tools=[
                 self._create_hr_search_tool(),
@@ -105,34 +105,34 @@ class MedicalSupervisor:
                 self._create_web_search_tool(),
                 self._create_paper_search_tool()
             ],
-            name="info_retrieval_expert",
+            name="information_retrieval_agent",
             system_message="""당신은 의료/제약 정보 검색 전문가입니다.
             인사정보, 내부규정, 웹정보, 논문 등 다양한 소스에서 정보를 검색합니다.
             정확하고 관련성 높은 정보만을 제공합니다."""
         )
         
         # 3. 문서 생성 에이전트
-        agents["doc_generation"] = create_react_agent(
+        agents["document_generation"] = create_react_agent(
             self.llm,
             tools=[
                 self._create_report_generation_tool(),
                 self._create_form_filling_tool(),
                 self._create_db_storage_tool()
             ],
-            name="doc_generation_expert",
+            name="document_generation_agent",
             system_message="""당신은 의료/제약 문서 작성 전문가입니다.
             방문결과보고서, 제품설명회 신청서, 샘플신청서 등을 작성합니다.
             규정에 맞는 정확한 문서를 생성합니다."""
         )
         
         # 4. 규정 검토 에이전트
-        agents["compliance"] = create_react_agent(
+        agents["compliance_validation"] = create_react_agent(
             self.llm,
             tools=[
                 self._create_compliance_check_tool(),
                 self._create_regulation_validation_tool()
             ],
-            name="compliance_expert",
+            name="compliance_validation_agent",
             system_message="""당신은 의료/제약 규정 준수 전문가입니다.
             의료법, 리베이트법, 공정거래규약 등을 검토합니다.
             문서와 활동의 규정 위반 여부를 철저히 확인합니다."""
@@ -246,17 +246,17 @@ class MedicalSupervisor:
         supervisor_prompt = """당신은 의료/제약 도메인 전문 Supervisor입니다.
         
         다음 전문가들을 관리합니다:
-        1. data_analysis_expert: 직원 실적, 거래처 트렌드 분석
-        2. info_retrieval_expert: 정보 검색 (인사, 규정, 웹, 논문)
-        3. doc_generation_expert: 문서 생성 및 DB 저장
-        4. compliance_expert: 규정 준수 검토
+        1. sql_analysis_agent: SQL 분석, 직원 실적, 거래처 트렌드 분석
+        2. information_retrieval_agent: 정보 검색 (인사, 규정, 웹, 논문)
+        3. document_generation_agent: 문서 생성 및 DB 저장
+        4. compliance_validation_agent: 규정 준수 검토
         
         사용자 요청을 분석하여 적절한 전문가에게 작업을 할당하세요.
         복잡한 작업은 여러 전문가를 순차적 또는 병렬로 활용하세요.
         
         작업 우선순위:
-        1. 규정 준수가 필요한 경우 compliance_expert를 반드시 포함
-        2. 데이터 분석이 필요한 경우 data_analysis_expert 우선
+        1. 규정 준수가 필요한 경우 compliance_validation_agent를 반드시 포함
+        2. 데이터 분석이 필요한 경우 sql_analysis_agent 우선
         3. 문서 생성 전에는 필요한 정보를 먼저 수집
         
         모든 작업이 완료되면 FINISH로 응답하세요."""
@@ -264,23 +264,23 @@ class MedicalSupervisor:
         # Handoff 도구 생성
         handoff_tools = [
             create_handoff_tool(
-                agent_name="data_analysis_expert",
-                name="delegate_to_data_analysis",
-                description="데이터 분석 전문가에게 작업 위임"
+                agent_name="sql_analysis_agent",
+                name="delegate_to_sql_analysis",
+                description="SQL 분석 전문가에게 작업 위임"
             ),
             create_handoff_tool(
-                agent_name="info_retrieval_expert",
-                name="delegate_to_info_retrieval",
+                agent_name="information_retrieval_agent",
+                name="delegate_to_information_retrieval",
                 description="정보 검색 전문가에게 작업 위임"
             ),
             create_handoff_tool(
-                agent_name="doc_generation_expert",
-                name="delegate_to_doc_generation",
+                agent_name="document_generation_agent",
+                name="delegate_to_document_generation",
                 description="문서 생성 전문가에게 작업 위임"
             ),
             create_handoff_tool(
-                agent_name="compliance_expert",
-                name="delegate_to_compliance",
+                agent_name="compliance_validation_agent",
+                name="delegate_to_compliance_validation",
                 description="규정 검토 전문가에게 작업 위임"
             )
         ]
