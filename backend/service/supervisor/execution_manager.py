@@ -404,7 +404,7 @@ class ParallelExecutionManager:
 
         # 기본 작업 정보 생성
         if "agent" in task_id:
-            agent_name = task_id.split("_")[0] + "_expert"
+            agent_name = task_id.split("_")[0] + "_agent"
             return {
                 "task_id": task_id,
                 "agent": agent_name,
@@ -557,10 +557,10 @@ async def execution_node(state: MedicalSupervisorState) -> Dict[str, Any]:
 
     # 에이전트 실행 함수 맵 생성 (실제 구현에서는 실제 에이전트 연결)
     agent_executors = {
-        "data_analysis_expert": lambda s: {"status": "completed", "result": "data"},
-        "info_retrieval_expert": lambda s: {"status": "completed", "result": "info"},
-        "doc_generation_expert": lambda s: {"status": "completed", "result": "doc"},
-        "compliance_expert": lambda s: {"status": "completed", "result": "compliant"}
+        "sql_analysis_agent": lambda s: {"status": "completed", "result": "data"},
+        "information_retrieval_agent": lambda s: {"status": "completed", "result": "info"},
+        "document_generation_agent": lambda s: {"status": "completed", "result": "doc"},
+        "compliance_validation_agent": lambda s: {"status": "completed", "result": "compliant"}
     }
 
     # 실행 계획 추출

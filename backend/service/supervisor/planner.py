@@ -67,42 +67,42 @@ class SmartPlanner:
             "data_query": TaskNode(
                 id="data_query",
                 name="데이터 쿼리 실행",
-                agent="data_analysis_expert",
+                agent="sql_analysis_agent",
                 estimated_time=10.0,
                 required_capabilities=["sql_query", "data_aggregation"]
             ),
             "trend_analysis": TaskNode(
                 id="trend_analysis",
                 name="트렌드 분석",
-                agent="data_analysis_expert",
+                agent="sql_analysis_agent",
                 estimated_time=15.0,
                 required_capabilities=["trend_analysis", "data_aggregation"]
             ),
             "hr_search": TaskNode(
                 id="hr_search",
                 name="인사정보 검색",
-                agent="info_retrieval_expert",
+                agent="information_retrieval_agent",
                 estimated_time=5.0,
                 required_capabilities=["search", "retrieval"]
             ),
             "regulation_search": TaskNode(
                 id="regulation_search",
                 name="규정 검색",
-                agent="info_retrieval_expert",
+                agent="information_retrieval_agent",
                 estimated_time=8.0,
                 required_capabilities=["regulation_search"]
             ),
             "web_search": TaskNode(
                 id="web_search",
                 name="웹 검색",
-                agent="info_retrieval_expert",
+                agent="information_retrieval_agent",
                 estimated_time=12.0,
                 required_capabilities=["web_search", "api_integration"]
             ),
             "report_generation": TaskNode(
                 id="report_generation",
                 name="보고서 생성",
-                agent="doc_generation_expert",
+                agent="document_generation_agent",
                 estimated_time=20.0,
                 required_capabilities=["document_generation", "formatting"],
                 can_parallel=False  # 순차 실행 필요
@@ -110,7 +110,7 @@ class SmartPlanner:
             "compliance_check": TaskNode(
                 id="compliance_check",
                 name="규정 준수 확인",
-                agent="compliance_expert",
+                agent="compliance_validation_agent",
                 estimated_time=15.0,
                 required_capabilities=["compliance_check", "regulation_validation"],
                 priority=10,  # 높은 우선순위
@@ -119,7 +119,7 @@ class SmartPlanner:
             "data_storage": TaskNode(
                 id="data_storage",
                 name="데이터 저장",
-                agent="doc_generation_expert",
+                agent="document_generation_agent",
                 estimated_time=5.0,
                 required_capabilities=["data_storage", "db_write"]
             )
@@ -217,7 +217,7 @@ class SmartPlanner:
                     task = TaskNode(
                         id=f"task_{task_counter}",
                         name="데이터 쿼리 실행",
-                        agent="data_analysis_expert",
+                        agent="sql_analysis_agent",
                         estimated_time=10.0,
                         required_capabilities=["sql_query"],
                         metadata={"target": context.target_entity}
@@ -231,7 +231,7 @@ class SmartPlanner:
                     task = TaskNode(
                         id=f"task_{task_counter}",
                         name="트렌드 분석",
-                        agent="data_analysis_expert",
+                        agent="sql_analysis_agent",
                         estimated_time=15.0,
                         required_capabilities=["trend_analysis"],
                         dependencies=[query_task_id] if query_task_id else [],
@@ -244,7 +244,7 @@ class SmartPlanner:
                     task = TaskNode(
                         id=f"task_{task_counter}",
                         name="정보 검색",
-                        agent="info_retrieval_expert",
+                        agent="information_retrieval_agent",
                         estimated_time=8.0,
                         required_capabilities=["search", "retrieval"],
                         metadata={"sources": context.data_sources}
@@ -254,11 +254,11 @@ class SmartPlanner:
 
                 elif capability == "document_generation":
                     # 이전 작업들의 결과가 필요
-                    dependencies = [t.id for t in tasks if t.agent != "doc_generation_expert"]
+                    dependencies = [t.id for t in tasks if t.agent != "document_generation_agent"]
                     task = TaskNode(
                         id=f"task_{task_counter}",
                         name="문서 생성",
-                        agent="doc_generation_expert",
+                        agent="document_generation_agent",
                         estimated_time=20.0,
                         required_capabilities=["document_generation"],
                         dependencies=dependencies,
@@ -274,7 +274,7 @@ class SmartPlanner:
             compliance_task = TaskNode(
                 id=f"task_{task_counter}",
                 name="규정 준수 최종 확인",
-                agent="compliance_expert",
+                agent="compliance_validation_agent",
                 estimated_time=15.0,
                 required_capabilities=["compliance_check"],
                 dependencies=all_task_ids,
@@ -461,22 +461,22 @@ class SmartPlanner:
 
         # 각 에이전트별 fallback
         agent_fallbacks = {
-            "data_analysis_expert": {
+            "sql_analysis_agent": {
                 "primary": "sql_query",
                 "fallback": "cached_data",
                 "condition": "database_timeout"
             },
-            "info_retrieval_expert": {
+            "information_retrieval_agent": {
                 "primary": "web_search",
                 "fallback": "local_search",
                 "condition": "api_limit_exceeded"
             },
-            "doc_generation_expert": {
+            "document_generation_agent": {
                 "primary": "template_generation",
                 "fallback": "simple_text",
                 "condition": "template_error"
             },
-            "compliance_expert": {
+            "compliance_validation_agent": {
                 "primary": "automated_check",
                 "fallback": "manual_review_flag",
                 "condition": "validation_error"

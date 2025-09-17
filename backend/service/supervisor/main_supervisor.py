@@ -312,11 +312,11 @@ class MedicalSupervisor:
         
         # 캐시 정책
         cache_policy = {
-            "data_analysis_expert": {
+            "sql_analysis_agent": {
                 "ttl": 600,  # 10분
-                "key_func": lambda x: f"data_{x.get('query', '')}_{x.get('time_range', '')}"
+                "key_func": lambda x: f"sql_{x.get('query', '')}_{x.get('time_range', '')}"
             },
-            "info_retrieval_expert": {
+            "information_retrieval_agent": {
                 "ttl": 900,  # 15분
                 "key_func": lambda x: f"info_{x.get('search_query', '')}"
             }
@@ -325,10 +325,10 @@ class MedicalSupervisor:
         # 노드별 타임아웃
         node_timeouts = {
             "supervisor": 30,
-            "data_analysis_expert": 60,
-            "info_retrieval_expert": 45,
-            "doc_generation_expert": 90,
-            "compliance_expert": 60
+            "sql_analysis_agent": 60,
+            "information_retrieval_agent": 45,
+            "document_generation_agent": 90,
+            "compliance_validation_agent": 60
         }
         
         # 컴파일
@@ -337,7 +337,7 @@ class MedicalSupervisor:
             store=self.store,
             cache_policy=cache_policy,
             node_timeouts=node_timeouts,
-            interrupt_before=["compliance_expert"]  # 규정 검토 전 확인
+            interrupt_before=["compliance_validation_agent"]  # 규정 검토 전 확인
         )
         
         logger.info("Supervisor workflow compiled with optimizations")
@@ -426,7 +426,7 @@ class MedicalSupervisor:
                     processed["agents_used"].append(msg.name)
         
         # 규정 준수 상태 확인
-        if "compliance_expert" in processed["agents_used"]:
+        if "compliance_validation_agent" in processed["agents_used"]:
             processed["compliance_status"] = "reviewed"
         
         return processed

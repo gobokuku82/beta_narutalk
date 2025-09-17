@@ -66,8 +66,8 @@ class DynamicAgentSelector:
         """에이전트 프로필 초기화"""
 
         return {
-            "data_analysis_expert": AgentProfile(
-                name="data_analysis_expert",
+            "sql_analysis_agent": AgentProfile(
+                name="sql_analysis_agent",
                 capabilities=[
                     "sql_query",
                     "data_aggregation",
@@ -81,8 +81,8 @@ class DynamicAgentSelector:
                 success_rate=0.96,
                 cost_per_call=0.02
             ),
-            "info_retrieval_expert": AgentProfile(
-                name="info_retrieval_expert",
+            "information_retrieval_agent": AgentProfile(
+                name="information_retrieval_agent",
                 capabilities=[
                     "search",
                     "retrieval",
@@ -97,8 +97,8 @@ class DynamicAgentSelector:
                 success_rate=0.94,
                 cost_per_call=0.01
             ),
-            "doc_generation_expert": AgentProfile(
-                name="doc_generation_expert",
+            "document_generation_agent": AgentProfile(
+                name="document_generation_agent",
                 capabilities=[
                     "document_generation",
                     "template_processing",
@@ -113,8 +113,8 @@ class DynamicAgentSelector:
                 success_rate=0.92,
                 cost_per_call=0.03
             ),
-            "compliance_expert": AgentProfile(
-                name="compliance_expert",
+            "compliance_validation_agent": AgentProfile(
+                name="compliance_validation_agent",
                 capabilities=[
                     "compliance_check",
                     "regulation_validation",
@@ -467,28 +467,28 @@ class DynamicAgentSelector:
         if context.domain_type == "실적분석":
             # 데이터 분석 전문가 우선
             for agent_name, score in sorted_agents:
-                if "data_analysis" in agent_name:
+                if "sql_analysis" in agent_name:
                     selected.append(agent_name)
                     break
 
         elif context.domain_type == "정보검색":
             # 정보 검색 전문가 우선
             for agent_name, score in sorted_agents:
-                if "info_retrieval" in agent_name:
+                if "information_retrieval" in agent_name:
                     selected.append(agent_name)
                     break
 
         elif context.domain_type == "문서생성":
             # 문서 생성 전문가 필수
             for agent_name, score in sorted_agents:
-                if "doc_generation" in agent_name:
+                if "document_generation" in agent_name:
                     selected.append(agent_name)
                     break
 
-        # 규정 준수가 필요한 경우 compliance_expert 추가
+        # 규정 준수가 필요한 경우 compliance_validation_agent 추가
         if context.compliance_level == "strict":
-            if "compliance_expert" not in selected:
-                selected.append("compliance_expert")
+            if "compliance_validation_agent" not in selected:
+                selected.append("compliance_validation_agent")
 
         # 최소 1개 에이전트는 선택
         if not selected and sorted_agents:
