@@ -21,25 +21,37 @@ logger = logging.getLogger(__name__)
 class IntegrationTest:
     """통합 테스트 클래스"""
 
-    def __init__(self, base_url: str = "http://localhost:8000"):
-        self.base_url = base_url
-        self.client = None
+    def __init__(self, chat_url: str = "http://localhost:8001", db_url: str = "http://localhost:8002"):
+        self.chat_url = chat_url
+        self.db_url = db_url
+        self.chat_client = None
+        self.db_client = None
         self.test_results = []
 
     async def __aenter__(self):
-        self.client = httpx.AsyncClient(base_url=self.base_url, timeout=30.0)
+        self.chat_client = httpx.AsyncClient(base_url=self.chat_url, timeout=30.0)
+        self.db_client = httpx.AsyncClient(base_url=self.db_url, timeout=30.0)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.client.aclose()
+        await self.chat_client.aclose()
+        await self.db_client.aclose()
 
     async def test_health_check(self):
         """API 헬스 체크"""
         try:
-            response = await self.client.get("/")
+            # Chat API 체크
+            response = await self.chat_client.get("/")
             assert response.status_code == 200
-            data = response.json()
-            logger.info(f"✅ Health check passed: {data['message']}")
+            chat_data = response.json()
+            logger.info(f"✅ Chat API health check passed: {chat_data['service']}")
+
+            # Database API 체크
+            response = await self.db_client.get("/")
+            assert response.status_code == 200
+            db_data = response.json()
+            logger.info(f"✅ Database API health check passed: {db_data['message']}")
+
             return True
         except Exception as e:
             logger.error(f"❌ Health check failed: {e}")
@@ -49,7 +61,7 @@ class IntegrationTest:
         """Database API 테스트"""
         try:
             # 스키마 조회
-            response = await self.client.get("/api/v1/schemas")
+            response = await self.db_client.get("/api/v1/schemas")
             assert response.status_code == 200
             logger.info("✅ Database API - Schema retrieval passed")
 
@@ -58,7 +70,7 @@ class IntegrationTest:
                 "query": 'SELECT COUNT(*) as count FROM "인사자료"',
                 "database": "hr"
             }
-            response = await self.client.post("/api/v1/execute_sql", json=sql_request)
+            response = await self.db_client.post("/api/v1/execute_sql", json=sql_request)
             assert response.status_code == 200
             data = response.json()
             logger.info(f"✅ Database API - SQL execution passed: {data.get('data', [])}")
@@ -81,7 +93,7 @@ class IntegrationTest:
                 }
             }
 
-            response = await self.client.post("/api/v1/chat", json=chat_request)
+            response = await self.chat_client.post("/api/v1/chat", json=chat_request)
             assert response.status_code == 200
             data = response.json()
 
@@ -107,7 +119,7 @@ class IntegrationTest:
                 }
             }
 
-            response = await self.client.post("/api/v1/chat", json=chat_request)
+            response = await self.chat_client.post("/api/v1/chat", json=chat_request)
             assert response.status_code == 200
             data = response.json()
 
@@ -157,9 +169,10 @@ class IntegrationTest:
         """세션 관리 테스트"""
         try:
             # 세션 목록 조회
-            response = await self.client.get("/api/v1/sessions")
+            response = await self.chat_client.get("/api/v1/sessions")
             assert response.status_code == 200
-            sessions = response.json()
+            data = response.json()
+            sessions = data.get('sessions', [])
 
             logger.info(f"✅ Session management test passed")
             logger.info(f"   Active sessions: {len(sessions)}")
@@ -172,7 +185,7 @@ class IntegrationTest:
     async def test_statistics(self):
         """통계 조회 테스트"""
         try:
-            response = await self.client.get("/api/v1/stats")
+            response = await self.chat_client.get("/api/v1/sessions/stats/summary")
             assert response.status_code == 200
             stats = response.json()
 
@@ -208,7 +221,7 @@ class IntegrationTest:
                 "query": 'SELECT "사번", "성명", "부서" FROM "인사자료" LIMIT 5',
                 "database": "hr"
             }
-            response = await self.client.post("/api/v1/execute_sql", json=sql_request)
+            response = await self.db_client.post("/api/v1/execute_sql", json=sql_request)
             assert response.status_code == 200
             data = response.json()
 
@@ -229,7 +242,7 @@ class IntegrationTest:
                 "query": 'SELECT "202401", "202402", "202403" FROM sales_performance LIMIT 5',
                 "database": "sales"
             }
-            response = await self.client.post("/api/v1/execute_sql", json=sql_request)
+            response = await self.db_client.post("/api/v1/execute_sql", json=sql_request)
             assert response.status_code == 200
             data = response.json()
 
@@ -304,12 +317,27 @@ async def main():
     try:
         # 서버가 실행 중인지 확인
         async with httpx.AsyncClient() as client:
+            servers_running = True
+
+            # Chat API 체크
             try:
-                response = await client.get("http://localhost:8000/", timeout=5.0)
-                logger.info(f"✅ Server is running")
+                response = await client.get("http://localhost:8001/", timeout=5.0)
+                logger.info(f"✅ Chat API is running on port 8001")
             except:
-                logger.error("❌ Server is not running. Please start the FastAPI server first:")
-                logger.error("   cd database && python -m uvicorn main:app --reload")
+                logger.error("❌ Chat API is not running on port 8001")
+                servers_running = False
+
+            # Database API 체크
+            try:
+                response = await client.get("http://localhost:8002/", timeout=5.0)
+                logger.info(f"✅ Database API is running on port 8002")
+            except:
+                logger.error("❌ Database API is not running on port 8002")
+                servers_running = False
+
+            if not servers_running:
+                logger.error("\n❌ Please start both servers first:")
+                logger.error("   python run_servers.py")
                 return
 
         # 통합 테스트 실행
