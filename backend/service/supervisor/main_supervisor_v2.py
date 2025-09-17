@@ -22,10 +22,11 @@ import logging
 import asyncio
 from datetime import datetime
 import sys
-import os
+from pathlib import Path
 
 # 프로젝트 경로 추가
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.append(str(PROJECT_ROOT))
 
 from backend.service.worker_agents.database_api_client import DatabaseAPIClient
 from backend.service.supervisor.context_manager import ContextManager, MedicalContext
