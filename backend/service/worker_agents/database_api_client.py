@@ -9,7 +9,14 @@ import logging
 from typing import Dict, Any, List, Optional, Union
 from datetime import datetime
 import json
-import re
+import sys
+from pathlib import Path
+
+# 프로젝트 경로 추가
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+sys.path.append(str(PROJECT_ROOT))
+
+from backend.common.korean_sql_utils import KoreanSQLProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -45,56 +52,8 @@ class DatabaseAPIClient:
             headers={"Content-Type": "application/json"}
         )
 
-        # 한글 컬럼명 목록 (자동 처리용)
-        self.korean_columns = {
-            "사번", "성명", "본부", "직급", "부서", "지점", "연락처",
-            "월평균사용예산", "최근 평가", "기본급(₩)", "성과급(₩)", "책임업무",
-            "지점 연락처", "담당자", "거래처ID", "품목", "거래처자료",
-            "월방문횟수", "사용 예산", "총환자수", "월", "매출",
-            "원장명", "지역구", "병원연락처", "지점별목표", "인사자료",
-            "거래처정보", "지점연락처"
-        }
-
-        # 월별 컬럼 패턴 (202312 ~ 202411)
-        self.monthly_columns = self._generate_monthly_columns()
-
-    def _generate_monthly_columns(self) -> List[str]:
-        """월별 컬럼명 생성 (202312 ~ 202411)"""
-        columns = []
-        # 2023년 12월
-        columns.append("202312")
-        # 2024년 1월 ~ 11월
-        for month in range(1, 12):
-            columns.append(f"2024{month:02d}")
-        return columns
-
-    def process_korean_query(self, query: str) -> str:
-        """
-        한글 컬럼명과 테이블명을 큰따옴표로 처리
-
-        Args:
-            query: SQL 쿼리
-
-        Returns:
-            처리된 SQL 쿼리
-        """
-        processed = query
-
-        # 한글 컬럼명 처리
-        for column in self.korean_columns:
-            # 이미 따옴표가 없는 경우만 처리
-            if f'"{column}"' not in processed and f"'{column}'" not in processed:
-                # 단어 경계를 확인하여 정확한 매칭
-                pattern = r'\b' + re.escape(column) + r'\b'
-                processed = re.sub(pattern, f'"{column}"', processed)
-
-        # 월별 컬럼 처리
-        for month in self.monthly_columns:
-            if f'"{month}"' not in processed:
-                pattern = r'\b' + month + r'\b'
-                processed = re.sub(pattern, f'"{month}"', processed)
-
-        return processed
+        # 한글 SQL 처리기 사용
+        self.sql_processor = KoreanSQLProcessor()
 
     async def execute_sql(
         self,
@@ -113,8 +72,8 @@ class DatabaseAPIClient:
         Returns:
             쿼리 실행 결과
         """
-        # 한글 컬럼명 처리
-        processed_query = self.process_korean_query(query)
+        # 한글 컬럼명 처리 (통합 유틸리티 사용)
+        processed_query = self.sql_processor.auto_quote_sql(query)
 
         logger.info(f"Executing SQL on {database}: {processed_query[:100]}...")
 

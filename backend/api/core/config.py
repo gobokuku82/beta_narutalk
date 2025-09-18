@@ -48,6 +48,10 @@ class Settings(BaseSettings):
 
     # Security
     API_KEY: Optional[str] = Field(default=None, env="API_KEY")
+
+    # Monitoring
+    ENABLE_MONITORING: bool = Field(default=True, env="ENABLE_MONITORING")
+    METRICS_EXPORT: bool = Field(default=False, env="METRICS_EXPORT")
     ENABLE_CORS: bool = Field(default=True, env="ENABLE_CORS")
     CORS_ORIGINS: list = Field(
         default=["*"],

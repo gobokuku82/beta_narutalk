@@ -8,10 +8,11 @@ from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import logging
 import sys
-import os
+from pathlib import Path
 
 # 프로젝트 루트 경로 추가
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.append(str(PROJECT_ROOT))
 
 from backend.api.core.config import settings, validate_settings
 from backend.api.core.middleware import setup_middleware
