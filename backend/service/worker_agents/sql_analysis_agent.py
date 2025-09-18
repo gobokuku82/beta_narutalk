@@ -6,7 +6,7 @@ SQL 분석 에이전트 - Text2SQL 활용
 from typing import Dict, Any, List, Optional, Literal, Union
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_core.tools import Tool
+from langchain_core.tools import Tool, StructuredTool
 from pydantic import BaseModel, Field
 import logging
 from datetime import datetime
@@ -84,39 +84,46 @@ class SQLAnalysisAgent:
         # 복잡한 칼럼 메타데이터
         self.column_metadata = self._initialize_column_metadata()
     
-    def _initialize_analysis_tools(self) -> Dict[str, Tool]:
-        """분석 도구 초기화"""
-        
+    def _initialize_analysis_tools(self) -> Dict[str, StructuredTool]:
+        """분석 도구 초기화 - LangGraph 0.6.x 비동기 패턴 적용"""
+
+        # 비동기 함수들을 StructuredTool로 변경하여 네이티브 코루틴 지원
         tools = {
-            "generate_sql": Tool(
+            "generate_sql": StructuredTool.from_function(
                 name="generate_sql",
                 description="자연어를 SQL로 변환",
-                func=self._generate_sql_query
+                func=self._generate_sql_query_wrapper,
+                coroutine=self._generate_sql_with_metadata  # 비동기 함수 직접 지정
             ),
-            "execute_query": Tool(
+            "execute_query": StructuredTool.from_function(
                 name="execute_query",
                 description="SQL 쿼리 실행",
-                func=self._execute_sql_query
+                func=self._execute_query_wrapper,
+                coroutine=self._execute_query_via_api  # 비동기 함수 직접 지정
             ),
-            "calculate_statistics": Tool(
+            "calculate_statistics": StructuredTool.from_function(
                 name="calculate_statistics",
                 description="통계 계산",
-                func=self._calculate_statistics
+                func=self._calculate_statistics_wrapper,
+                coroutine=self._calculate_basic_stats  # 비동기 함수 직접 지정
             ),
-            "trend_analysis": Tool(
+            "trend_analysis": StructuredTool.from_function(
                 name="trend_analysis",
                 description="트렌드 분석",
-                func=self._perform_trend_analysis
+                func=self._trend_analysis_wrapper,
+                coroutine=self._perform_trend_analysis  # 비동기 함수 직접 지정
             ),
-            "comparative_analysis": Tool(
+            "comparative_analysis": StructuredTool.from_function(
                 name="comparative_analysis",
                 description="비교 분석",
-                func=self._perform_comparative_analysis
+                func=self._comparative_analysis_wrapper,
+                coroutine=self._perform_comparative_analysis  # 비동기 함수 직접 지정
             ),
-            "generate_visualization": Tool(
+            "generate_visualization": StructuredTool.from_function(
                 name="generate_visualization",
                 description="시각화 생성",
-                func=self._generate_visualization
+                func=self._visualization_wrapper,
+                coroutine=self._generate_visualization  # 비동기 함수 직접 지정
             )
         }
         
@@ -733,10 +740,37 @@ class SQLAnalysisAgent:
     
     def _generate_query_id(self) -> str:
         """쿼리 ID 생성"""
-        
+
         from uuid import uuid4
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         return f"QUERY_{timestamp}_{str(uuid4())[:8]}"
+
+    # === 비동기 함수 래퍼 메서드들 (StructuredTool 호환) ===
+
+    def _generate_sql_query_wrapper(self, *args, **kwargs):
+        """generate_sql 동기 래퍼 (호환성용)"""
+        # 동기 컨텍스트에서 호출될 경우를 위한 래퍼
+        return "SQL generation requires async context"
+
+    def _execute_query_wrapper(self, *args, **kwargs):
+        """execute_query 동기 래퍼 (호환성용)"""
+        return {"error": "Query execution requires async context"}
+
+    def _calculate_statistics_wrapper(self, *args, **kwargs):
+        """calculate_statistics 동기 래퍼 (호환성용)"""
+        return {"error": "Statistics calculation requires async context"}
+
+    def _trend_analysis_wrapper(self, *args, **kwargs):
+        """trend_analysis 동기 래퍼 (호환성용)"""
+        return {"error": "Trend analysis requires async context"}
+
+    def _comparative_analysis_wrapper(self, *args, **kwargs):
+        """comparative_analysis 동기 래퍼 (호환성용)"""
+        return {"error": "Comparative analysis requires async context"}
+
+    def _visualization_wrapper(self, *args, **kwargs):
+        """visualization 동기 래퍼 (호환성용)"""
+        return {"error": "Visualization requires async context"}
 
 
 # === Graph Node Function ===
