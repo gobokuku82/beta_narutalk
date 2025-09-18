@@ -22,6 +22,7 @@ import logging
 import asyncio
 from datetime import datetime
 import sys
+import os
 from pathlib import Path
 
 # 프로젝트 경로 추가
@@ -31,6 +32,7 @@ sys.path.append(str(PROJECT_ROOT))
 from backend.service.worker_agents.database_api_client import DatabaseAPIClient
 from backend.service.supervisor.context_manager import ContextManager, MedicalContext
 from backend.service.supervisor.state import MedicalSupervisorState
+from backend.service.supervisor.checkpointer_pool import get_checkpointer_pool
 
 logger = logging.getLogger(__name__)
 
@@ -85,9 +87,13 @@ class MedicalSupervisorV2:
         self.workflow = None
         self.workflow_compiled = False
 
-        # 메모리 초기화
+        # 메모리 및 연결 풀 초기화
         self.checkpoint_db_path = checkpoint_db_path
         self.store = InMemoryStore()
+        self.checkpointer_pool = get_checkpointer_pool(
+            db_path=checkpoint_db_path,
+            max_connections=5
+        )
 
     def _initialize_agents(self) -> Dict[str, Any]:
         """
@@ -587,8 +593,8 @@ class MedicalSupervisorV2:
             }
         }
 
-        # AsyncSqliteSaver 사용
-        async with AsyncSqliteSaver.from_conn_string(self.checkpoint_db_path) as checkpointer:
+        # CheckpointerPool을 통한 연결 관리
+        async with self.checkpointer_pool.get_connection_context() as checkpointer:
             # workflow 컴파일
             app = self.workflow.compile(
                 checkpointer=checkpointer,
