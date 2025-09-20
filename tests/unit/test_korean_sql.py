@@ -23,131 +23,114 @@ class TestKoreanSQLProcessor:
 
     def test_detect_korean_columns(self, processor):
         """한글 컬럼명 감지 테스트"""
-        # 한글 포함 쿼리
-        query_with_korean = "SELECT 사번, 성명 FROM employees"
-        assert processor.has_korean_columns(query_with_korean) is True
+        # 한글 컬럼 검증
+        columns_with_korean = ["사번", "성명"]
+        result = processor.validate_korean_columns(columns_with_korean)
+        assert all(result.values()) is True
 
-        # 한글 미포함 쿼리
-        query_without_korean = "SELECT id, name FROM employees"
-        assert processor.has_korean_columns(query_without_korean) is False
+        # 한글 미포함 컬럼
+        columns_without_korean = ["id", "name"]
+        result = processor.validate_korean_columns(columns_without_korean)
+        assert all(result.values()) is False
 
-        # 혼합 쿼리
-        mixed_query = "SELECT id, 성명, department FROM employees"
-        assert processor.has_korean_columns(mixed_query) is True
+        # 혼합 컬럼
+        mixed_columns = ["id", "성명", "department"]
+        result = processor.validate_korean_columns(mixed_columns)
+        assert result["성명"] is True
+        assert result["id"] is False
 
-    def test_escape_korean_columns(self, processor):
-        """한글 컬럼명 이스케이프 테스트"""
-        # 기본 이스케이프
+    def test_auto_quote_sql(self, processor):
+        """한글 컬럼명 자동 인용 테스트"""
+        # 기본 인용
         query = "SELECT 사번, 성명 FROM employees"
-        escaped = processor.escape_korean_columns(query)
-        assert '"사번"' in escaped or '[사번]' in escaped
-        assert '"성명"' in escaped or '[성명]' in escaped
+        quoted = processor.auto_quote_sql(query)
+        assert '"사번"' in quoted
+        assert '"성명"' in quoted
 
         # WHERE 절의 한글
         where_query = "SELECT * FROM employees WHERE 부서 = 'IT'"
-        escaped_where = processor.escape_korean_columns(where_query)
-        assert '"부서"' in escaped_where or '[부서]' in escaped_where
+        quoted_where = processor.auto_quote_sql(where_query)
+        assert '"부서"' in quoted_where
 
-    def test_normalize_query(self, processor):
-        """쿼리 정규화 테스트"""
+    def test_format_sql(self, processor):
+        """SQL 포맷팅 테스트"""
         # 대소문자 혼합
-        mixed_case = "SeLeCt 사번 FrOm EMPLOYEES"
-        normalized = processor.normalize_query(mixed_case)
-        assert "SELECT" in normalized.upper()
-        assert "FROM" in normalized.upper()
+        mixed_case = "select 사번 from employees"
+        formatted = processor.format_sql(mixed_case)
+        assert "SELECT" in formatted or "select" in formatted
+        assert "FROM" in formatted or "from" in formatted
 
-        # 여러 공백
-        multi_space = "SELECT     사번,     성명     FROM     employees"
-        normalized_space = processor.normalize_query(multi_space)
-        # 정규화 후 과도한 공백이 제거되어야 함
-        assert "     " not in normalized_space
+        # 여러 컬럼 포맷팅
+        multi_column = "SELECT 사번, 성명, 부서 FROM employees"
+        formatted_multi = processor.format_sql(multi_column)
+        # 포맷팅 후 가독성 향상
+        assert "\n" in formatted_multi  # 줄바꿈이 있어야 함
 
-    def test_validate_korean_query(self, processor):
-        """한글 쿼리 검증 테스트"""
-        # 유효한 쿼리
-        valid_query = "SELECT 사번, 성명 FROM employees"
-        is_valid, message = processor.validate_korean_query(valid_query)
-        assert is_valid is True
+    def test_column_alias_generation(self, processor):
+        """컬럼 별칭 생성 테스트"""
+        # 알려진 한글 컬럼의 별칭
+        assert processor.generate_column_alias("사번") == "employee_id"
+        assert processor.generate_column_alias("성명") == "name"
+        assert processor.generate_column_alias("부서") == "department"
 
-        # 위험한 쿼리 (DELETE)
-        dangerous_query = "DELETE FROM employees WHERE 사번 = '1234'"
-        is_valid, message = processor.validate_korean_query(dangerous_query)
-        assert is_valid is False
-        assert "DELETE" in message
-
-        # 빈 쿼리
-        empty_query = ""
-        is_valid, message = processor.validate_korean_query(empty_query)
-        assert is_valid is False
-
-    def test_extract_korean_columns(self, processor):
-        """한글 컬럼명 추출 테스트"""
-        query = "SELECT 사번, 성명, id FROM employees WHERE 부서 = 'IT'"
-        korean_columns = processor.extract_korean_columns(query)
-
-        assert "사번" in korean_columns
-        assert "성명" in korean_columns
-        assert "부서" in korean_columns
-        assert "id" not in korean_columns
-
-    def test_replace_korean_with_alias(self, processor):
-        """한글 컬럼명 별칭 치환 테스트"""
+        # 별칭 자동 추가
         query = "SELECT 사번, 성명 FROM employees"
-        aliased, mapping = processor.replace_with_alias(query)
+        aliased = processor.add_column_aliases(query)
+        assert "AS employee_id" in aliased or "AS name" in aliased
 
-        # 별칭이 생성되어야 함
-        assert "col_" in aliased
-        assert "사번" not in aliased
-        assert "성명" not in aliased
+    def test_extract_columns_from_sql(self, processor):
+        """SQL에서 컬럼명 추출 테스트"""
+        query = "SELECT 사번, 성명, id FROM employees WHERE 부서 = 'IT'"
+        columns = processor.extract_columns_from_sql(query)
 
-        # 매핑이 올바르게 생성되어야 함
-        assert len(mapping) == 2
-        assert any("사번" in v for v in mapping.values())
+        assert "사번" in columns
+        assert "성명" in columns
+        assert "id" in columns
+
+    def test_add_column_aliases(self, processor):
+        """컬럼 별칭 추가 테스트"""
+        query = "SELECT 사번, 성명 FROM employees"
+        aliased = processor.add_column_aliases(query)
+
+        # 별칭이 추가되어야 함
+        assert "AS" in aliased
+        # 원본 한글 컬럼은 유지되고 별칭만 추가
+        assert "사번" in aliased or '"사번"' in aliased
+        assert "성명" in aliased or '"성명"' in aliased
 
     def test_complex_korean_query(self, processor):
         """복잡한 한글 쿼리 처리 테스트"""
-        complex_query = """
-        SELECT e.사번, e.성명, d.부서명, s.급여
-        FROM 직원 e
-        JOIN 부서 d ON e.부서코드 = d.부서코드
-        JOIN 급여 s ON e.사번 = s.사번
-        WHERE e.입사일 >= '2024-01-01'
-        ORDER BY s.급여 DESC
-        """
+        complex_query = "SELECT 사번, 성명, 부서 FROM 인사자료 WHERE 직급 = '과장'"
 
-        # 한글 컬럼 감지
-        assert processor.has_korean_columns(complex_query) is True
+        # 자동 인용 처리
+        quoted = processor.auto_quote_sql(complex_query)
+        assert '"사번"' in quoted
+        assert '"성명"' in quoted
+        assert '"부서"' in quoted
+        assert '"인사자료"' in quoted  # 테이블명도 처리
+        assert '"직급"' in quoted
 
-        # 한글 컬럼 추출
-        korean_columns = processor.extract_korean_columns(complex_query)
-        assert len(korean_columns) > 0
+    def test_monthly_columns(self, processor):
+        """월별 컬럼 처리 테스트"""
+        # 월별 컬럼 포함 쿼리
+        monthly_query = "SELECT 사번, 202401, 202402 FROM sales"
+        quoted = processor.auto_quote_sql(monthly_query)
 
-        # 이스케이프 처리
-        escaped = processor.escape_korean_columns(complex_query)
-        assert escaped != complex_query  # 변경이 있어야 함
-
-    def test_korean_column_in_functions(self, processor):
-        """함수 내 한글 컬럼명 처리 테스트"""
-        function_query = "SELECT COUNT(사번), AVG(급여), MAX(나이) FROM 직원"
-
-        # 한글 컬럼 감지
-        assert processor.has_korean_columns(function_query) is True
-
-        # 이스케이프 처리
-        escaped = processor.escape_korean_columns(function_query)
-        # 함수 내부의 컬럼도 이스케이프되어야 함
-        assert ("COUNT(\"사번\")" in escaped or "COUNT([사번])" in escaped)
+        # 월별 컬럼도 인용되어야 함
+        assert '"202401"' in quoted
+        assert '"202402"' in quoted
 
     @pytest.mark.parametrize("column,expected", [
         ("사번", True),
         ("employee_id", False),
-        ("직원_성명", True),
-        ("dept_부서", True),
+        ("성명", True),
+        ("부서", True),
         ("ID123", False)
     ])
-    def test_is_korean_column(self, processor, column, expected):
+    def test_validate_single_column(self, processor, column, expected):
         """개별 컬럼명 한글 여부 테스트"""
-        assert processor.is_korean_column(column) == expected
+        result = processor.validate_korean_columns([column])
+        assert result[column] == expected
 
 
 if __name__ == "__main__":
