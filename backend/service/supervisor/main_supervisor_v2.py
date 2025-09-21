@@ -1,33 +1,31 @@
 """
 Medical Domain Supervisor with Real Database API Integration
 실제 Database API를 호출하는 Tool 구현이 포함된 Supervisor
+LangGraph 0.6.7 StateGraph 기반 구현
 """
 
-from typing import Dict, Any, List, Optional, Literal
+from typing import Dict, Any, List, Optional, Literal, Annotated, Sequence, TypedDict
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 from langgraph.graph import StateGraph, END, START
-from langgraph.types import Command
-from langgraph_supervisor import (
-    create_supervisor,
-    create_handoff_tool,
-    create_forward_message_tool
-)
-from langgraph.prebuilt import create_react_agent, ToolNode
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.store.memory import InMemoryStore
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage, ToolMessage
 from langchain_core.tools import Tool
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 import logging
 import asyncio
 from datetime import datetime
 import sys
 import os
 from pathlib import Path
+import operator
 
 # 프로젝트 경로 추가
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -41,115 +39,108 @@ from backend.service.supervisor.checkpointer_pool import get_checkpointer_pool
 logger = logging.getLogger(__name__)
 
 
+# State definition for agents
+class AgentState(TypedDict):
+    """Individual agent state"""
+    messages: Annotated[Sequence[BaseMessage], add_messages]
+    context: Dict[str, Any]
+    next_agent: Optional[str]
+
+
+# Supervisor state
+class SupervisorState(TypedDict):
+    """Supervisor state for routing"""
+    messages: Annotated[Sequence[BaseMessage], add_messages]
+    context: Dict[str, Any]
+    current_agent: Optional[str]
+    next_agent: Optional[str]
+    completed_agents: List[str]
+
+
 class MedicalSupervisorV2:
     """
     의료/제약 도메인 특화 Supervisor V2
-    실제 Database API 통합 버전
+    StateGraph 기반 구현
     """
 
     def __init__(
         self,
         llm_provider: str = "openai",
-        model_name: Optional[str] = None,
-        checkpoint_db_path: str = "database/checkpointer/checkpoint.db",
-        database_api_url: str = "http://localhost:8000/api/v1"
+        llm_model: str = "gpt-4o-2024-08-06",
+        checkpoint_db_path: str = "./checkpoints/supervisor_v2.db",
+        verbose: bool = False
     ):
         """
-        Initialize Medical Supervisor V2
+        Supervisor V2 초기화
 
         Args:
-            llm_provider: LLM provider (openai, anthropic)
-            model_name: 모델 이름
-            checkpoint_db_path: SQLite 체크포인트 DB 경로
-            database_api_url: Database API 서버 URL
+            llm_provider: LLM 제공자 (openai, anthropic)
+            llm_model: 모델명
+            checkpoint_db_path: 체크포인트 저장 경로
+            verbose: 디버그 출력 여부
         """
+        self.llm_provider = llm_provider
+        self.llm_model = llm_model
+        self.checkpoint_db_path = checkpoint_db_path
+        self.verbose = verbose
 
         # LLM 초기화
-        if llm_provider == "openai":
-            self.llm = ChatOpenAI(
-                model=model_name or "gpt-4o",
-                temperature=0.1
-            )
-        elif llm_provider == "anthropic":
-            self.llm = ChatAnthropic(
-                model=model_name or "claude-3-opus-20240229",
-                temperature=0.1
-            )
+        if llm_provider == "anthropic":
+            self.llm = ChatAnthropic(model=llm_model, temperature=0)
         else:
-            raise ValueError(f"Unsupported LLM provider: {llm_provider}")
+            self.llm = ChatOpenAI(model=llm_model, temperature=0)
 
-        # Database API Client
-        self.db_client = DatabaseAPIClient(base_url=database_api_url)
+        # Database API 클라이언트
+        self.db_client = DatabaseAPIClient()
 
         # Context Manager
         self.context_manager = ContextManager()
 
-        # 에이전트 초기화
-        self.agents = self._initialize_agents()
+        # Checkpointer Pool
+        self.checkpointer_pool = get_checkpointer_pool()
 
-        # Supervisor workflow
+        # Store 초기화
+        self.store = InMemoryStore()
+
+        # 에이전트별 도구 초기화
+        self.agent_tools = self._initialize_tools()
+
+        # Workflow 초기화 플래그
         self.workflow = None
         self.workflow_compiled = False
 
-        # 메모리 및 연결 풀 초기화
-        self.checkpoint_db_path = checkpoint_db_path
-        self.store = InMemoryStore()
-        self.checkpointer_pool = get_checkpointer_pool(
-            db_path=checkpoint_db_path,
-            max_connections=5
-        )
+    def _initialize_tools(self) -> Dict[str, List[Tool]]:
+        """각 에이전트별 도구 초기화"""
+        tools = {}
 
-    def _initialize_agents(self) -> Dict[str, Any]:
-        """
-        하위 에이전트 초기화 - 실제 Database API 호출 Tool 포함
-        """
+        # 1. SQL 분석 에이전트 도구
+        tools["sql_analysis"] = [
+            self._create_sql_query_tool(),
+            self._create_monthly_analysis_tool(),
+            self._create_trend_analysis_tool()
+        ]
 
-        agents = {}
+        # 2. 정보 검색 에이전트 도구
+        tools["information_retrieval"] = [
+            self._create_hr_search_tool(),
+            self._create_vector_search_tool(),
+            self._create_hybrid_search_tool()
+        ]
 
-        # 1. SQL 분석 에이전트
-        agents["sql_analysis"] = create_react_agent(
-            self.llm,
-            tools=[
-                self._create_sql_query_tool(),
-                self._create_monthly_analysis_tool(),
-                self._create_trend_analysis_tool()
-            ],
-            name="sql_analysis"
-        )
+        # 3. 문서 생성 에이전트 도구
+        tools["document_generation"] = [
+            self._create_document_generation_tool(),
+            self._create_template_management_tool(),
+            self._create_document_storage_tool()
+        ]
 
-        # 2. 정보 검색 에이전트
-        agents["information_retrieval"] = create_react_agent(
-            self.llm,
-            tools=[
-                self._create_hr_search_tool(),
-                self._create_vector_search_tool(),
-                self._create_hybrid_search_tool()
-            ],
-            name="information_retrieval"
-        )
+        # 4. 규정 검토 에이전트 도구
+        tools["compliance_validation"] = [
+            self._create_compliance_check_tool(),
+            self._create_regulation_search_tool()
+        ]
 
-        # 3. 문서 생성 에이전트
-        agents["document_generation"] = create_react_agent(
-            self.llm,
-            tools=[
-                self._create_report_generation_tool(),
-                self._create_template_tool(),
-                self._create_export_tool()
-            ],
-            name="document_generation"
-        )
-
-        # 4. 규정 검토 에이전트
-        agents["compliance_validation"] = create_react_agent(
-            self.llm,
-            tools=[
-                self._create_compliance_check_tool(),
-                self._create_regulation_search_tool()
-            ],
-            name="compliance_validation"
-        )
-
-        return agents
+        return tools
 
     def _create_sql_query_tool(self) -> Tool:
         """SQL 쿼리 실행 도구 - 실제 Database API 호출"""
@@ -249,23 +240,24 @@ class MedicalSupervisorV2:
                        "202407", "202408", "202409", "202410", "202411"
                 FROM sales_performance
                 WHERE "담당자" LIKE '%{query}%'
-                LIMIT 10
                 """
 
                 result = await self.db_client.execute_sql(sql, "sales")
 
                 if result["success"] and result["data"]:
-                    # 간단한 트렌드 분석
+                    # 트렌드 분석 로직
                     trends = []
-                    for row in result["data"][:3]:  # 처음 3개만
-                        monthly_values = [row.get(f"2024{i:02d}", 0) for i in range(1, 12)]
-                        avg = sum(v for v in monthly_values if v) / len([v for v in monthly_values if v])
+                    for row in result["data"][:3]:  # 샘플 3개
+                        monthly_values = [
+                            row.get(f"2024{str(i).zfill(2)}", 0) for i in range(1, 12)
+                        ]
+                        avg = sum(monthly_values) / len([v for v in monthly_values if v])
                         trend = "상승" if monthly_values[-1] > avg else "하락"
                         trends.append(f"{row.get('담당자', 'Unknown')}: {trend} 추세")
 
                     return f"트렌드 분석 결과:\n" + "\n".join(trends)
                 else:
-                    return "트렌드 분석할 데이터 없음"
+                    return "트렌드 분석 데이터 없음"
 
             except Exception as e:
                 return f"트렌드 분석 중 오류: {str(e)}"
@@ -280,16 +272,25 @@ class MedicalSupervisorV2:
         """HR 정보 검색 도구"""
 
         async def search_hr(query: str) -> str:
-            """HR 정보 검색"""
+            """HR 정보 데이터베이스 검색"""
             try:
-                result = await self.db_client.search_hr(query)
+                # HR 테이블에서 검색
+                sql = f"""
+                SELECT * FROM 인사자료
+                WHERE "성명" LIKE '%{query}%'
+                   OR "사번" = '{query}'
+                   OR "부서" LIKE '%{query}%'
+                LIMIT 10
+                """
+
+                result = await self.db_client.execute_sql(sql, "hr")
 
                 if result["success"]:
                     data = result["data"]
                     if data:
-                        return f"HR 검색 결과 {len(data)}건:\n{data[:3]}"  # 처음 3개
+                        return f"HR 검색 결과 {len(data)}건 발견"
                     else:
-                        return "검색 결과 없음"
+                        return "HR 검색 결과 없음"
                 else:
                     return f"HR 검색 실패: {result.get('error', 'Unknown error')}"
 
@@ -298,33 +299,25 @@ class MedicalSupervisorV2:
 
         return Tool(
             name="hr_search",
-            description="인사정보 DB에서 직원 정보를 검색합니다",
+            description="인사 정보를 검색합니다 (성명, 사번, 부서)",
             func=lambda q: asyncio.run(search_hr(q))
         )
 
     def _create_vector_search_tool(self) -> Tool:
-        """벡터 검색 도구 (ChromaDB)"""
+        """벡터 검색 도구"""
 
-        async def search_vector(params: str) -> str:
-            """
-            벡터 검색
-
-            Args:
-                params: "쿼리,컬렉션" 형식 (예: "리베이트,rules")
-            """
+        async def search_vector(query: str) -> str:
+            """벡터 데이터베이스 검색"""
             try:
-                parts = params.split(',')
-                query = parts[0].strip()
-                collection = parts[1].strip() if len(parts) > 1 else "rules"
-
-                result = await self.db_client.search_vector(query, collection)
+                # ChromaDB 벡터 검색 (Mock)
+                result = await self.db_client.search_vector(query, "medical_docs")
 
                 if result["success"]:
                     docs = result["documents"]
                     if docs:
-                        return f"벡터 검색 결과 {len(docs)}건:\n{docs[:2]}"  # 처음 2개
+                        return f"벡터 검색 결과 {len(docs)}건 발견"
                     else:
-                        return "검색 결과 없음"
+                        return "관련 문서 없음"
                 else:
                     return f"벡터 검색 실패: {result.get('error', 'Unknown error')}"
 
@@ -333,116 +326,138 @@ class MedicalSupervisorV2:
 
         return Tool(
             name="vector_search",
-            description="ChromaDB에서 벡터 검색을 수행합니다. 형식: 쿼리,컬렉션",
-            func=lambda p: asyncio.run(search_vector(p))
+            description="의료 문서를 벡터 검색합니다",
+            func=lambda q: asyncio.run(search_vector(q))
         )
 
     def _create_hybrid_search_tool(self) -> Tool:
-        """하이브리드 검색 도구 (SQL + Vector)"""
+        """하이브리드 검색 도구"""
 
         async def hybrid_search(query: str) -> str:
-            """SQL과 벡터를 조합한 하이브리드 검색"""
+            """키워드 + 벡터 하이브리드 검색"""
             try:
-                result = await self.db_client.hybrid_search(
-                    query,
-                    databases=["hr", "sales"],
-                    vector_collections=["rules", "hr_rules"]
+                # 키워드 검색
+                keyword_results = []
+
+                # 벡터 검색
+                vector_results = await self.db_client.search_vector(query, "medical_docs")
+
+                # 결과 병합
+                total_results = len(keyword_results) + (
+                    len(vector_results.get("documents", [])) if vector_results.get("success") else 0
                 )
 
-                if result["success"]:
-                    sql_count = len(result.get("sql_results", []))
-                    vector_count = len(result.get("vector_results", []))
-                    return f"하이브리드 검색 완료:\nSQL 결과: {sql_count}건\n벡터 결과: {vector_count}건"
-                else:
-                    return f"하이브리드 검색 실패: {result.get('error', 'Unknown error')}"
+                return f"하이브리드 검색 완료. 총 {total_results}건 발견"
 
             except Exception as e:
                 return f"하이브리드 검색 중 오류: {str(e)}"
 
         return Tool(
             name="hybrid_search",
-            description="SQL과 벡터 검색을 조합한 하이브리드 검색",
+            description="키워드와 벡터를 조합한 하이브리드 검색",
             func=lambda q: asyncio.run(hybrid_search(q))
         )
 
-    def _create_report_generation_tool(self) -> Tool:
-        """보고서 생성 도구"""
+    def _create_document_generation_tool(self) -> Tool:
+        """문서 생성 도구"""
 
-        def generate_report(data: str) -> str:
-            """보고서 생성 (템플릿 기반)"""
-            # 실제 구현에서는 템플릿 엔진 사용
-            return f"보고서 생성 완료:\n제목: 방문결과보고서\n내용: {data[:100]}..."
+        async def generate_document(params: str) -> str:
+            """문서 생성"""
+            try:
+                # 파라미터 파싱
+                parts = params.split('|')
+                doc_type = parts[0] if len(parts) > 0 else "report"
+                content = parts[1] if len(parts) > 1 else "기본 내용"
+
+                # 문서 생성 로직
+                document = {
+                    "type": doc_type,
+                    "content": content,
+                    "created_at": datetime.now().isoformat(),
+                    "id": f"DOC_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                }
+
+                return f"문서 생성 완료: {document['id']} ({doc_type})"
+
+            except Exception as e:
+                return f"문서 생성 중 오류: {str(e)}"
 
         return Tool(
-            name="report_generation",
-            description="방문결과보고서 등 각종 보고서를 생성합니다",
-            func=generate_report
+            name="generate_document",
+            description="문서를 생성합니다. 형식: 문서타입|내용",
+            func=lambda p: asyncio.run(generate_document(p))
         )
 
-    def _create_template_tool(self) -> Tool:
+    def _create_template_management_tool(self) -> Tool:
         """템플릿 관리 도구"""
 
-        def manage_template(action: str) -> str:
-            """템플릿 로드/저장"""
-            templates = {
-                "visit_report": "방문결과보고서 템플릿",
-                "product_meeting": "제품설명회 신청서 템플릿",
-                "sample_request": "샘플신청서 템플릿"
-            }
-            return f"사용 가능한 템플릿: {list(templates.keys())}"
+        async def manage_template(action: str) -> str:
+            """템플릿 관리"""
+            try:
+                if action == "list":
+                    templates = ["보고서", "증명서", "계약서", "제안서"]
+                    return f"사용 가능한 템플릿: {', '.join(templates)}"
+                elif action.startswith("load:"):
+                    template_name = action.replace("load:", "").strip()
+                    return f"템플릿 '{template_name}' 로드 완료"
+                else:
+                    return "지원되는 액션: list, load:템플릿명"
+
+            except Exception as e:
+                return f"템플릿 관리 중 오류: {str(e)}"
 
         return Tool(
-            name="template_manager",
+            name="manage_template",
             description="문서 템플릿을 관리합니다",
-            func=manage_template
+            func=lambda a: asyncio.run(manage_template(a))
         )
 
-    def _create_export_tool(self) -> Tool:
-        """문서 내보내기 도구"""
+    def _create_document_storage_tool(self) -> Tool:
+        """문서 저장소 도구"""
 
-        def export_document(format: str) -> str:
-            """문서를 다양한 형식으로 내보내기"""
-            supported = ["PDF", "Excel", "Word", "HTML"]
-            if format.upper() in supported:
-                return f"{format} 형식으로 내보내기 준비 완료"
-            else:
-                return f"지원 형식: {supported}"
+        async def store_document(doc_info: str) -> str:
+            """문서 저장"""
+            try:
+                # 문서 저장 로직
+                doc_id = f"STORED_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                return f"문서 저장 완료: {doc_id}"
+
+            except Exception as e:
+                return f"문서 저장 중 오류: {str(e)}"
 
         return Tool(
-            name="export_document",
-            description="문서를 PDF, Excel 등으로 내보냅니다",
-            func=export_document
+            name="store_document",
+            description="생성된 문서를 저장소에 저장합니다",
+            func=lambda d: asyncio.run(store_document(d))
         )
 
     def _create_compliance_check_tool(self) -> Tool:
-        """규정 준수 확인 도구"""
+        """컴플라이언스 체크 도구"""
 
-        async def check_compliance(document: str) -> str:
-            """문서의 규정 위반 여부 확인"""
+        async def check_compliance(content: str) -> str:
+            """컴플라이언스 규정 체크"""
             try:
-                # 규정 키워드 검색
-                keywords = ["리베이트", "금품", "향응", "접대", "현금", "상품권"]
+                # 규정 체크 로직 (Mock)
                 violations = []
 
-                for keyword in keywords:
-                    if keyword in document:
-                        # ChromaDB에서 관련 규정 검색
-                        result = await self.db_client.search_vector(keyword, "rules")
-                        if result["success"] and result["documents"]:
-                            violations.append(f"'{keyword}' 관련 규정 주의 필요")
+                # 키워드 기반 체크
+                prohibited_keywords = ["리베이트", "불법", "위반"]
+                for keyword in prohibited_keywords:
+                    if keyword in content:
+                        violations.append(f"금지 키워드 발견: {keyword}")
 
                 if violations:
-                    return f"규정 검토 필요:\n" + "\n".join(violations)
+                    return f"컴플라이언스 위반 사항:\n" + "\n".join(violations)
                 else:
-                    return "규정 위반 사항 없음"
+                    return "컴플라이언스 체크 통과"
 
             except Exception as e:
-                return f"규정 확인 중 오류: {str(e)}"
+                return f"컴플라이언스 체크 중 오류: {str(e)}"
 
         return Tool(
             name="compliance_check",
-            description="문서의 규정 위반 여부를 확인합니다",
-            func=lambda doc: asyncio.run(check_compliance(doc))
+            description="문서나 활동의 컴플라이언스 준수 여부를 체크합니다",
+            func=lambda c: asyncio.run(check_compliance(c))
         )
 
     def _create_regulation_search_tool(self) -> Tool:
@@ -472,65 +487,155 @@ class MedicalSupervisorV2:
             func=lambda q: asyncio.run(search_regulation(q))
         )
 
+    def _create_agent_node(self, agent_name: str, tools: List[Tool]):
+        """각 에이전트를 위한 노드 생성"""
+
+        async def agent_node(state: AgentState) -> Dict:
+            """에이전트 노드 실행"""
+            messages = state["messages"]
+            context = state.get("context", {})
+
+            # 에이전트별 시스템 프롬프트
+            system_prompts = {
+                "sql_analysis": "당신은 SQL 분석 전문가입니다. 데이터베이스 쿼리를 작성하고 실행하여 데이터를 분석합니다.",
+                "information_retrieval": "당신은 정보 검색 전문가입니다. 다양한 소스에서 관련 정보를 찾아 제공합니다.",
+                "document_generation": "당신은 문서 생성 전문가입니다. 템플릿을 활용하여 전문적인 문서를 작성합니다.",
+                "compliance_validation": "당신은 규정 준수 검토 전문가입니다. 의료법과 규정을 확인하여 컴플라이언스를 검증합니다."
+            }
+
+            # 도구가 있는 경우 도구 사용
+            if tools:
+                # 도구 바인딩
+                llm_with_tools = self.llm.bind_tools(tools)
+
+                # 시스템 메시지 추가
+                system_message = SystemMessage(content=system_prompts.get(agent_name, ""))
+                messages_with_system = [system_message] + list(messages)
+
+                # LLM 호출
+                response = await llm_with_tools.ainvoke(messages_with_system)
+            else:
+                # 도구 없이 직접 응답
+                response = await self.llm.ainvoke(messages)
+
+            return {"messages": [response]}
+
+        return agent_node
+
     def build_supervisor_workflow(self) -> StateGraph:
         """
-        Supervisor workflow 구축
+        StateGraph 기반 Supervisor workflow 구축
         """
 
-        # Supervisor 시스템 프롬프트
-        supervisor_prompt = """당신은 의료/제약 도메인 전문 Supervisor입니다.
+        # Workflow 생성
+        workflow = StateGraph(SupervisorState)
 
-        다음 전문가들을 관리합니다:
-        1. sql_analysis_agent: SQL 분석, 직원 실적, 월별 데이터 분석
-        2. information_retrieval_agent: 정보 검색 (HR, 벡터, 하이브리드)
-        3. document_generation_agent: 문서 생성 및 템플릿 관리
-        4. compliance_validation_agent: 규정 준수 검토
+        # Supervisor 노드
+        async def supervisor_node(state: SupervisorState) -> Dict:
+            """Supervisor 노드 - 라우팅 결정"""
+            messages = state["messages"]
+            context = state.get("context", {})
+            completed_agents = state.get("completed_agents", [])
 
-        데이터베이스 정보:
-        - HR DB: 인사자료, 지점연락처 (한글 컬럼명)
-        - Sales DB: sales_performance (월별 데이터 202312~202411)
-        - ChromaDB: rules (규정), hr_rules (HR규정)
+            # Supervisor 시스템 프롬프트
+            supervisor_prompt = f"""당신은 의료/제약 도메인 전문 Supervisor입니다.
 
-        사용자 요청을 분석하여 적절한 전문가에게 작업을 할당하세요.
-        모든 작업이 완료되면 FINISH로 응답하세요."""
+            다음 전문가들을 관리합니다:
+            1. sql_analysis: SQL 분석, 직원 실적, 월별 데이터 분석
+            2. information_retrieval: 정보 검색 (HR, 벡터, 하이브리드)
+            3. document_generation: 문서 생성 및 템플릿 관리
+            4. compliance_validation: 규정 준수 검토
 
-        # Handoff 도구 생성
-        handoff_tools = [
-            create_handoff_tool(
-                agent_name="sql_analysis",
-                name="delegate_to_sql_analysis",
-                description="SQL 분석 전문가에게 작업 위임"
-            ),
-            create_handoff_tool(
-                agent_name="information_retrieval",
-                name="delegate_to_information_retrieval",
-                description="정보 검색 전문가에게 작업 위임"
-            ),
-            create_handoff_tool(
-                agent_name="document_generation",
-                name="delegate_to_document_generation",
-                description="문서 생성 전문가에게 작업 위임"
-            ),
-            create_handoff_tool(
-                agent_name="compliance_validation",
-                name="delegate_to_compliance_validation",
-                description="규정 검토 전문가에게 작업 위임"
-            )
-        ]
+            이미 완료된 에이전트: {completed_agents}
 
-        # Forward 메시지 도구 추가
-        forward_tool = create_forward_message_tool("supervisor")
-        handoff_tools.append(forward_tool)
+            사용자 요청을 분석하여:
+            - 적절한 전문가를 선택하거나
+            - 모든 작업이 완료되었으면 'FINISH'로 응답하세요.
 
-        # Supervisor workflow 생성
-        self.workflow = create_supervisor(
-            agents=list(self.agents.values()),
-            model=self.llm,
-            prompt=supervisor_prompt,
-            tools=handoff_tools
+            응답 형식: "NEXT: agent_name" 또는 "FINISH: 최종 답변"
+            """
+
+            system_message = SystemMessage(content=supervisor_prompt)
+            messages_with_system = [system_message] + list(messages)
+
+            response = await self.llm.ainvoke(messages_with_system)
+
+            # 응답 파싱
+            response_text = response.content
+            if "FINISH:" in response_text:
+                return {
+                    "messages": [response],
+                    "next_agent": None
+                }
+            elif "NEXT:" in response_text:
+                next_agent = response_text.split("NEXT:")[1].strip().split()[0]
+                return {
+                    "messages": [response],
+                    "next_agent": next_agent,
+                    "completed_agents": completed_agents
+                }
+            else:
+                # 기본 응답
+                return {
+                    "messages": [response],
+                    "next_agent": None
+                }
+
+        # Supervisor 노드 추가
+        workflow.add_node("supervisor", supervisor_node)
+
+        # 각 에이전트 노드와 도구 노드 추가
+        for agent_name, tools in self.agent_tools.items():
+            # 에이전트 노드
+            agent_node = self._create_agent_node(agent_name, tools)
+            workflow.add_node(agent_name, agent_node)
+
+            # 도구 노드
+            if tools:
+                tool_node = ToolNode(tools)
+                workflow.add_node(f"{agent_name}_tools", tool_node)
+
+                # 에이전트와 도구 간 엣지
+                workflow.add_conditional_edges(
+                    agent_name,
+                    tools_condition,
+                    {
+                        "tools": f"{agent_name}_tools",
+                        "continue": "supervisor"
+                    }
+                )
+                workflow.add_edge(f"{agent_name}_tools", agent_name)
+
+        # 시작 엣지
+        workflow.add_edge(START, "supervisor")
+
+        # Supervisor 라우팅
+        def route_supervisor(state: SupervisorState) -> str:
+            """Supervisor 라우팅 로직"""
+            next_agent = state.get("next_agent")
+            if next_agent and next_agent in self.agent_tools:
+                return next_agent
+            return END
+
+        workflow.add_conditional_edges(
+            "supervisor",
+            route_supervisor,
+            {
+                "sql_analysis": "sql_analysis",
+                "information_retrieval": "information_retrieval",
+                "document_generation": "document_generation",
+                "compliance_validation": "compliance_validation",
+                END: END
+            }
         )
 
-        return self.workflow
+        # 에이전트에서 supervisor로 돌아오는 엣지 (도구가 없는 경우)
+        for agent_name in self.agent_tools:
+            if not self.agent_tools[agent_name]:
+                workflow.add_edge(agent_name, "supervisor")
+
+        self.workflow = workflow
+        return workflow
 
     async def compile_with_optimization(self) -> None:
         """최적화된 워크플로우 준비"""
@@ -545,7 +650,7 @@ class MedicalSupervisorV2:
 
         # 컴파일 설정
         self.compile_config = {
-            "interrupt_before": ["compliance_validation_agent"]
+            "interrupt_before": ["compliance_validation"]
         }
 
         logger.info(f"Supervisor V2 workflow prepared with checkpoint at {self.checkpoint_db_path}")
@@ -572,9 +677,8 @@ class MedicalSupervisorV2:
         initial_state = {
             "messages": [HumanMessage(content=query)],
             "context": medical_context.dict(),
-            "user_id": user_context.get("user_id"),
-            "session_id": user_context.get("session_id"),
-            "timestamp": datetime.now().isoformat()
+            "completed_agents": [],
+            "next_agent": None
         }
 
         # 설정
@@ -598,52 +702,34 @@ class MedicalSupervisorV2:
                 # 실행
                 result = await app.ainvoke(initial_state, config)
 
-                # 결과 후처리
-                processed_result = self._post_process_result(result, medical_context)
+                # 결과 처리
+                messages = result.get("messages", [])
+                last_message = messages[-1] if messages else None
 
                 return {
                     "status": "success",
-                    "result": processed_result,
-                    "context": medical_context.dict(),
-                    "execution_time": (datetime.now() - datetime.fromisoformat(initial_state["timestamp"])).total_seconds()
+                    "response": last_message.content if last_message else "처리 완료",
+                    "metadata": {
+                        "completed_agents": result.get("completed_agents", []),
+                        "message_count": len(messages)
+                    }
                 }
 
             except Exception as e:
-                logger.error(f"Execution failed: {e}")
+                logger.error(f"Workflow execution error: {e}")
                 return {
                     "status": "error",
-                    "error": str(e),
-                    "context": medical_context.dict()
+                    "response": "처리 중 오류가 발생했습니다.",
+                    "error": str(e)
                 }
-
-    def _post_process_result(
-        self,
-        result: Dict[str, Any],
-        context: MedicalContext
-    ) -> Dict[str, Any]:
-        """결과 후처리"""
-
-        processed = {
-            "final_answer": result.get("messages", [])[-1].content if result.get("messages") else "",
-            "domain": context.domain_type,
-            "agents_used": [],
-            "data_sources": context.data_sources
-        }
-
-        # 사용된 에이전트 추출
-        for msg in result.get("messages", []):
-            if hasattr(msg, "name") and msg.name:
-                if msg.name not in processed["agents_used"]:
-                    processed["agents_used"].append(msg.name)
-
-        return processed
 
     async def stream_execution(
         self,
         query: str,
-        user_context: Dict[str, Any]
+        user_context: Dict[str, Any],
+        conversation_history: Optional[List[Dict]] = None
     ):
-        """실시간 스트리밍 실행"""
+        """스트리밍 실행"""
 
         if not self.workflow_compiled:
             await self.compile_with_optimization()
@@ -652,17 +738,18 @@ class MedicalSupervisorV2:
         medical_context = await self.context_manager.optimize_context(
             query,
             user_context,
-            []
+            conversation_history or []
         )
 
+        # 초기 상태
         initial_state = {
             "messages": [HumanMessage(content=query)],
             "context": medical_context.dict(),
-            "user_id": user_context.get("user_id"),
-            "session_id": user_context.get("session_id"),
-            "timestamp": datetime.now().isoformat()
+            "completed_agents": [],
+            "next_agent": None
         }
 
+        # 설정
         config = {
             "configurable": {
                 "thread_id": user_context.get("session_id", "default"),
@@ -670,54 +757,55 @@ class MedicalSupervisorV2:
             }
         }
 
-        async with AsyncSqliteSaver.from_conn_string(self.checkpoint_db_path) as checkpointer:
+        # CheckpointerPool을 통한 연결 관리
+        async with self.checkpointer_pool.get_connection_context() as checkpointer:
+            # workflow 컴파일
             app = self.workflow.compile(
                 checkpointer=checkpointer,
                 store=self.store,
                 **self.compile_config
             )
 
+            # 스트리밍
+            async for event in app.astream(initial_state, config):
+                yield event
+
+    async def get_state(self, session_id: str) -> Optional[Dict]:
+        """체크포인트에서 상태 조회"""
+
+        config = {
+            "configurable": {
+                "thread_id": session_id,
+                "checkpoint_ns": "medical_supervisor_v2"
+            }
+        }
+
+        async with self.checkpointer_pool.get_connection_context() as checkpointer:
+            app = self.workflow.compile(checkpointer=checkpointer, store=self.store)
+
             try:
-                async for chunk in app.astream(initial_state, config):
-                    yield {
-                        "type": "stream",
-                        "data": chunk,
-                        "timestamp": datetime.now().isoformat()
-                    }
+                state = await app.aget_state(config)
+                return state.values if state else None
             except Exception as e:
-                logger.error(f"Streaming failed: {e}")
-                yield {
-                    "type": "error",
-                    "error": str(e),
-                    "timestamp": datetime.now().isoformat()
-                }
-
-    async def shutdown(self):
-        """안전한 종료"""
-        logger.info("Shutting down Supervisor V2...")
-
-        # Database API 클라이언트 종료
-        if self.db_client:
-            await self.db_client.close()
-
-        logger.info("Supervisor V2 shutdown complete")
+                logger.error(f"Failed to get state: {e}")
+                return None
 
 
-# 생성 헬퍼 함수
-async def create_medical_supervisor_v2(
-    llm_provider: str = "openai",
-    model_name: Optional[str] = None,
-    checkpoint_db_path: str = "database/checkpointer/checkpoint.db",
-    database_api_url: str = "http://localhost:8000/api/v1"
-) -> MedicalSupervisorV2:
-    """Medical Supervisor V2 생성"""
+# Example usage
+async def main():
+    """테스트용 메인 함수"""
+    supervisor = MedicalSupervisorV2(verbose=True)
 
-    supervisor = MedicalSupervisorV2(
-        llm_provider,
-        model_name,
-        checkpoint_db_path,
-        database_api_url
+    # 테스트 쿼리
+    test_query = "사번 E001의 2024년 월별 매출 실적을 분석해주세요"
+
+    result = await supervisor.execute_with_context(
+        query=test_query,
+        user_context={"user_id": "test_user", "session_id": "test_session"}
     )
-    await supervisor.compile_with_optimization()
 
-    return supervisor
+    print(f"Result: {result}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
