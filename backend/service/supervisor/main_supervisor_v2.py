@@ -113,9 +113,7 @@ class MedicalSupervisorV2:
                 self._create_sql_query_tool(),
                 self._create_monthly_analysis_tool(),
                 self._create_trend_analysis_tool()
-            ],
-            name="sql_analysis_agent",
-            state_modifier="You are a medical/pharmaceutical data analysis expert. Process Korean column names and monthly data (202312~202411) accurately. Perform employee performance analysis and trading partner trend analysis."
+            ]
         )
 
         # 2. 정보 검색 에이전트
@@ -125,9 +123,7 @@ class MedicalSupervisorV2:
                 self._create_hr_search_tool(),
                 self._create_vector_search_tool(),
                 self._create_hybrid_search_tool()
-            ],
-            name="information_retrieval_agent",
-            state_modifier="You are a medical/pharmaceutical information retrieval expert. Perform HR information, regulation, and ChromaDB vector searches. Also capable of hybrid search combining SQL and vector search."
+            ]
         )
 
         # 3. 문서 생성 에이전트
@@ -137,9 +133,7 @@ class MedicalSupervisorV2:
                 self._create_report_generation_tool(),
                 self._create_template_tool(),
                 self._create_export_tool()
-            ],
-            name="document_generation_agent",
-            state_modifier="You are a medical/pharmaceutical document creation expert. Create visit reports, product presentation applications, etc. Generate compliant documents using templates."
+            ]
         )
 
         # 4. 규정 검토 에이전트
@@ -148,9 +142,7 @@ class MedicalSupervisorV2:
             tools=[
                 self._create_compliance_check_tool(),
                 self._create_regulation_search_tool()
-            ],
-            name="compliance_validation_agent",
-            state_modifier="You are a medical/pharmaceutical compliance expert. Review medical law, anti-rebate law, and fair trade regulations. Utilize ChromaDB's regulatory database."
+            ]
         )
 
         return agents
@@ -528,7 +520,7 @@ class MedicalSupervisorV2:
 
         # Supervisor workflow 생성
         self.workflow = create_supervisor(
-            agents=list(self.agents.values()),
+            agents=self.agents,
             model=self.llm,
             prompt=supervisor_prompt,
             tools=handoff_tools
