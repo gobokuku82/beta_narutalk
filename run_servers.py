@@ -1,6 +1,6 @@
 """
-Dual Server Startup Script
-Chat API (Port 8001) and Database API (Port 8002)를 동시에 실행
+Triple Server Startup Script
+Chat API (Port 8001), Database API (Port 8002), Frontend (Port 8080)을 동시에 실행
 """
 
 import subprocess
@@ -23,6 +23,41 @@ class ServerManager:
     def __init__(self):
         self.processes = {}
         self.running = True
+
+    def start_frontend_server(self, port: int = 8080) -> subprocess.Popen:
+        """
+        Frontend 서버 시작
+
+        Args:
+            port: 포트 번호 (기본값: 8080)
+
+        Returns:
+            서버 프로세스
+        """
+        logger.info(f"Starting Frontend Server on port {port}...")
+
+        # frontend 디렉토리로 이동하여 http.server 실행
+        frontend_dir = os.path.join(os.path.dirname(__file__), "frontend")
+
+        cmd = [
+            sys.executable,
+            "-m",
+            "http.server",
+            str(port),
+            "--directory", frontend_dir
+        ]
+
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+
+        self.processes["Frontend Server"] = process
+        logger.info(f"Frontend Server started with PID: {process.pid}")
+
+        return process
 
     def start_server(self, name: str, module: str, port: int) -> subprocess.Popen:
         """
@@ -103,7 +138,14 @@ class ServerManager:
         else:
             logger.error("❌ Chat API failed to start")
 
-        if db_ready and chat_ready:
+        # Frontend 서버 체크 (간단한 체크 - http.server는 보통 즉시 시작됨)
+        frontend_ready = await self.check_health("http://localhost:8080/test_chat.html")
+        if frontend_ready:
+            logger.info("✅ Frontend Server is ready")
+        else:
+            logger.error("❌ Frontend Server failed to start")
+
+        if db_ready and chat_ready and frontend_ready:
             logger.info("=" * 60)
             logger.info("🚀 All servers are running!")
             logger.info("=" * 60)
@@ -111,6 +153,7 @@ class ServerManager:
             logger.info("   - Docs: http://localhost:8002/docs")
             logger.info("📍 Chat API: http://localhost:8001")
             logger.info("   - Docs: http://localhost:8001/docs")
+            logger.info("🌐 Frontend: http://localhost:8080/test_chat.html")
             logger.info("=" * 60)
             logger.info("Press Ctrl+C to stop all servers")
             return True
@@ -182,7 +225,13 @@ async def main():
             8001
         )
 
-        # 3. 서버들이 준비될 때까지 대기
+        # Chat API가 시작될 때까지 잠시 대기
+        await asyncio.sleep(2)
+
+        # 3. Frontend 서버 시작 (Port 8080)
+        manager.start_frontend_server(8080)
+
+        # 4. 서버들이 준비될 때까지 대기
         success = await manager.wait_for_servers()
 
         if success:

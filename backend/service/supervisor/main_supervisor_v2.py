@@ -113,7 +113,8 @@ class MedicalSupervisorV2:
                 self._create_sql_query_tool(),
                 self._create_monthly_analysis_tool(),
                 self._create_trend_analysis_tool()
-            ]
+            ],
+            name="sql_analysis"
         )
 
         # 2. 정보 검색 에이전트
@@ -123,7 +124,8 @@ class MedicalSupervisorV2:
                 self._create_hr_search_tool(),
                 self._create_vector_search_tool(),
                 self._create_hybrid_search_tool()
-            ]
+            ],
+            name="information_retrieval"
         )
 
         # 3. 문서 생성 에이전트
@@ -133,7 +135,8 @@ class MedicalSupervisorV2:
                 self._create_report_generation_tool(),
                 self._create_template_tool(),
                 self._create_export_tool()
-            ]
+            ],
+            name="document_generation"
         )
 
         # 4. 규정 검토 에이전트
@@ -142,7 +145,8 @@ class MedicalSupervisorV2:
             tools=[
                 self._create_compliance_check_tool(),
                 self._create_regulation_search_tool()
-            ]
+            ],
+            name="compliance_validation"
         )
 
         return agents
@@ -493,22 +497,22 @@ class MedicalSupervisorV2:
         # Handoff 도구 생성
         handoff_tools = [
             create_handoff_tool(
-                agent_name="sql_analysis_agent",
+                agent_name="sql_analysis",
                 name="delegate_to_sql_analysis",
                 description="SQL 분석 전문가에게 작업 위임"
             ),
             create_handoff_tool(
-                agent_name="information_retrieval_agent",
+                agent_name="information_retrieval",
                 name="delegate_to_information_retrieval",
                 description="정보 검색 전문가에게 작업 위임"
             ),
             create_handoff_tool(
-                agent_name="document_generation_agent",
+                agent_name="document_generation",
                 name="delegate_to_document_generation",
                 description="문서 생성 전문가에게 작업 위임"
             ),
             create_handoff_tool(
-                agent_name="compliance_validation_agent",
+                agent_name="compliance_validation",
                 name="delegate_to_compliance_validation",
                 description="규정 검토 전문가에게 작업 위임"
             )
@@ -520,7 +524,7 @@ class MedicalSupervisorV2:
 
         # Supervisor workflow 생성
         self.workflow = create_supervisor(
-            agents=self.agents,
+            agents=list(self.agents.values()),
             model=self.llm,
             prompt=supervisor_prompt,
             tools=handoff_tools
