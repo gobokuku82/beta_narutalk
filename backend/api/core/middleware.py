@@ -7,7 +7,7 @@ import logging
 import uuid
 from typing import Callable
 from fastapi import Request, Response
-from fastapi.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 
 from .config import settings

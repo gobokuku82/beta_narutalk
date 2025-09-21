@@ -4,6 +4,10 @@ Medical Domain Supervisor with Real Database API Integration
 """
 
 from typing import Dict, Any, List, Optional, Literal
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 from langgraph.graph import StateGraph, END, START
 from langgraph.types import Command
 from langgraph_supervisor import (
@@ -111,9 +115,7 @@ class MedicalSupervisorV2:
                 self._create_trend_analysis_tool()
             ],
             name="sql_analysis_agent",
-            system_message="""당신은 의료/제약 데이터 분석 전문가입니다.
-            한글 컬럼명과 월별 데이터(202312~202411)를 정확히 처리합니다.
-            직원 실적 분석, 거래처 트렌드 분석을 수행합니다."""
+            state_modifier="You are a medical/pharmaceutical data analysis expert. Process Korean column names and monthly data (202312~202411) accurately. Perform employee performance analysis and trading partner trend analysis."
         )
 
         # 2. 정보 검색 에이전트
@@ -125,9 +127,7 @@ class MedicalSupervisorV2:
                 self._create_hybrid_search_tool()
             ],
             name="information_retrieval_agent",
-            system_message="""당신은 의료/제약 정보 검색 전문가입니다.
-            HR 정보, 규정, ChromaDB 벡터 검색을 수행합니다.
-            SQL과 벡터 검색을 조합한 하이브리드 검색도 가능합니다."""
+            state_modifier="You are a medical/pharmaceutical information retrieval expert. Perform HR information, regulation, and ChromaDB vector searches. Also capable of hybrid search combining SQL and vector search."
         )
 
         # 3. 문서 생성 에이전트
@@ -139,9 +139,7 @@ class MedicalSupervisorV2:
                 self._create_export_tool()
             ],
             name="document_generation_agent",
-            system_message="""당신은 의료/제약 문서 작성 전문가입니다.
-            방문결과보고서, 제품설명회 신청서 등을 작성합니다.
-            템플릿을 활용하여 규정에 맞는 문서를 생성합니다."""
+            state_modifier="You are a medical/pharmaceutical document creation expert. Create visit reports, product presentation applications, etc. Generate compliant documents using templates."
         )
 
         # 4. 규정 검토 에이전트
@@ -152,9 +150,7 @@ class MedicalSupervisorV2:
                 self._create_regulation_search_tool()
             ],
             name="compliance_validation_agent",
-            system_message="""당신은 의료/제약 규정 준수 전문가입니다.
-            의료법, 리베이트법, 공정거래규약을 검토합니다.
-            ChromaDB의 규정 데이터베이스를 활용합니다."""
+            state_modifier="You are a medical/pharmaceutical compliance expert. Review medical law, anti-rebate law, and fair trade regulations. Utilize ChromaDB's regulatory database."
         )
 
         return agents
