@@ -25,7 +25,7 @@ class Conversation(Base):
     session_id = Column(String, nullable=False, index=True)
     company_id = Column(String, nullable=True)
     status = Column(String, default="initializing")
-    metadata = Column(JSON, default={})
+    meta_data = Column(JSON, default={})
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -44,7 +44,7 @@ class Message(Base):
     role = Column(String, nullable=False)  # user, assistant, system, tool
     content = Column(Text, nullable=False)
     sequence_number = Column(Integer, nullable=False)
-    metadata = Column(JSON, default={})
+    meta_data = Column(JSON, default={})
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -81,7 +81,7 @@ class AnalysisResult(Base):
     query = Column(Text, nullable=True)
     result_data = Column(JSON, nullable=False)
     confidence_score = Column(Float, nullable=True)
-    metadata = Column(JSON, default={})
+    meta_data = Column(JSON, default={})
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -100,7 +100,7 @@ class Document(Base):
     file_path = Column(String, nullable=True)
     file_size = Column(Integer, nullable=True)
     mime_type = Column(String, nullable=True)
-    metadata = Column(JSON, default={})
+    meta_data = Column(JSON, default={})
     created_by = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -133,7 +133,7 @@ class VectorEmbedding(Base):
     content_chunk = Column(Text, nullable=False)
     embedding_model = Column(String, nullable=False)
     embedding_dimension = Column(Integer, nullable=False)
-    metadata = Column(JSON, default={})
+    meta_data = Column(JSON, default={})
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Note: Actual embedding vector would be stored in a vector database like ChromaDB or Pinecone
@@ -152,5 +152,5 @@ class AuditLog(Base):
     entity_id = Column(String, nullable=False)
     old_value = Column(JSON, nullable=True)
     new_value = Column(JSON, nullable=True)
-    metadata = Column(JSON, default={})
+    meta_data = Column(JSON, default={})
     created_at = Column(DateTime, default=datetime.utcnow)

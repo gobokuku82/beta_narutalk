@@ -29,7 +29,7 @@ async def create_conversation(
         user_id=conversation.user_id,
         session_id=conversation.session_id,
         company_id=conversation.company_id,
-        metadata=conversation.metadata or {}
+        meta_data=conversation.meta_data or {}
     )
     db.add(db_conversation)
     await db.commit()
@@ -100,7 +100,7 @@ async def create_message(
         role=message.role,
         content=message.content,
         sequence_number=next_sequence,
-        metadata=message.metadata or {}
+        meta_data=message.meta_data or {}
     )
     db.add(db_message)
     await db.commit()
@@ -215,7 +215,7 @@ async def create_analysis_result(
         result_type=result.result_type,
         query=result.query,
         result_data=result.result_data,
-        metadata=result.metadata or {}
+        meta_data=result.meta_data or {}
     )
     db.add(db_result)
     await db.commit()

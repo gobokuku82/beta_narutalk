@@ -50,7 +50,7 @@ class ConversationBase(BaseSchema):
     user_id: str
     session_id: str
     company_id: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    meta_data: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 class ConversationCreate(ConversationBase):
@@ -73,7 +73,7 @@ class MessageBase(BaseSchema):
     conversation_id: str
     role: MessageRole
     content: str
-    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    meta_data: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 class MessageCreate(MessageBase):
@@ -120,7 +120,7 @@ class AnalysisResultBase(BaseSchema):
     result_type: str
     result_data: Dict[str, Any]
     query: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    meta_data: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 class AnalysisResultCreate(AnalysisResultBase):
@@ -169,7 +169,7 @@ class GlobalSessionState(BaseSchema):
 
     # Results
     final_response: Optional[str] = None
-    response_metadata: Dict[str, Any] = Field(default_factory=dict)
+    response_meta_data: Dict[str, Any] = Field(default_factory=dict)
 
     # Errors and warnings
     errors: List[Dict[str, Any]] = Field(default_factory=list)
