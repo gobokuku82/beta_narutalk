@@ -2,6 +2,16 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from typing import TypedDict, List, Dict, Any, Optional
 from enum import Enum
+import logging
+
+# 서브그래프 임포트
+from .intent_analysis import IntentAnalysisSubGraph
+from .planning import PlanningSubGraph
+from .agent_execution import AgentExecutionSubGraph
+from .result_evaluation import ResultEvaluationSubGraph
+from .response_generation import ResponseGenerationSubGraph
+
+logger = logging.getLogger(__name__)
 
 # 상태 정의
 class MainState(TypedDict):
@@ -42,7 +52,16 @@ class MainState(TypedDict):
 class MainOrchestrator:
     def __init__(self):
         self.workflow = StateGraph(MainState)
-        self.checkpointer = AsyncSqliteSaver.from_conn_string("database/checkpointer/main.db")
+        # Checkpointer는 선택사항으로 변경 (테스트 시 문제 발생)
+        self.checkpointer = None  # AsyncSqliteSaver는 별도 초기화 필요
+
+        # 서브그래프 초기화
+        self.intent_analyzer = IntentAnalysisSubGraph()
+        self.planner = PlanningSubGraph()
+        self.agent_executor = AgentExecutionSubGraph()
+        self.evaluator = ResultEvaluationSubGraph()
+        self.response_generator = ResponseGenerationSubGraph()
+
         self._build_graph()
     
     def _build_graph(self):
@@ -101,37 +120,189 @@ class MainOrchestrator:
     # 노드 메서드들 (임시 구현)
     async def authenticate_user(self, state: MainState) -> MainState:
         """사용자 인증"""
+        # 필수 필드 초기화
+        if "error_logs" not in state:
+            state["error_logs"] = []
+        if "conversation_history" not in state:
+            state["conversation_history"] = []
+        if "tokens_used" not in state:
+            state["tokens_used"] = 0
+        if "execution_time" not in state:
+            state["execution_time"] = 0.0
+        if "priority_level" not in state:
+            state["priority_level"] = "medium"
+
         # TODO: 실제 인증 로직 구현
+        logger.info(f"User authenticated: {state.get('user_id', 'unknown')}")
         return state
 
     async def analyze_intent_subgraph(self, state: MainState) -> MainState:
         """의도 분석 서브그래프"""
-        # TODO: IntentAnalysisSubGraph 연결
-        state["intents"] = []
+        try:
+            # 서브그래프 상태 준비
+            intent_state = {
+                "user_query": state.get("user_query", ""),
+                "tokens": [],
+                "entities": [],
+                "intents": [],
+                "confidence_scores": {},
+                "ambiguous": False
+            }
+
+            # 서브그래프 실행
+            app = self.intent_analyzer.workflow.compile()
+            result = await app.ainvoke(intent_state)
+
+            # 결과를 메인 상태에 병합
+            state["intents"] = result.get("intents", [])
+            state["confidence_score"] = max(result.get("confidence_scores", {}).values(), default=0.0)
+
+            logger.info(f"Intent analysis complete: {[i.get('type') for i in state['intents']]}")
+
+        except Exception as e:
+            logger.error(f"Intent analysis failed: {e}")
+            state["intents"] = []
+            state["error_logs"] = state.get("error_logs", [])
+            state["error_logs"].append(f"Intent analysis: {str(e)}")
+
         return state
 
     async def planning_subgraph(self, state: MainState) -> MainState:
         """계획 수립 서브그래프"""
-        # TODO: PlanningSubGraph 연결
-        state["execution_plan"] = {}
+        try:
+            # 서브그래프 상태 준비
+            planning_state = {
+                "intents": state.get("intents", []),
+                "execution_steps": [],
+                "agent_sequence": [],
+                "dependencies": {},
+                "parallel_groups": [],
+                "estimated_time": 0.0
+            }
+
+            # 서브그래프 실행
+            app = self.planner.workflow.compile()
+            result = await app.ainvoke(planning_state)
+
+            # 결과를 메인 상태에 병합
+            state["execution_plan"] = {
+                "steps": result.get("execution_steps", []),
+                "agents": result.get("agent_sequence", []),
+                "parallel_groups": result.get("parallel_groups", [])
+            }
+            state["parallel_execution"] = len(result.get("parallel_groups", [])) > 0
+
+            logger.info(f"Planning complete: {len(state['execution_plan'].get('steps', []))} steps")
+
+        except Exception as e:
+            logger.error(f"Planning failed: {e}")
+            state["execution_plan"] = {}
+            state["error_logs"] = state.get("error_logs", [])
+            state["error_logs"].append(f"Planning: {str(e)}")
+
         return state
 
     async def agent_execution_subgraph(self, state: MainState) -> MainState:
         """에이전트 실행 서브그래프"""
-        # TODO: AgentExecutionSubGraph 연결
-        state["agent_results"] = {}
+        try:
+            # 서브그래프 상태 준비
+            execution_state = {
+                "execution_plan": state.get("execution_plan", {}),
+                "active_agents": [],
+                "agent_inputs": {},
+                "agent_results": {},
+                "parallel_groups": state.get("execution_plan", {}).get("parallel_groups", []),
+                "execution_status": "",
+                "error_logs": [],
+                "retry_count": 0,
+                "start_time": 0,
+                "end_time": None
+            }
+
+            # 서브그래프 실행
+            app = self.agent_executor.workflow.compile()
+            result = await app.ainvoke(execution_state)
+
+            # 결과를 메인 상태에 병합
+            state["agent_results"] = result.get("agent_results", {})
+            state["active_agents"] = result.get("active_agents", [])
+            state["raw_results"] = result.get("agent_results", {})
+
+            logger.info(f"Agent execution complete: {len(state['agent_results'])} results")
+
+        except Exception as e:
+            logger.error(f"Agent execution failed: {e}")
+            state["agent_results"] = {}
+            state["error_logs"] = state.get("error_logs", [])
+            state["error_logs"].append(f"Agent execution: {str(e)}")
+
         return state
 
     async def evaluation_subgraph(self, state: MainState) -> MainState:
         """평가 서브그래프"""
-        # TODO: ResultEvaluationSubGraph 연결
-        state["validated_results"] = {}
+        try:
+            # 서브그래프 상태 준비
+            eval_state = {
+                "raw_results": state.get("raw_results", {}),
+                "validation_rules": [],
+                "quality_scores": {},
+                "compliance_checks": {},
+                "validated_results": {},
+                "issues_found": [],
+                "recommendations": []
+            }
+
+            # 서브그래프 실행
+            app = self.evaluator.workflow.compile()
+            result = await app.ainvoke(eval_state)
+
+            # 결과를 메인 상태에 병합
+            state["validated_results"] = result.get("validated_results", {})
+            state["compliance_status"] = result.get("compliance_checks", {})
+            state["need_human_review"] = len(result.get("issues_found", [])) > 0
+
+            logger.info(f"Evaluation complete: {len(result.get('issues_found', []))} issues found")
+
+        except Exception as e:
+            logger.error(f"Evaluation failed: {e}")
+            state["validated_results"] = state.get("raw_results", {})
+            state["error_logs"] = state.get("error_logs", [])
+            state["error_logs"].append(f"Evaluation: {str(e)}")
+
         return state
 
     async def response_generation_subgraph(self, state: MainState) -> MainState:
         """응답 생성 서브그래프"""
-        # TODO: ResponseGenerationSubGraph 연결
-        state["final_response"] = "테스트 응답입니다."
+        try:
+            # 서브그래프 상태 준비
+            response_state = {
+                "response_format": state.get("response_format", "text"),
+                "raw_data": state.get("validated_results", {}),
+                "formatted_response": "",
+                "citations": [],
+                "confidence_score": state.get("confidence_score", 0.0)
+            }
+
+            # 서브그래프 실행
+            app = self.response_generator.workflow.compile()
+            result = await app.ainvoke(response_state)
+
+            # 결과를 메인 상태에 병합
+            state["final_response"] = result.get("formatted_response", "응답을 생성할 수 없습니다.")
+            state["response_format"] = result.get("response_format", "text")
+
+            # 에러가 있었다면 응답에 포함
+            if state.get("error_logs"):
+                state["final_response"] += f"\n\n⚠️ 일부 오류가 발생했습니다: {', '.join(state['error_logs'][:3])}"
+
+            logger.info(f"Response generated: {len(state['final_response'])} chars")
+
+        except Exception as e:
+            logger.error(f"Response generation failed: {e}")
+            state["final_response"] = f"죄송합니다. 응답 생성 중 오류가 발생했습니다: {str(e)}"
+            state["error_logs"] = state.get("error_logs", [])
+            state["error_logs"].append(f"Response generation: {str(e)}")
+
         return state
 
     async def store_conversation(self, state: MainState) -> MainState:
