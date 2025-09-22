@@ -55,4 +55,31 @@ class IntentAnalysisSubGraph:
         의도를 분류하고 신뢰도를 평가하세요.
         """
         # LLM 호출 로직
+        state["intents"] = []
+        state["confidence_scores"] = {}
         return state
+
+    async def tokenize_query(self, state: IntentAnalysisState) -> IntentAnalysisState:
+        """쿼리 토큰화"""
+        state["tokens"] = state.get("user_query", "").split()
+        return state
+
+    async def extract_entities(self, state: IntentAnalysisState) -> IntentAnalysisState:
+        """엔티티 추출"""
+        state["entities"] = []
+        return state
+
+    async def validate_intent(self, state: IntentAnalysisState) -> IntentAnalysisState:
+        """의도 검증"""
+        state["ambiguous"] = False
+        return state
+
+    async def resolve_ambiguity(self, state: IntentAnalysisState) -> IntentAnalysisState:
+        """모호성 해결"""
+        return state
+
+    def check_ambiguity(self, state: IntentAnalysisState) -> str:
+        """모호성 체크"""
+        if state.get("ambiguous"):
+            return "ambiguous"
+        return "clear"
