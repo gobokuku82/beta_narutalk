@@ -1,5 +1,5 @@
 from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.aiosqlite import AsyncSqliteSaver
+from langgraph_checkpoint_sqlite import AsyncSqliteSaver
 from typing import TypedDict, List, Dict, Any, Optional
 from enum import Enum
 
@@ -42,7 +42,7 @@ class MainState(TypedDict):
 class MainOrchestrator:
     def __init__(self):
         self.workflow = StateGraph(MainState)
-        self.checkpointer = AsyncSqliteSaver.from_path("database/checkpointer/main.db")
+        self.checkpointer = AsyncSqliteSaver.from_conn_string("database/checkpointer/main.db")
         self._build_graph()
     
     def _build_graph(self):
@@ -97,3 +97,63 @@ class MainOrchestrator:
         
         self.workflow.add_edge("generate_response", "store_memory")
         self.workflow.add_edge("store_memory", END)
+
+    # 노드 메서드들 (임시 구현)
+    async def authenticate_user(self, state: MainState) -> MainState:
+        """사용자 인증"""
+        # TODO: 실제 인증 로직 구현
+        return state
+
+    async def analyze_intent_subgraph(self, state: MainState) -> MainState:
+        """의도 분석 서브그래프"""
+        # TODO: IntentAnalysisSubGraph 연결
+        state["intents"] = []
+        return state
+
+    async def planning_subgraph(self, state: MainState) -> MainState:
+        """계획 수립 서브그래프"""
+        # TODO: PlanningSubGraph 연결
+        state["execution_plan"] = {}
+        return state
+
+    async def agent_execution_subgraph(self, state: MainState) -> MainState:
+        """에이전트 실행 서브그래프"""
+        # TODO: AgentExecutionSubGraph 연결
+        state["agent_results"] = {}
+        return state
+
+    async def evaluation_subgraph(self, state: MainState) -> MainState:
+        """평가 서브그래프"""
+        # TODO: ResultEvaluationSubGraph 연결
+        state["validated_results"] = {}
+        return state
+
+    async def response_generation_subgraph(self, state: MainState) -> MainState:
+        """응답 생성 서브그래프"""
+        # TODO: ResponseGenerationSubGraph 연결
+        state["final_response"] = "테스트 응답입니다."
+        return state
+
+    async def store_conversation(self, state: MainState) -> MainState:
+        """대화 저장"""
+        # TODO: 대화 내용 저장 로직
+        return state
+
+    # 조건 메서드들
+    def check_plan_validity(self, state: MainState) -> str:
+        """계획 유효성 검사"""
+        if state.get("execution_plan"):
+            return "valid"
+        return "invalid"
+
+    def check_execution_status(self, state: MainState) -> str:
+        """실행 상태 확인"""
+        if state.get("agent_results"):
+            return "success"
+        return "failure"
+
+    def check_evaluation(self, state: MainState) -> str:
+        """평가 결과 확인"""
+        if state.get("validated_results"):
+            return "approved"
+        return "need_revision"
