@@ -1,3 +1,13 @@
+from langgraph.graph import StateGraph, START, END
+from typing import TypedDict, List, Dict, Any
+
+class SalesAnalyticsState(TypedDict):
+    query: str
+    sql_query: str
+    query_results: List[Dict]
+    analysis: Dict[str, Any]
+    visualization: Dict[str, Any]
+
 class SalesAnalyticsAgent:
     def __init__(self):
         self.workflow = StateGraph(SalesAnalyticsState)
@@ -10,7 +20,8 @@ class SalesAnalyticsAgent:
         self.workflow.add_node("analyze_data", self.perform_analysis)
         self.workflow.add_node("visualize", self.create_visualization)
         
-        self.workflow.set_entry_point("parse_query")
+        # 엔트리 포인트 정의 (LangGraph 0.6.7 방식)
+        self.workflow.add_edge(START, "parse_query")
         self.workflow.add_edge("parse_query", "generate_sql")
         self.workflow.add_edge("generate_sql", "execute_query")
         self.workflow.add_edge("execute_query", "analyze_data")

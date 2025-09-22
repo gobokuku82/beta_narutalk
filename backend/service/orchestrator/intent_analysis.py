@@ -1,3 +1,6 @@
+from langgraph.graph import StateGraph, START, END
+from typing import TypedDict, List, Dict
+
 class IntentAnalysisState(TypedDict):
     user_query: str
     tokens: List[str]
@@ -19,8 +22,8 @@ class IntentAnalysisSubGraph:
         self.workflow.add_node("validate_intent", self.validate_intent)
         self.workflow.add_node("resolve_ambiguity", self.resolve_ambiguity)
         
-        # 플로우 정의
-        self.workflow.set_entry_point("tokenize")
+        # 엔트리 포인트 정의 (LangGraph 0.6.7 방식)
+        self.workflow.add_edge(START, "tokenize")
         self.workflow.add_edge("tokenize", "extract_entities")
         self.workflow.add_edge("extract_entities", "classify_intent")
         self.workflow.add_edge("classify_intent", "validate_intent")

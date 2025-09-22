@@ -1,3 +1,13 @@
+from langgraph.graph import StateGraph, START, END
+from typing import TypedDict, List, Dict, Any
+
+class ResponseState(TypedDict):
+    response_format: str
+    raw_data: Dict[str, Any]
+    formatted_response: str
+    citations: List[str]
+    confidence_score: float
+
 class ResponseGenerationSubGraph:
     def __init__(self):
         self.workflow = StateGraph(ResponseState)
@@ -12,7 +22,8 @@ class ResponseGenerationSubGraph:
         self.workflow.add_node("add_citations", self.add_references)
         self.workflow.add_node("final_review", self.final_quality_check)
         
-        self.workflow.set_entry_point("format_selection")
+        # 엔트리 포인트 정의 (LangGraph 0.6.7 방식)
+        self.workflow.add_edge(START, "format_selection")
         
         self.workflow.add_conditional_edges(
             "format_selection",

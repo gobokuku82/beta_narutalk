@@ -1,3 +1,14 @@
+from langgraph.graph import StateGraph, START, END
+from typing import TypedDict, List, Dict, Any
+
+class ComplianceState(TypedDict):
+    checkpoint: str
+    document_to_check: Dict[str, Any]
+    relevant_regulations: List[Dict]
+    violations: List[Dict]
+    compliance_score: float
+    report: str
+
 class ComplianceCheckAgent:
     def __init__(self):
         self.workflow = StateGraph(ComplianceState)
@@ -11,7 +22,8 @@ class ComplianceCheckAgent:
         self.workflow.add_node("evaluate_compliance", self.evaluate_compliance_status)
         self.workflow.add_node("generate_report", self.generate_compliance_report)
         
-        self.workflow.set_entry_point("extract_checkpoints")
+        # 엔트리 포인트 정의 (LangGraph 0.6.7 방식)
+        self.workflow.add_edge(START, "extract_checkpoints")
         self.workflow.add_edge("extract_checkpoints", "search_regulations")
         self.workflow.add_edge("search_regulations", "cross_reference")
         self.workflow.add_edge("cross_reference", "evaluate_compliance")

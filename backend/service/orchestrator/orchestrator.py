@@ -1,4 +1,4 @@
-from langgraph.graph import StateGraph, END
+from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.aiosqlite import AsyncSqliteSaver
 from typing import TypedDict, List, Dict, Any, Optional
 from enum import Enum
@@ -55,9 +55,9 @@ class MainOrchestrator:
         self.workflow.add_node("generate_response", self.response_generation_subgraph)
         self.workflow.add_node("store_memory", self.store_conversation)
         
-        # 엣지 정의
-        self.workflow.set_entry_point("authenticate")
-        
+        # 엔트리 포인트 정의 (LangGraph 0.6.7 방식)
+        self.workflow.add_edge(START, "authenticate")
+
         self.workflow.add_edge("authenticate", "analyze_intent")
         self.workflow.add_edge("analyze_intent", "create_plan")
         

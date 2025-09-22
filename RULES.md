@@ -15,16 +15,6 @@
 
 ### 1. **Architecture Rules**
 
-#### 1.1 Supervisor Pattern (필수)
-```python
-# ✅ GOOD: langgraph-supervisor 라이브러리 사용
-from langgraph_supervisor import create_supervisor, create_handoff_tool
-
-# ❌ BAD: 커스텀 supervisor 구현
-class CustomSupervisor:  # 지양
-    pass
-```
-
 #### 1.2 Context Engineering (핵심)
 ```python
 # ✅ GOOD: 에이전트별 컨텍스트 최적화

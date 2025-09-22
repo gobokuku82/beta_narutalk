@@ -1,3 +1,6 @@
+from langgraph.graph import StateGraph, START, END
+from typing import TypedDict, List, Dict
+
 class PlanningState(TypedDict):
     intents: List[Dict]
     execution_steps: List[Dict]
@@ -17,7 +20,8 @@ class PlanningSubGraph:
         self.workflow.add_node("allocate_resources", self.allocate_resources)
         self.workflow.add_node("create_execution_plan", self.create_execution_plan)
         
-        self.workflow.set_entry_point("analyze_dependencies")
+        # 엔트리 포인트 정의 (LangGraph 0.6.7 방식)
+        self.workflow.add_edge(START, "analyze_dependencies")
         self.workflow.add_edge("analyze_dependencies", "optimize_sequence")
         self.workflow.add_edge("optimize_sequence", "allocate_resources")
         self.workflow.add_edge("allocate_resources", "create_execution_plan")
