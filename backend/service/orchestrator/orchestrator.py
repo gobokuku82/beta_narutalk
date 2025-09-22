@@ -1,5 +1,5 @@
 from langgraph.graph import StateGraph, START, END
-from langgraph_checkpoint_sqlite import AsyncSqliteSaver
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from typing import TypedDict, List, Dict, Any, Optional
 from enum import Enum
 

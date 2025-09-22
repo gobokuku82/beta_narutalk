@@ -43,3 +43,19 @@ class PlanningSubGraph:
         
         state['parallel_groups'] = parallel_groups
         return state
+
+    async def analyze_dependencies(self, state: PlanningState) -> PlanningState:
+        """의존성 분석"""
+        state["dependencies"] = {}
+        return state
+
+    async def allocate_resources(self, state: PlanningState) -> PlanningState:
+        """리소스 할당"""
+        state["estimated_time"] = 10.0
+        return state
+
+    async def create_execution_plan(self, state: PlanningState) -> PlanningState:
+        """실행 계획 생성"""
+        state["execution_steps"] = []
+        state["agent_sequence"] = []
+        return state

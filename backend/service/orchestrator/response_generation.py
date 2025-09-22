@@ -42,3 +42,46 @@ class ResponseGenerationSubGraph:
         
         self.workflow.add_edge("add_citations", "final_review")
         self.workflow.add_edge("final_review", END)
+
+    # 노드 메서드들
+    async def select_format(self, state: ResponseState) -> ResponseState:
+        """응답 형식 선택"""
+        state["response_format"] = "text"
+        return state
+
+    async def generate_text_response(self, state: ResponseState) -> ResponseState:
+        """텍스트 응답 생성"""
+        state["formatted_response"] = "텍스트 응답입니다."
+        return state
+
+    async def generate_table_response(self, state: ResponseState) -> ResponseState:
+        """테이블 응답 생성"""
+        state["formatted_response"] = "테이블 응답입니다."
+        return state
+
+    async def generate_chart_response(self, state: ResponseState) -> ResponseState:
+        """차트 응답 생성"""
+        state["formatted_response"] = "차트 응답입니다."
+        return state
+
+    async def generate_document_response(self, state: ResponseState) -> ResponseState:
+        """문서 응답 생성"""
+        state["formatted_response"] = "문서 응답입니다."
+        return state
+
+    async def add_references(self, state: ResponseState) -> ResponseState:
+        """참조/인용 추가"""
+        state["citations"] = []
+        return state
+
+    async def final_quality_check(self, state: ResponseState) -> ResponseState:
+        """최종 품질 확인"""
+        state["confidence_score"] = 0.95
+        return state
+
+    def route_by_format(self, state: ResponseState) -> str:
+        """포맷별 라우팅"""
+        format_type = state.get("response_format", "text")
+        if format_type in ["text", "table", "chart", "document"]:
+            return format_type
+        return "text"
