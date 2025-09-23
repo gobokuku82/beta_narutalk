@@ -128,7 +128,9 @@ class SimpleOrchestrator:
         """Prepare input for specific agent"""
         base_input = {
             "user_id": user_id,
-            "session_id": session_id
+            "session_id": session_id,
+            "original_query": query,  # Add original query
+            "intent_result": intent_result  # Add intent analysis result
         }
 
         entities = intent_result.get("entities", {})

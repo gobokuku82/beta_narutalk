@@ -43,6 +43,10 @@ class AgentContext(BaseContext):
     retry_count: Optional[int] = 0
     max_retries: Optional[int] = 3
 
+    # Original query and intent analysis
+    original_query: Optional[str] = None
+    intent_result: Optional[Dict[str, Any]] = None
+
     # Error tracking (separate from State)
     error_logs: Optional[List[str]] = None
 

@@ -99,7 +99,7 @@ class BaseAgent(ABC):
             "status": "pending",
             "execution_step": "starting",
             **{k: v for k, v in input_data.items()
-               if k not in ["user_id", "session_id", "metadata"]}  # Exclude context fields
+               if k not in ["user_id", "session_id", "metadata", "original_query", "intent_result"]}  # Exclude context fields
         }
 
     def _create_context(self, input_data: Dict[str, Any]) -> AgentContext:
@@ -118,6 +118,8 @@ class BaseAgent(ABC):
             session_id=input_data.get("session_id", "default"),
             context_type="agent",
             agent_name=self.agent_name,
+            original_query=input_data.get("original_query", ""),
+            intent_result=input_data.get("intent_result", {}),
             metadata=input_data.get("metadata", {}),
             request_id=input_data.get("request_id")
         )
