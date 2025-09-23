@@ -19,6 +19,33 @@ class PlanningSubGraph:
         self.workflow = StateGraph(PlanningState)
         self.llm_manager = LLMManager()
         self.prompt_templates = PromptTemplates()
+
+        # 의도 타입을 에이전트로 매핑
+        self.intent_to_agent_mapping = {
+            "sales_analysis": "sales_analytics",
+            "sales_analytics": "sales_analytics",
+            "sales": "sales_analytics",
+            "실적": "sales_analytics",
+            "매출": "sales_analytics",
+
+            "search": "internal_search",
+            "internal_search": "internal_search",
+            "general_query": "internal_search",
+            "질문": "internal_search",
+            "정보": "internal_search",
+
+            "document": "doc_generation",
+            "document_generation": "doc_generation",
+            "doc_generation": "doc_generation",
+            "보고서": "doc_generation",
+            "문서": "doc_generation",
+
+            "compliance": "compliance_check",
+            "compliance_check": "compliance_check",
+            "규정": "compliance_check",
+            "검토": "compliance_check"
+        }
+
         self._build_graph()
     
     def _build_graph(self):
@@ -74,7 +101,10 @@ class PlanningSubGraph:
                 logger.warning("Failed to parse planning response, using fallback")
                 state['parallel_groups'] = []
                 for intent in state.get('intents', []):
-                    state['parallel_groups'].append([intent.get('type', 'unknown')])
+                    intent_type = intent.get('type', 'unknown')
+                    # 의도 타입을 에이전트 이름으로 매핑
+                    agent_name = self.intent_to_agent_mapping.get(intent_type, 'internal_search')
+                    state['parallel_groups'].append([agent_name])
 
         except Exception as e:
             logger.error(f"Planning optimization failed: {e}")

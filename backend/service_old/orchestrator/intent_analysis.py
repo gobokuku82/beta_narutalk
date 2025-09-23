@@ -82,13 +82,15 @@ class IntentAnalysisSubGraph:
                 logger.info(f"Classified intents: {[i['type'] for i in state['intents']]}")
 
             except json.JSONDecodeError:
-                # JSON 파싱 실패 시 기본값
+                # JSON 파싱 실패 시 기본값 - internal_search 에이전트 사용
                 logger.error("Failed to parse LLM response as JSON")
+                logger.info("Using fallback intent: internal_search")
                 state["intents"] = [{
-                    "type": "general_query",
-                    "confidence": 0.5
+                    "type": "internal_search",  # 실제 존재하는 에이전트로 매핑
+                    "confidence": 0.5,
+                    "fallback": True
                 }]
-                state["confidence_scores"] = {"general_query": 0.5}
+                state["confidence_scores"] = {"internal_search": 0.5}
                 state["ambiguous"] = True
 
         except Exception as e:

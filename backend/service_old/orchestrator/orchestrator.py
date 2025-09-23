@@ -8,8 +8,10 @@ import logging
 from .intent_analysis import IntentAnalysisSubGraph
 from .planning import PlanningSubGraph
 from .agent_execution import AgentExecutionSubGraph
-from .result_evaluation import ResultEvaluationSubGraph
-from .response_generation import ResponseGenerationSubGraph
+# from .result_evaluation import ResultEvaluationSubGraph  # 원본 (느림)
+from .result_evaluation_fast import ResultEvaluationSubGraph  # Fast 버전 (LLM 없음)
+# from .response_generation import ResponseGenerationSubGraph  # 원본 (느림)
+from .response_generation_fast import ResponseGenerationSubGraph  # Fast 버전 (LLM 없음)
 
 logger = logging.getLogger(__name__)
 
@@ -188,7 +190,8 @@ class MainOrchestrator:
             state["execution_plan"] = {
                 "steps": result.get("execution_steps", []),
                 "agents": result.get("agent_sequence", []),
-                "parallel_groups": result.get("parallel_groups", [])
+                "parallel_groups": result.get("parallel_groups", []),
+                "query": state.get("user_query", "")  # 원본 쿼리 추가
             }
             state["parallel_execution"] = len(result.get("parallel_groups", [])) > 0
 
@@ -319,9 +322,19 @@ class MainOrchestrator:
 
     def check_execution_status(self, state: MainState) -> str:
         """실행 상태 확인"""
+        # retry_count를 확인하여 무한 루프 방지
+        retry_count = state.get("retry_count", 0)
+
         if state.get("agent_results"):
             return "success"
-        return "failure"
+
+        # 최대 2회만 재시도
+        if retry_count >= 2:
+            return "failure"
+
+        # retry 조건 (현재는 사용하지 않음 - 무한 루프 방지)
+        # return "retry"
+        return "failure"  # 재시도 하지 않고 바로 실패 처리
 
     def check_evaluation(self, state: MainState) -> str:
         """평가 결과 확인"""

@@ -179,20 +179,39 @@ class AgentExecutionSubGraph:
 
         # 동적 에이전트 임포트 및 실행
         try:
-            if agent_name == "sales_analytics":
+            # 에이전트 이름 매핑 (의도 타입 -> 에이전트)
+            agent_mapping = {
+                "sales_analytics": "sales_analytics",
+                "sales_analysis": "sales_analytics",  # 별칭 지원
+                "internal_search": "internal_search",
+                "search": "internal_search",  # 별칭 지원
+                "general_query": "internal_search",  # general_query를 internal_search로 매핑
+                "doc_generation": "doc_generation",
+                "document_generation": "doc_generation",  # 별칭 지원
+                "compliance_check": "compliance_check",
+                "compliance": "compliance_check"  # 별칭 지원
+            }
+
+            # 매핑된 에이전트 이름 가져오기
+            mapped_agent_name = agent_mapping.get(agent_name, agent_name)
+
+            if mapped_agent_name == "sales_analytics":
                 from ..agents.sales_analytics_agent import SalesAnalyticsAgent
                 agent = SalesAnalyticsAgent()
-            elif agent_name == "internal_search":
+            elif mapped_agent_name == "internal_search":
                 from ..agents.search_agent import SearchAgent
                 agent = SearchAgent()
-            elif agent_name == "doc_generation":
+            elif mapped_agent_name == "doc_generation":
                 from ..agents.document_generation_agent import DocumentGenerationAgent
                 agent = DocumentGenerationAgent()
-            elif agent_name == "compliance_check":
+            elif mapped_agent_name == "compliance_check":
                 from ..agents.compliance_check_agent import ComplianceCheckAgent
                 agent = ComplianceCheckAgent()
             else:
-                raise ValueError(f"Unknown agent: {agent_name}")
+                # 알 수 없는 에이전트는 기본적으로 internal_search 사용
+                logger.warning(f"Unknown agent: {agent_name}, falling back to internal_search")
+                from ..agents.search_agent import SearchAgent
+                agent = SearchAgent()
 
             # 에이전트 실행
             result = await agent.execute(input_data)

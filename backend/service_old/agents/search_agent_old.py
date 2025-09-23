@@ -50,27 +50,46 @@ class SearchAgent:
         # SQLite 설정 (인사정보)
         self.hr_info_path = Path("database/storage/hr_information/hr_data.db")
 
-        # 임베딩 모델 초기화 (Kure-v1)
-        try:
-            from sentence_transformers import SentenceTransformer
-            self.embedding_model = SentenceTransformer('models/kure_v1')
-        except Exception as e:
-            logger.warning(f"Kure-v1 model not found, using default: {e}")
-            self.embedding_model = None
+        # 임베딩 모델 초기화 (Lazy loading)
+        self.embedding_model = None
+        self.embedding_model_path = 'models/kure_v1'
 
-        # 리랭커 모델 초기화 (bge-reranker-ko)
-        try:
-            from transformers import AutoModelForSequenceClassification, AutoTokenizer
-            self.reranker_model = AutoModelForSequenceClassification.from_pretrained(
-                'models/bge-reranker-v2-m3-ko'
-            )
-            self.reranker_tokenizer = AutoTokenizer.from_pretrained(
-                'models/bge-reranker-v2-m3-ko'
-            )
-        except Exception as e:
-            logger.warning(f"Reranker model not found: {e}")
-            self.reranker_model = None
-            self.reranker_tokenizer = None
+        # 리랭커 모델 초기화 (Lazy loading)
+        self.reranker_model = None
+        self.reranker_tokenizer = None
+        self.reranker_model_path = 'models/bge-reranker-v2-m3-ko'
+
+    def _load_embedding_model(self):
+        """임베딩 모델을 lazy load (필요할 때만 로드)"""
+        if self.embedding_model is None:
+            try:
+                logger.info("Loading embedding model (kure_v1)...")
+                from sentence_transformers import SentenceTransformer
+                self.embedding_model = SentenceTransformer(self.embedding_model_path)
+                logger.info("Embedding model loaded successfully")
+            except Exception as e:
+                logger.warning(f"Failed to load embedding model: {e}")
+                self.embedding_model = False  # False로 설정하여 재시도 방지
+        return self.embedding_model
+
+    def _load_reranker_model(self):
+        """리랭커 모델을 lazy load (필요할 때만 로드)"""
+        if self.reranker_model is None:
+            try:
+                logger.info("Loading reranker model (bge-reranker-v2-m3-ko)...")
+                from transformers import AutoModelForSequenceClassification, AutoTokenizer
+                self.reranker_model = AutoModelForSequenceClassification.from_pretrained(
+                    self.reranker_model_path
+                )
+                self.reranker_tokenizer = AutoTokenizer.from_pretrained(
+                    self.reranker_model_path
+                )
+                logger.info("Reranker model loaded successfully")
+            except Exception as e:
+                logger.warning(f"Failed to load reranker model: {e}")
+                self.reranker_model = False  # False로 설정하여 재시도 방지
+                self.reranker_tokenizer = False
+        return self.reranker_model
 
     def _build_graph(self):
         """그래프 구성"""
@@ -97,9 +116,15 @@ class SearchAgent:
         )
 
         # HR 정보 검색 후 처리
+        def after_hr_info(state):
+            if state.get("search_type") == "both":
+                return "search_hr_rules"
+            else:
+                return "merge_results"
+
         self.workflow.add_conditional_edges(
             "search_hr_info",
-            lambda state: "search_hr_rules" if state.get("search_type") == "both" else "merge_results",
+            after_hr_info,
             {
                 "search_hr_rules": "search_hr_rules",
                 "merge_results": "merge_results"
@@ -224,9 +249,10 @@ class SearchAgent:
 
             query = state.get("query", "")
 
-            # 임베딩 생성
-            if self.embedding_model:
-                query_embedding = self.embedding_model.encode(query).tolist()
+            # 임베딩 생성 (lazy loading)
+            embedding_model = self._load_embedding_model()
+            if embedding_model and embedding_model is not False:
+                query_embedding = embedding_model.encode(query).tolist()
 
                 # 벡터 검색
                 results = collection.query(
@@ -302,7 +328,9 @@ class SearchAgent:
             state["reranked_results"] = []
             return state
 
-        if self.reranker_model and self.reranker_tokenizer:
+        # 리랭킹 모델 사용 (lazy loading)
+        reranker_model = self._load_reranker_model()
+        if reranker_model and reranker_model is not False and self.reranker_tokenizer:
             try:
                 # 리랭킹 수행
                 reranked = []
@@ -324,7 +352,7 @@ class SearchAgent:
                     )
 
                     with torch.no_grad():
-                        scores = self.reranker_model(**inputs).logits
+                        scores = reranker_model(**inputs).logits
                         relevance_score = torch.sigmoid(scores).item()
 
                     result["rerank_score"] = relevance_score
@@ -395,6 +423,8 @@ class SearchAgent:
     def _extract_keywords(self, query: str) -> List[str]:
         """쿼리에서 키워드 추출"""
         # 간단한 키워드 추출 (실제로는 더 정교한 NLP 처리 필요)
+        if not query:
+            return []
         stopwords = {"을", "를", "이", "가", "은", "는", "의", "에", "와", "과", "도", "로"}
         words = query.split()
         keywords = [w for w in words if w not in stopwords and len(w) > 1]
@@ -402,7 +432,7 @@ class SearchAgent:
 
     def _build_hr_info_query(self, query: str, filters: Dict) -> str:
         """HR 정보 검색을 위한 SQL 쿼리 구성"""
-        base_query = "SELECT * FROM employees WHERE 1=1"
+        base_query = "SELECT * FROM 인사자료 WHERE 1=1"
 
         keywords = filters.get("keywords", [])
         if keywords:
