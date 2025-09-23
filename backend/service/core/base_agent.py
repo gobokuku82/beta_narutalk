@@ -1,21 +1,29 @@
 """
-Base agent class for all agents
+BaseAgent class with full LangGraph 0.6.x Context API support
+Following the official Context API manual and rules
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Type, Callable
 from langgraph.graph import StateGraph
+from langgraph.runtime import Runtime
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 import logging
 import asyncio
 from pathlib import Path
+from datetime import datetime
+
+from .context import AgentContext, create_context
 
 
 logger = logging.getLogger(__name__)
 
 
 class BaseAgent(ABC):
-    """Base class for all agents"""
+    """
+    Base class for all agents with full Context API support
+    Implements LangGraph 0.6.x patterns with Runtime
+    """
 
     def __init__(self, agent_name: str, checkpoint_dir: Optional[str] = None):
         """
@@ -35,35 +43,121 @@ class BaseAgent(ABC):
         self.checkpoint_dir = Path(checkpoint_dir)
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-        # Initialize checkpointer
-        self.checkpointer = None
-        self._init_checkpointer()
+        # Initialize checkpointer (will be created in execute)
+        self.checkpointer_path = self.checkpoint_dir / f"{self.agent_name}.db"
 
-        # Initialize workflow
+        # Initialize workflow with context schema
         self.workflow = None
         self._build_graph()
 
-        self.logger.info(f"{agent_name} initialized")
+        self.logger.info(f"{agent_name} initialized with Context API support")
 
-    def _init_checkpointer(self):
-        """Initialize async SQLite checkpointer"""
-        checkpoint_path = self.checkpoint_dir / f"{self.agent_name}.db"
-        self.checkpointer = AsyncSqliteSaver.from_conn_string(str(checkpoint_path))
-        self.logger.debug(f"Checkpointer initialized at {checkpoint_path}")
+    @abstractmethod
+    def _get_state_schema(self) -> Type:
+        """
+        Get the state schema for this agent
+
+        Returns:
+            State schema type (TypedDict)
+        """
+        pass
 
     @abstractmethod
     def _build_graph(self):
-        """Build the LangGraph workflow - must be implemented by subclasses"""
+        """
+        Build the LangGraph workflow with context_schema
+        Must call StateGraph with both state_schema and context_schema
+        """
         pass
 
     @abstractmethod
     async def _validate_input(self, input_data: Dict[str, Any]) -> bool:
-        """Validate input data - must be implemented by subclasses"""
+        """
+        Validate input data before processing
+
+        Args:
+            input_data: Input data to validate
+
+        Returns:
+            True if valid, False otherwise
+        """
         pass
 
-    async def execute(self, input_data: Dict[str, Any], config: Optional[Dict] = None) -> Dict[str, Any]:
+    def _create_initial_state(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Execute the agent workflow
+        Create initial state from input data
+        Only includes workflow-specific fields (not context fields)
+
+        Args:
+            input_data: Input data from user
+
+        Returns:
+            Initial state dictionary with workflow fields only
+        """
+        # Basic state fields - subclasses should override to add specific fields
+        return {
+            "status": "pending",
+            "execution_step": "starting",
+            **{k: v for k, v in input_data.items()
+               if k not in ["user_id", "session_id", "metadata"]}  # Exclude context fields
+        }
+
+    def _create_context(self, input_data: Dict[str, Any]) -> AgentContext:
+        """
+        Create context from input data
+        Context contains metadata that doesn't change during execution
+
+        Args:
+            input_data: Input data containing context information
+
+        Returns:
+            AgentContext instance
+        """
+        return create_context(
+            user_id=input_data.get("user_id", "default"),
+            session_id=input_data.get("session_id", "default"),
+            context_type="agent",
+            agent_name=self.agent_name,
+            metadata=input_data.get("metadata", {}),
+            request_id=input_data.get("request_id")
+        )
+
+    def _wrap_node_with_runtime(self, node_func: Callable) -> Callable:
+        """
+        Wrap a node function to properly handle Runtime parameter
+        This ensures nodes receive Runtime even if not explicitly passed
+
+        Args:
+            node_func: Original node function
+
+        Returns:
+            Wrapped function that handles Runtime
+        """
+        async def wrapped(state: Dict[str, Any], runtime: Optional[Runtime] = None) -> Dict[str, Any]:
+            # If the node expects runtime, pass it
+            import inspect
+            sig = inspect.signature(node_func)
+
+            if "runtime" in sig.parameters:
+                if runtime is None:
+                    # Create a mock runtime if needed (shouldn't happen in practice)
+                    self.logger.warning(f"Runtime not provided to {node_func.__name__}, using default")
+                    return await node_func(state, runtime)
+                return await node_func(state, runtime)
+            else:
+                # Old-style node without runtime
+                self.logger.warning(f"Node {node_func.__name__} doesn't use Runtime - consider updating")
+                return await node_func(state)
+
+        return wrapped
+
+    async def execute(
+        self,
+        input_data: Dict[str, Any],
+        config: Optional[Dict] = None
+    ) -> Dict[str, Any]:
+        """
+        Execute the agent workflow with Context API
 
         Args:
             input_data: Input data for the agent
@@ -81,6 +175,12 @@ class BaseAgent(ABC):
                     "agent": self.agent_name
                 }
 
+            # Create initial state (workflow data only)
+            initial_state = self._create_initial_state(input_data)
+
+            # Create context (metadata)
+            context = self._create_context(input_data)
+
             # Prepare config
             if config is None:
                 config = {}
@@ -88,7 +188,9 @@ class BaseAgent(ABC):
             # Add default config
             config.setdefault("recursion_limit", 25)
             config.setdefault("configurable", {})
-            config["configurable"]["thread_id"] = input_data.get("session_id", "default")
+
+            # Use context's session_id for thread_id
+            config["configurable"]["thread_id"] = context.session_id
 
             # Compile workflow with checkpointer
             if self.workflow is None:
@@ -99,31 +201,53 @@ class BaseAgent(ABC):
                     "agent": self.agent_name
                 }
 
-            app = self.workflow.compile(checkpointer=self.checkpointer)
+            # Create checkpointer and compile
+            async with AsyncSqliteSaver.from_conn_string(str(self.checkpointer_path)) as checkpointer:
+                app = self.workflow.compile(checkpointer=checkpointer)
 
-            # Execute with timeout
-            timeout = config.get("timeout", 30)  # Default 30 seconds
+                # Execute with timeout
+                timeout = config.get("timeout", 30)  # Default 30 seconds
 
-            try:
-                result = await asyncio.wait_for(
-                    app.ainvoke(input_data, config=config),
-                    timeout=timeout
-                )
+                try:
+                    # Execute with context following LangGraph 0.6.x pattern
+                    result = await asyncio.wait_for(
+                        app.ainvoke(
+                            initial_state,
+                            config=config,
+                            context=context.model_dump() if hasattr(context, 'model_dump') else context.__dict__
+                        ),
+                        timeout=timeout
+                    )
 
-                self.logger.info(f"{self.agent_name} execution completed successfully")
-                return {
-                    "status": "success",
-                    "data": result,
-                    "agent": self.agent_name
-                }
+                    self.logger.info(f"{self.agent_name} execution completed successfully")
 
-            except asyncio.TimeoutError:
-                self.logger.error(f"{self.agent_name} execution timed out after {timeout}s")
-                return {
-                    "status": "error",
-                    "error": f"Execution timed out after {timeout} seconds",
-                    "agent": self.agent_name
-                }
+                    # Check if there were any errors logged in context
+                    if hasattr(context, 'error_logs') and context.error_logs:
+                        self.logger.warning(f"Execution completed with errors: {context.error_logs}")
+
+                    return {
+                        "status": "success",
+                        "data": result,
+                        "agent": self.agent_name,
+                        "context": {
+                            "user_id": context.user_id,
+                            "session_id": context.session_id,
+                            "request_id": context.request_id
+                        }
+                    }
+
+                except asyncio.TimeoutError:
+                    self.logger.error(f"{self.agent_name} execution timed out after {timeout}s")
+
+                    # Log timeout in context if possible
+                    if hasattr(context, 'add_error'):
+                        context.add_error(f"Execution timed out after {timeout} seconds")
+
+                    return {
+                        "status": "error",
+                        "error": f"Execution timed out after {timeout} seconds",
+                        "agent": self.agent_name
+                    }
 
         except Exception as e:
             self.logger.error(f"{self.agent_name} execution failed: {e}", exc_info=True)
@@ -144,30 +268,56 @@ class BaseAgent(ABC):
             Current state or None
         """
         try:
-            app = self.workflow.compile(checkpointer=self.checkpointer)
-            config = {"configurable": {"thread_id": thread_id}}
-            state = await app.aget_state(config)
-            return state.values if state else None
+            async with AsyncSqliteSaver.from_conn_string(str(self.checkpointer_path)) as checkpointer:
+                app = self.workflow.compile(checkpointer=checkpointer)
+                config = {"configurable": {"thread_id": thread_id}}
+                state = await app.aget_state(config)
+                return state.values if state else None
         except Exception as e:
             self.logger.error(f"Failed to get state: {e}")
             return None
 
-    async def update_state(self, thread_id: str, state_update: Dict[str, Any]) -> bool:
+    async def update_state(
+        self,
+        thread_id: str,
+        state_update: Dict[str, Any],
+        context: Optional[AgentContext] = None
+    ) -> bool:
         """
         Update the state for a thread
 
         Args:
             thread_id: Thread ID to update
-            state_update: State updates to apply
+            state_update: State updates to apply (partial update)
+            context: Optional context for the update
 
         Returns:
             True if successful, False otherwise
         """
         try:
-            app = self.workflow.compile(checkpointer=self.checkpointer)
-            config = {"configurable": {"thread_id": thread_id}}
-            await app.aupdate_state(config, state_update)
-            return True
+            async with AsyncSqliteSaver.from_conn_string(str(self.checkpointer_path)) as checkpointer:
+                app = self.workflow.compile(checkpointer=checkpointer)
+                config = {"configurable": {"thread_id": thread_id}}
+
+                # Update only the specified fields (following Context API pattern)
+                await app.aupdate_state(config, state_update)
+
+                self.logger.info(f"State updated for thread {thread_id}: {list(state_update.keys())}")
+                return True
         except Exception as e:
             self.logger.error(f"Failed to update state: {e}")
             return False
+
+    # Helper method for nodes to properly return partial updates
+    @staticmethod
+    def create_partial_update(**kwargs) -> Dict[str, Any]:
+        """
+        Helper to create partial state updates for nodes
+
+        Usage in node:
+            return self.create_partial_update(
+                field1=new_value1,
+                field2=new_value2
+            )
+        """
+        return kwargs

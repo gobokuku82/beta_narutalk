@@ -1,5 +1,6 @@
 """
 State definitions for all agents and orchestrator
+Simplified to contain only workflow-related data (Context API handles metadata)
 """
 
 from typing import TypedDict, List, Dict, Any, Optional
@@ -15,28 +16,22 @@ class ProcessingStatus(Enum):
     RETRY = "retry"
 
 
+# Note: With Context API, metadata like user_id, session_id, error_logs
+# are moved to Context. State now only contains workflow data.
+
 class BaseState(TypedDict):
-    """Base state shared by all components"""
-    user_id: str
-    session_id: str
-    timestamp: str
+    """Base workflow state - simplified"""
     status: str  # ProcessingStatus value
-    error_logs: List[str]
-    metadata: Dict[str, Any]
+    execution_step: str  # Current step in workflow
 
 
-class AgentState(BaseState):
-    """Base state for all agents"""
-    input_data: Dict[str, Any]
-    output_data: Dict[str, Any]
-    execution_time: float
-    retry_count: int
+# ============= Agent-specific States (Simplified) =============
 
-
-# ============= Agent-specific States =============
-
-class SearchState(AgentState):
-    """Search agent state"""
+class SearchState(TypedDict):
+    """Search agent workflow state"""
+    status: str
+    execution_step: str
+    # Search-specific workflow data
     query: str
     search_type: str  # hr_info, hr_rules, both
     filters: Dict[str, Any]
@@ -48,8 +43,11 @@ class SearchState(AgentState):
     final_results: Dict[str, Any]
 
 
-class SalesState(AgentState):
-    """Sales analytics agent state"""
+class SalesState(TypedDict):
+    """Sales analytics workflow state"""
+    status: str
+    execution_step: str
+    # Sales-specific workflow data
     employee_name: str
     period: str  # daily, weekly, monthly, yearly
     metrics_type: str  # performance, revenue, targets
@@ -61,11 +59,14 @@ class SalesState(AgentState):
     final_report: Dict[str, Any]
 
 
-class ComplianceState(AgentState):
-    """Compliance check agent state"""
+class ComplianceState(TypedDict):
+    """Compliance check workflow state"""
+    status: str
+    execution_step: str
+    # Compliance-specific workflow data
     check_type: str  # policy, regulation, audit
     target_action: str
-    context: Dict[str, Any]
+    action_context: Dict[str, Any]  # Renamed from 'context' to avoid confusion
     rules_checked: List[Dict[str, Any]]
     violations: List[Dict[str, Any]]
     recommendations: List[str]
@@ -74,8 +75,11 @@ class ComplianceState(AgentState):
     compliance_report: Dict[str, Any]
 
 
-class DocumentState(AgentState):
-    """Document generation agent state"""
+class DocumentState(TypedDict):
+    """Document generation workflow state"""
+    status: str
+    execution_step: str
+    # Document-specific workflow data
     document_type: str  # report, memo, presentation, email
     template_name: str
     input_content: Dict[str, Any]
@@ -88,8 +92,11 @@ class DocumentState(AgentState):
 
 # ============= Orchestrator States =============
 
-class OrchestratorState(BaseState):
-    """Main orchestrator state"""
+class OrchestratorState(TypedDict):
+    """Main orchestrator workflow state"""
+    status: str
+    execution_step: str
+
     # User input
     user_query: str
     conversation_history: List[Dict[str, Any]]
@@ -112,7 +119,6 @@ class OrchestratorState(BaseState):
     active_agents: List[str]
     agent_inputs: Dict[str, Any]
     agent_results: Dict[str, Any]
-    execution_status: Dict[str, str]
 
     # Response generation
     raw_results: Dict[str, Any]
@@ -123,4 +129,3 @@ class OrchestratorState(BaseState):
     # Final output
     final_response: str
     success: bool
-    total_execution_time: float

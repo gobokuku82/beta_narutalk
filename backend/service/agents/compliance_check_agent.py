@@ -1,16 +1,20 @@
 """
 Compliance Check Agent - Policy and regulation compliance verification
+Fully compliant with LangGraph 0.6.x Context API
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Type
 from langgraph.graph import StateGraph, START, END
+from langgraph.runtime import Runtime
 import asyncio
 from pathlib import Path
 import logging
 from datetime import datetime
+import json
 
 from ..core.base_agent import BaseAgent
 from ..core.states import ComplianceState
+from ..core.context import AgentContext
 from ..core.config import Config
 
 
@@ -18,296 +22,383 @@ logger = logging.getLogger(__name__)
 
 
 class ComplianceCheckAgent(BaseAgent):
-    """Agent for checking policy and regulation compliance"""
+    """Agent for checking compliance with policies and regulations with Runtime support"""
 
     def __init__(self):
         super().__init__("compliance_check_agent")
         self.compliance_db_path = Config.get_database_path("compliance")
 
-    def _build_graph(self):
-        """Build the compliance check workflow"""
-        self.workflow = StateGraph(ComplianceState)
+    def _get_state_schema(self) -> Type:
+        """Get the state schema for this agent"""
+        return ComplianceState
 
-        # Add nodes
-        self.workflow.add_node("parse_request", self.parse_request)
-        self.workflow.add_node("load_rules", self.load_compliance_rules)
+    def _build_graph(self):
+        """Build the compliance check workflow with context support"""
+        # StateGraph with context_schema following LangGraph 0.6.x pattern
+        self.workflow = StateGraph(ComplianceState, context_schema=AgentContext)
+
+        # Add nodes - all nodes will receive Runtime parameter
+        self.workflow.add_node("analyze_request", self.analyze_request)
+        self.workflow.add_node("fetch_policies", self.fetch_policies)
         self.workflow.add_node("check_compliance", self.check_compliance)
-        self.workflow.add_node("identify_violations", self.identify_violations)
         self.workflow.add_node("generate_recommendations", self.generate_recommendations)
-        self.workflow.add_node("create_report", self.create_compliance_report)
+        self.workflow.add_node("format_results", self.format_results)
 
         # Add edges
-        self.workflow.add_edge(START, "parse_request")
-        self.workflow.add_edge("parse_request", "load_rules")
-        self.workflow.add_edge("load_rules", "check_compliance")
-        self.workflow.add_edge("check_compliance", "identify_violations")
-        self.workflow.add_edge("identify_violations", "generate_recommendations")
-        self.workflow.add_edge("generate_recommendations", "create_report")
-        self.workflow.add_edge("create_report", END)
+        self.workflow.add_edge(START, "analyze_request")
+        self.workflow.add_edge("analyze_request", "fetch_policies")
+        self.workflow.add_edge("fetch_policies", "check_compliance")
+        self.workflow.add_edge("check_compliance", "generate_recommendations")
+        self.workflow.add_edge("generate_recommendations", "format_results")
+        self.workflow.add_edge("format_results", END)
 
     async def _validate_input(self, input_data: Dict[str, Any]) -> bool:
         """Validate input data"""
-        required_fields = ["target_action"]
+        required_fields = ["check_type"]
         for field in required_fields:
             if field not in input_data:
                 self.logger.error(f"Missing required field: {field}")
                 return False
         return True
 
-    async def parse_request(self, state: ComplianceState) -> ComplianceState:
-        """Parse the compliance check request"""
+    def _create_initial_state(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create initial ComplianceState from input data
+        Only workflow data, no context fields
+        """
+        return {
+            # Workflow status fields
+            "status": "pending",
+            "execution_step": "starting",
+
+            # ComplianceState specific fields
+            "check_type": input_data.get("check_type", "general"),
+            "check_target": input_data.get("check_target", ""),
+            "period": input_data.get("period", "current"),
+            "applicable_policies": [],
+            "compliance_status": {},
+            "violations": [],
+            "risk_level": "",
+            "recommendations": [],
+            "compliance_report": {}
+        }
+
+    # ==================== Node Functions with Runtime ====================
+    # All nodes now receive Runtime[AgentContext] and return partial updates
+
+    async def analyze_request(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext]
+    ) -> Dict[str, Any]:
+        """
+        Analyze the compliance check request
+
+        Args:
+            state: Current workflow state
+            runtime: Runtime with context access
+
+        Returns:
+            Partial state update (only changed fields)
+        """
         try:
-            state["status"] = "processing"
+            # Access context through runtime
+            user_id = getattr(runtime.context, "user_id", "unknown")
+            self.logger.info(f"Analyzing compliance request for user: {user_id}")
 
-            # Set default check type if not specified
-            if not state.get("check_type"):
-                state["check_type"] = "policy"
+            check_type = state.get("check_type", "general")
+            check_target = state.get("check_target", "")
 
-            # Initialize empty lists
-            state["violations"] = []
-            state["recommendations"] = []
-            state["rules_checked"] = []
+            # Determine risk level based on check type
+            risk_level = "medium"
+            if check_type in ["financial", "legal", "security"]:
+                risk_level = "high"
+            elif check_type in ["administrative", "general"]:
+                risk_level = "low"
 
-            self.logger.info(f"Compliance check request parsed - Type: {state.get('check_type')}, Action: {state.get('target_action')}")
-            return state
+            self.logger.info(f"Compliance check: type={check_type}, target={check_target}, risk={risk_level}")
+
+            # Return ONLY changed fields (Context API pattern)
+            return {
+                "status": "processing",
+                "execution_step": "request_analyzed",
+                "risk_level": risk_level
+            }
 
         except Exception as e:
-            self.logger.error(f"Error parsing request: {e}")
-            state["error_logs"] = state.get("error_logs", []) + [str(e)]
-            state["status"] = "failed"
-            return state
+            self.logger.error(f"Error analyzing request: {e}")
 
-    async def load_compliance_rules(self, state: ComplianceState) -> ComplianceState:
-        """Load relevant compliance rules"""
+            # Log error in context if possible
+            if hasattr(runtime.context, 'add_error'):
+                runtime.context.add_error(f"Request analysis failed: {str(e)}")
+
+            # Return failure status
+            return {
+                "status": "failed",
+                "execution_step": "analysis_failed"
+            }
+
+    async def fetch_policies(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext]
+    ) -> Dict[str, Any]:
+        """
+        Fetch relevant policies for the compliance check
+
+        Args:
+            state: Current workflow state
+            runtime: Runtime with context access
+
+        Returns:
+            Partial state update
+        """
         try:
-            check_type = state.get("check_type", "policy")
-            target_action = state.get("target_action", "")
+            # Access context
+            session_id = getattr(runtime.context, "session_id", "unknown")
+            self.logger.info(f"Fetching policies for session: {session_id}")
 
-            # For now, use mock rules
-            # TODO: Load from real compliance database later
-            mock_rules = self._get_mock_compliance_rules(check_type, target_action)
+            check_type = state.get("check_type", "general")
 
-            state["rules_checked"] = mock_rules
-            self.logger.info(f"Loaded {len(mock_rules)} compliance rules")
+            # Mock policy data for now
+            # TODO: Integrate with real policy database
+            mock_policies = []
+            if check_type == "hr":
+                mock_policies = [
+                    {"id": "HR001", "title": "근태 관리 규정", "category": "attendance"},
+                    {"id": "HR002", "title": "연차 사용 규정", "category": "leave"}
+                ]
+            elif check_type == "financial":
+                mock_policies = [
+                    {"id": "FIN001", "title": "경비 처리 규정", "category": "expense"},
+                    {"id": "FIN002", "title": "구매 승인 규정", "category": "procurement"}
+                ]
+            else:
+                mock_policies = [
+                    {"id": "GEN001", "title": "일반 업무 규정", "category": "general"}
+                ]
+
+            self.logger.info(f"Found {len(mock_policies)} applicable policies")
+
+            # Return partial update
+            return {
+                "execution_step": "policies_fetched",
+                "applicable_policies": mock_policies
+            }
 
         except Exception as e:
-            self.logger.error(f"Error loading rules: {e}")
-            state["error_logs"] = state.get("error_logs", []) + [str(e)]
-            state["rules_checked"] = []
+            self.logger.error(f"Error fetching policies: {e}")
 
-        return state
+            # Log error in context
+            if hasattr(runtime.context, 'add_error'):
+                runtime.context.add_error(f"Policy fetch failed: {str(e)}")
 
-    async def check_compliance(self, state: ComplianceState) -> ComplianceState:
-        """Check compliance against loaded rules"""
+            return {
+                "execution_step": "policy_fetch_failed",
+                "applicable_policies": []
+            }
+
+    async def check_compliance(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext]
+    ) -> Dict[str, Any]:
+        """
+        Check compliance against policies
+
+        Args:
+            state: Current workflow state
+            runtime: Runtime with context access
+
+        Returns:
+            Partial state update
+        """
         try:
-            rules = state.get("rules_checked", [])
-            context = state.get("context", {})
-            target_action = state.get("target_action", "")
+            # Access context for logging
+            user_id = getattr(runtime.context, "user_id", "unknown")
+            self.logger.info(f"Checking compliance for user: {user_id}")
 
-            compliance_results = {}
-            total_score = 0
-            checked_count = 0
+            policies = state.get("applicable_policies", [])
+            check_target = state.get("check_target", "")
 
-            for rule in rules:
-                rule_id = rule.get("id", "")
-                rule_type = rule.get("type", "")
+            compliance_status = {}
+            violations = []
 
-                # Simple compliance check logic
-                is_compliant = self._evaluate_rule(rule, target_action, context)
+            # Mock compliance check
+            for policy in policies:
+                # Simulate compliance check (random for demo)
+                import random
+                is_compliant = random.choice([True, True, False])  # 66% compliant
 
-                compliance_results[rule_id] = {
-                    "rule": rule,
+                compliance_status[policy["id"]] = {
+                    "policy": policy["title"],
                     "compliant": is_compliant,
                     "checked_at": datetime.now().isoformat()
                 }
 
-                if is_compliant:
-                    total_score += 1
-                checked_count += 1
+                if not is_compliant:
+                    violations.append({
+                        "policy_id": policy["id"],
+                        "policy_title": policy["title"],
+                        "violation_type": "minor",
+                        "description": f"{check_target}이(가) {policy['title']}을 위반했을 가능성이 있습니다."
+                    })
 
-            # Calculate compliance score
-            state["compliance_score"] = (total_score / checked_count * 100) if checked_count > 0 else 0
-            state["is_compliant"] = state["compliance_score"] >= 80  # 80% threshold
-            state["compliance_checks"] = compliance_results
+            self.logger.info(f"Compliance check complete: {len(violations)} violations found")
 
-            self.logger.info(f"Compliance check completed - Score: {state['compliance_score']:.1f}%")
+            # Return partial update
+            return {
+                "execution_step": "compliance_checked",
+                "compliance_status": compliance_status,
+                "violations": violations
+            }
 
         except Exception as e:
             self.logger.error(f"Error checking compliance: {e}")
-            state["error_logs"] = state.get("error_logs", []) + [str(e)]
-            state["compliance_score"] = 0
-            state["is_compliant"] = False
 
-        return state
+            # Log error in context
+            if hasattr(runtime.context, 'add_error'):
+                runtime.context.add_error(f"Compliance check failed: {str(e)}")
 
-    async def identify_violations(self, state: ComplianceState) -> ComplianceState:
-        """Identify specific violations"""
+            return {
+                "execution_step": "compliance_check_failed",
+                "compliance_status": {},
+                "violations": []
+            }
+
+    async def generate_recommendations(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext]
+    ) -> Dict[str, Any]:
+        """
+        Generate recommendations based on compliance check
+
+        Args:
+            state: Current workflow state
+            runtime: Runtime with context access
+
+        Returns:
+            Partial state update
+        """
         try:
-            compliance_checks = state.get("compliance_checks", {})
-            violations = []
+            # Access context
+            session_id = getattr(runtime.context, "session_id", "unknown")
+            self.logger.info(f"Generating recommendations for session: {session_id}")
 
-            for rule_id, result in compliance_checks.items():
-                if not result.get("compliant", True):
-                    rule = result.get("rule", {})
-                    violations.append({
-                        "rule_id": rule_id,
-                        "rule_name": rule.get("name", "Unknown Rule"),
-                        "severity": rule.get("severity", "medium"),
-                        "description": rule.get("description", ""),
-                        "violation_details": f"Action '{state.get('target_action', '')}' violates {rule.get('name', 'rule')}"
-                    })
-
-            state["violations"] = violations
-            self.logger.info(f"Identified {len(violations)} violations")
-
-        except Exception as e:
-            self.logger.error(f"Error identifying violations: {e}")
-            state["error_logs"] = state.get("error_logs", []) + [str(e)]
-            state["violations"] = []
-
-        return state
-
-    async def generate_recommendations(self, state: ComplianceState) -> ComplianceState:
-        """Generate recommendations based on violations"""
-        try:
             violations = state.get("violations", [])
+            risk_level = state.get("risk_level", "medium")
+
             recommendations = []
 
-            for violation in violations:
-                severity = violation.get("severity", "medium")
-                rule_name = violation.get("rule_name", "")
-
-                # Generate recommendations based on severity
-                if severity == "critical":
+            if violations:
+                # Generate recommendations for each violation
+                for violation in violations:
                     recommendations.append({
-                        "priority": "high",
-                        "action": f"즉시 {rule_name} 규정을 검토하고 준수하십시오",
-                        "details": "이 위반사항은 즉시 조치가 필요합니다"
+                        "priority": "high" if risk_level == "high" else "medium",
+                        "action": f"{violation['policy_title']} 준수를 위한 조치 필요",
+                        "description": f"정책 검토 및 필요시 시정 조치를 취하시기 바랍니다.",
+                        "deadline": "즉시" if risk_level == "high" else "1주일 이내"
                     })
-                elif severity == "high":
-                    recommendations.append({
-                        "priority": "medium",
-                        "action": f"{rule_name} 규정 준수를 위한 조치 계획을 수립하십시오",
-                        "details": "가능한 빠른 시일 내에 개선이 필요합니다"
-                    })
-                else:
-                    recommendations.append({
-                        "priority": "low",
-                        "action": f"{rule_name} 관련 프로세스 개선을 고려하십시오",
-                        "details": "장기적인 개선 계획에 포함시키십시오"
-                    })
-
-            # Add general recommendations if compliant
-            if state.get("is_compliant", False) and not violations:
+            else:
+                # No violations - positive recommendation
                 recommendations.append({
-                    "priority": "info",
+                    "priority": "low",
                     "action": "현재 규정을 잘 준수하고 있습니다",
-                    "details": "정기적인 검토를 계속하십시오"
+                    "description": "계속해서 규정을 준수해 주시기 바랍니다.",
+                    "deadline": "해당 없음"
                 })
 
-            state["recommendations"] = recommendations
             self.logger.info(f"Generated {len(recommendations)} recommendations")
+
+            # Return partial update
+            return {
+                "execution_step": "recommendations_generated",
+                "recommendations": recommendations
+            }
 
         except Exception as e:
             self.logger.error(f"Error generating recommendations: {e}")
-            state["error_logs"] = state.get("error_logs", []) + [str(e)]
-            state["recommendations"] = []
 
-        return state
+            # Log error in context
+            if hasattr(runtime.context, 'add_error'):
+                runtime.context.add_error(f"Recommendation generation failed: {str(e)}")
 
-    async def create_compliance_report(self, state: ComplianceState) -> ComplianceState:
-        """Create the final compliance report"""
+            return {
+                "execution_step": "recommendation_generation_failed",
+                "recommendations": []
+            }
+
+    async def format_results(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext]
+    ) -> Dict[str, Any]:
+        """
+        Format the compliance check results
+
+        Args:
+            state: Current workflow state
+            runtime: Runtime with context access
+
+        Returns:
+            Partial state update with final report
+        """
         try:
-            state["compliance_report"] = {
+            # Access context
+            user_id = getattr(runtime.context, "user_id", "unknown")
+            self.logger.info(f"Formatting results for user: {user_id}")
+
+            compliance_report = {
                 "status": "success",
                 "check_type": state.get("check_type", ""),
-                "target_action": state.get("target_action", ""),
-                "is_compliant": state.get("is_compliant", False),
-                "compliance_score": state.get("compliance_score", 0),
-                "rules_checked": len(state.get("rules_checked", [])),
+                "check_target": state.get("check_target", ""),
+                "risk_level": state.get("risk_level", ""),
+                "summary": {
+                    "total_policies": len(state.get("applicable_policies", [])),
+                    "violations_found": len(state.get("violations", [])),
+                    "compliance_rate": self._calculate_compliance_rate(state)
+                },
+                "compliance_status": state.get("compliance_status", {}),
                 "violations": state.get("violations", []),
                 "recommendations": state.get("recommendations", []),
-                "checked_at": datetime.now().isoformat()
+                "generated_at": datetime.now().isoformat()
             }
 
-            state["status"] = "completed"
-            self.logger.info("Compliance report created successfully")
+            self.logger.info("Compliance report generated successfully")
+
+            # Return partial update
+            return {
+                "status": "completed",
+                "execution_step": "results_formatted",
+                "compliance_report": compliance_report
+            }
 
         except Exception as e:
-            self.logger.error(f"Error creating report: {e}")
-            state["error_logs"] = state.get("error_logs", []) + [str(e)]
-            state["status"] = "failed"
-            state["compliance_report"] = {
-                "status": "error",
-                "error": str(e)
+            self.logger.error(f"Error formatting results: {e}")
+
+            # Log error in context
+            if hasattr(runtime.context, 'add_error'):
+                runtime.context.add_error(f"Result formatting failed: {str(e)}")
+
+            return {
+                "status": "failed",
+                "execution_step": "formatting_failed",
+                "compliance_report": {
+                    "status": "error",
+                    "error": str(e)
+                }
             }
 
-        return state
+    # ==================== Helper Methods ====================
 
-    def _get_mock_compliance_rules(self, check_type: str, target_action: str) -> List[Dict[str, Any]]:
-        """Get mock compliance rules for testing"""
-        rules = []
+    def _calculate_compliance_rate(self, state: Dict[str, Any]) -> float:
+        """Calculate compliance rate"""
+        compliance_status = state.get("compliance_status", {})
+        if not compliance_status:
+            return 100.0
 
-        if "채용" in target_action or "hire" in target_action.lower():
-            rules.extend([
-                {
-                    "id": "HR-001",
-                    "name": "채용 프로세스 규정",
-                    "type": "policy",
-                    "severity": "high",
-                    "description": "모든 채용은 공정한 절차를 따라야 함"
-                },
-                {
-                    "id": "HR-002",
-                    "name": "차별 금지 정책",
-                    "type": "regulation",
-                    "severity": "critical",
-                    "description": "채용 시 차별 금지"
-                }
-            ])
+        total = len(compliance_status)
+        compliant = sum(1 for s in compliance_status.values() if s.get("compliant"))
 
-        if "지출" in target_action or "expense" in target_action.lower():
-            rules.extend([
-                {
-                    "id": "FIN-001",
-                    "name": "지출 승인 규정",
-                    "type": "policy",
-                    "severity": "medium",
-                    "description": "일정 금액 이상 지출은 사전 승인 필요"
-                },
-                {
-                    "id": "FIN-002",
-                    "name": "예산 준수 정책",
-                    "type": "regulation",
-                    "severity": "high",
-                    "description": "부서별 예산 한도 준수"
-                }
-            ])
-
-        # Default rules if no specific match
-        if not rules:
-            rules = [
-                {
-                    "id": "GEN-001",
-                    "name": "일반 업무 규정",
-                    "type": check_type,
-                    "severity": "low",
-                    "description": "표준 업무 절차 준수"
-                }
-            ]
-
-        return rules
-
-    def _evaluate_rule(self, rule: Dict[str, Any], target_action: str, context: Dict[str, Any]) -> bool:
-        """Evaluate if an action complies with a rule"""
-        # Simple mock evaluation logic
-        # In real implementation, this would check actual compliance
-        import random
-
-        # Simulate compliance check
-        if rule.get("severity") == "critical":
-            return random.random() > 0.3  # 70% compliant
-        elif rule.get("severity") == "high":
-            return random.random() > 0.2  # 80% compliant
-        else:
-            return random.random() > 0.1  # 90% compliant
+        return round((compliant / total) * 100, 1) if total > 0 else 100.0

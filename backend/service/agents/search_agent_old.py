@@ -1,11 +1,9 @@
 """
 Search Agent - HR information and rules search
-Fully compliant with LangGraph 0.6.x Context API
 """
 
 from typing import Dict, Any, List, Type
 from langgraph.graph import StateGraph, START, END
-from langgraph.runtime import Runtime
 import sqlite3
 import asyncio
 from pathlib import Path
@@ -22,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class SearchAgent(BaseAgent):
-    """Agent for searching HR information and rules with Runtime support"""
+    """Agent for searching HR information and rules"""
 
     def __init__(self):
         super().__init__("search_agent")
@@ -35,10 +33,13 @@ class SearchAgent(BaseAgent):
 
     def _build_graph(self):
         """Build the search workflow with context support"""
-        # StateGraph with context_schema following LangGraph 0.6.x pattern
-        self.workflow = StateGraph(SearchState, context_schema=AgentContext)
+        # StateGraph now uses context_schema for metadata
+        self.workflow = StateGraph(
+            state_schema=SearchState,
+            context_schema=AgentContext
+        )
 
-        # Add nodes - all nodes will receive Runtime parameter
+        # Add nodes
         self.workflow.add_node("analyze_query", self.analyze_query)
         self.workflow.add_node("search_hr_info", self.search_hr_info)
         self.workflow.add_node("search_rules", self.search_rules)
@@ -81,14 +82,21 @@ class SearchAgent(BaseAgent):
         return True
 
     def _create_initial_state(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Create initial SearchState from input data
-        Only workflow data, no context fields
-        """
+        """Create initial SearchState from input data"""
         return {
-            # Workflow status fields
+            # BaseState fields
+            "user_id": input_data.get("user_id", "default"),
+            "session_id": input_data.get("session_id", "default"),
+            "timestamp": datetime.now().isoformat(),
             "status": "pending",
-            "execution_step": "starting",
+            "error_logs": [],
+            "metadata": input_data.get("metadata", {}),
+
+            # AgentState fields
+            "input_data": input_data,
+            "output_data": {},
+            "execution_time": 0.0,
+            "retry_count": 0,
 
             # SearchState specific fields
             "query": input_data.get("query", ""),
@@ -102,67 +110,36 @@ class SearchAgent(BaseAgent):
             "final_results": {}
         }
 
-    # ==================== Node Functions with Runtime ====================
-    # All nodes now receive Runtime[AgentContext] and return partial updates
-
-    async def analyze_query(
-        self,
-        state: Dict[str, Any],
-        runtime: Runtime[AgentContext]
-    ) -> Dict[str, Any]:
-        """
-        Analyze the search query
-
-        Args:
-            state: Current workflow state
-            runtime: Runtime with context access
-
-        Returns:
-            Partial state update (only changed fields)
-        """
+    async def analyze_query(self, state: SearchState) -> SearchState:
+        """Analyze the search query"""
         try:
-            # Access context through runtime
-            user_id = getattr(runtime.context, "user_id", "unknown")
-            self.logger.info(f"Analyzing query for user: {user_id}")
-
             query = state.get("query", "")
+            state["status"] = "processing"
 
             # Extract keywords
             keywords = self._extract_keywords(query)
+            state["keywords"] = keywords
 
             # Determine search type
-            search_type = "hr_only"
             if "규정" in query or "정책" in query or "지침" in query:
                 if "인사" in query or "직원" in query:
-                    search_type = "both"
+                    state["search_type"] = "both"
                 else:
-                    search_type = "rules_only"
+                    state["search_type"] = "rules_only"
+            else:
+                state["search_type"] = "hr_only"
 
-            self.logger.info(f"Query analyzed - Type: {search_type}, Keywords: {keywords}")
-
-            # Return ONLY changed fields (Context API pattern)
-            return {
-                "status": "processing",
-                "execution_step": "query_analyzed",
-                "keywords": keywords,
-                "search_type": search_type
-            }
+            self.logger.info(f"Query analyzed - Type: {state['search_type']}, Keywords: {keywords}")
+            return state
 
         except Exception as e:
             self.logger.error(f"Error analyzing query: {e}")
+            state["error_logs"] = state.get("error_logs", []) + [str(e)]
+            state["status"] = "failed"
+            return state
 
-            # Log error in context if possible
-            if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"Query analysis failed: {str(e)}")
-
-            # Return failure status
-            return {
-                "status": "failed",
-                "execution_step": "query_analysis_failed"
-            }
-
-    def determine_search_type(self, state: Dict[str, Any]) -> str:
-        """Determine which search to perform (for conditional edge)"""
+    def determine_search_type(self, state: SearchState) -> str:
+        """Determine which search to perform"""
         search_type = state.get("search_type", "hr_only")
         if search_type == "both":
             return "both"
@@ -170,40 +147,21 @@ class SearchAgent(BaseAgent):
             return "rules_only"
         return "hr_only"
 
-    async def search_hr_info(
-        self,
-        state: Dict[str, Any],
-        runtime: Runtime[AgentContext]
-    ) -> Dict[str, Any]:
-        """
-        Search HR information database
-
-        Args:
-            state: Current workflow state
-            runtime: Runtime with context access
-
-        Returns:
-            Partial state update
-        """
+    async def search_hr_info(self, state: SearchState) -> SearchState:
+        """Search HR information database"""
         try:
-            # Access context
-            session_id = getattr(runtime.context, "session_id", "unknown")
-            self.logger.info(f"Searching HR info for session: {session_id}")
-
-            hr_results = []
+            state["hr_results"] = []
 
             if not self.hr_db_path.exists():
                 self.logger.warning(f"HR database not found: {self.hr_db_path}")
-                return {
-                    "execution_step": "hr_search_skipped",
-                    "hr_results": []
-                }
+                return state
 
             conn = sqlite3.connect(str(self.hr_db_path))
             cursor = conn.cursor()
 
             # Build search query
             keywords = state.get("keywords", [])
+            query = state.get("query", "")
 
             # Simple keyword search
             sql = "SELECT * FROM 인사자료 WHERE 1=1"
@@ -224,66 +182,36 @@ class SearchAgent(BaseAgent):
             columns = [desc[0] for desc in cursor.description]
             rows = cursor.fetchall()
 
+            hr_results = []
             for row in rows:
                 result = dict(zip(columns, row))
                 hr_results.append({
                     "type": "hr_info",
                     "content": result,
-                    "relevance_score": 0.7
+                    "relevance_score": 0.7  # Simple fixed score
                 })
+
+            state["hr_results"] = hr_results
+            state["sources"] = state.get("sources", []) + ["HR Database"]
 
             conn.close()
             self.logger.info(f"Found {len(hr_results)} HR results")
 
-            # Update sources
-            current_sources = state.get("sources", [])
-            if "HR Database" not in current_sources:
-                current_sources.append("HR Database")
-
-            # Return partial update
-            return {
-                "execution_step": "hr_search_completed",
-                "hr_results": hr_results,
-                "sources": current_sources
-            }
-
         except Exception as e:
             self.logger.error(f"Error searching HR info: {e}")
+            state["error_logs"] = state.get("error_logs", []) + [str(e)]
 
-            # Log error in context
-            if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"HR search failed: {str(e)}")
+        return state
 
-            return {
-                "execution_step": "hr_search_failed",
-                "hr_results": []
-            }
-
-    async def search_rules(
-        self,
-        state: Dict[str, Any],
-        runtime: Runtime[AgentContext]
-    ) -> Dict[str, Any]:
-        """
-        Search rules database
-
-        Args:
-            state: Current workflow state
-            runtime: Runtime with context access
-
-        Returns:
-            Partial state update
-        """
+    async def search_rules(self, state: SearchState) -> SearchState:
+        """Search rules database (keyword-based for now)"""
         try:
-            # Access context for logging
-            user_id = getattr(runtime.context, "user_id", "unknown")
-            self.logger.info(f"Searching rules for user: {user_id}")
-
-            rules_results = []
-            keywords = state.get("keywords", [])
+            state["rules_results"] = []
 
             # For now, return mock results
             # TODO: Implement ChromaDB keyword search later
+            keywords = state.get("keywords", [])
+
             if keywords:
                 mock_rules = [
                     {
@@ -296,54 +224,20 @@ class SearchAgent(BaseAgent):
                         "relevance_score": 0.6
                     }
                 ]
-                rules_results = mock_rules
+                state["rules_results"] = mock_rules
+                state["sources"] = state.get("sources", []) + ["Rules Database"]
 
-            self.logger.info(f"Found {len(rules_results)} rule results")
-
-            # Update sources
-            current_sources = state.get("sources", [])
-            if rules_results and "Rules Database" not in current_sources:
-                current_sources.append("Rules Database")
-
-            # Return partial update
-            return {
-                "execution_step": "rules_search_completed",
-                "rules_results": rules_results,
-                "sources": current_sources
-            }
+            self.logger.info(f"Found {len(state.get('rules_results', []))} rule results")
 
         except Exception as e:
             self.logger.error(f"Error searching rules: {e}")
+            state["error_logs"] = state.get("error_logs", []) + [str(e)]
 
-            # Log error in context
-            if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"Rules search failed: {str(e)}")
+        return state
 
-            return {
-                "execution_step": "rules_search_failed",
-                "rules_results": []
-            }
-
-    async def merge_results(
-        self,
-        state: Dict[str, Any],
-        runtime: Runtime[AgentContext]
-    ) -> Dict[str, Any]:
-        """
-        Merge and format final results
-
-        Args:
-            state: Current workflow state
-            runtime: Runtime with context access
-
-        Returns:
-            Partial state update with final results
-        """
+    async def merge_results(self, state: SearchState) -> SearchState:
+        """Merge and format final results"""
         try:
-            # Access context
-            session_id = getattr(runtime.context, "session_id", "unknown")
-            self.logger.info(f"Merging results for session: {session_id}")
-
             hr_results = state.get("hr_results", [])
             rules_results = state.get("rules_results", [])
 
@@ -352,7 +246,7 @@ class SearchAgent(BaseAgent):
             # Sort by relevance score
             all_results.sort(key=lambda x: x.get("relevance_score", 0), reverse=True)
 
-            final_results = {
+            state["final_results"] = {
                 "status": "success",
                 "query": state.get("query", ""),
                 "total_results": len(all_results),
@@ -360,32 +254,19 @@ class SearchAgent(BaseAgent):
                 "sources": list(set(state.get("sources", [])))
             }
 
+            state["status"] = "completed"
             self.logger.info(f"Search completed with {len(all_results)} total results")
-
-            # Return partial update
-            return {
-                "status": "completed",
-                "execution_step": "results_merged",
-                "final_results": final_results
-            }
 
         except Exception as e:
             self.logger.error(f"Error merging results: {e}")
-
-            # Log error in context
-            if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"Results merge failed: {str(e)}")
-
-            return {
-                "status": "failed",
-                "execution_step": "merge_failed",
-                "final_results": {
-                    "status": "error",
-                    "error": str(e)
-                }
+            state["error_logs"] = state.get("error_logs", []) + [str(e)]
+            state["status"] = "failed"
+            state["final_results"] = {
+                "status": "error",
+                "error": str(e)
             }
 
-    # ==================== Helper Methods ====================
+        return state
 
     def _extract_keywords(self, query: str) -> List[str]:
         """Extract keywords from query"""

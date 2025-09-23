@@ -1,9 +1,11 @@
 """
 Sales Analytics Agent - Sales performance analysis
+Fully compliant with LangGraph 0.6.x Context API
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Type
 from langgraph.graph import StateGraph, START, END
+from langgraph.runtime import Runtime
 import sqlite3
 import asyncio
 from pathlib import Path
@@ -13,6 +15,7 @@ import json
 
 from ..core.base_agent import BaseAgent
 from ..core.states import SalesState
+from ..core.context import AgentContext
 from ..core.config import Config
 
 
@@ -20,17 +23,22 @@ logger = logging.getLogger(__name__)
 
 
 class SalesAnalyticsAgent(BaseAgent):
-    """Agent for analyzing sales performance"""
+    """Agent for analyzing sales performance with Runtime support"""
 
     def __init__(self):
         super().__init__("sales_analytics_agent")
         self.sales_db_path = Config.get_database_path("sales")
 
-    def _build_graph(self):
-        """Build the sales analytics workflow"""
-        self.workflow = StateGraph(SalesState)
+    def _get_state_schema(self) -> Type:
+        """Get the state schema for this agent"""
+        return SalesState
 
-        # Add nodes
+    def _build_graph(self):
+        """Build the sales analytics workflow with context support"""
+        # StateGraph with context_schema following LangGraph 0.6.x pattern
+        self.workflow = StateGraph(SalesState, context_schema=AgentContext)
+
+        # Add nodes - all nodes will receive Runtime parameter
         self.workflow.add_node("validate_request", self.validate_request)
         self.workflow.add_node("fetch_data", self.fetch_sales_data)
         self.workflow.add_node("calculate_metrics", self.calculate_metrics)
@@ -54,31 +62,101 @@ class SalesAnalyticsAgent(BaseAgent):
                 return False
         return True
 
-    async def validate_request(self, state: SalesState) -> SalesState:
-        """Validate and prepare the analytics request"""
+    def _create_initial_state(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create initial SalesState from input data
+        Only workflow data, no context fields
+        """
+        return {
+            # Workflow status fields
+            "status": "pending",
+            "execution_step": "starting",
+
+            # SalesState specific fields
+            "employee_name": input_data.get("employee_name", ""),
+            "period": input_data.get("period", "monthly"),
+            "metrics_type": input_data.get("metrics_type", "performance"),
+            "raw_data": [],
+            "statistics": {},
+            "aggregated_data": {},
+            "charts_data": [],
+            "insights": [],
+            "final_report": {}
+        }
+
+    # ==================== Node Functions with Runtime ====================
+    # All nodes now receive Runtime[AgentContext] and return partial updates
+
+    async def validate_request(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext]
+    ) -> Dict[str, Any]:
+        """
+        Validate and prepare the analytics request
+
+        Args:
+            state: Current workflow state
+            runtime: Runtime with context access
+
+        Returns:
+            Partial state update (only changed fields)
+        """
         try:
-            state["status"] = "processing"
+            # Access context through runtime
+            user_id = getattr(runtime.context, "user_id", "unknown")
+            self.logger.info(f"Validating request for user: {user_id}")
 
             # Set default period if not specified
-            if not state.get("period"):
-                state["period"] = "monthly"
+            period = state.get("period", "monthly")
 
             # Set default metrics type if not specified
-            if not state.get("metrics_type"):
-                state["metrics_type"] = "performance"
+            metrics_type = state.get("metrics_type", "performance")
 
-            self.logger.info(f"Analytics request validated - Employee: {state.get('employee_name')}, Period: {state.get('period')}")
-            return state
+            employee_name = state.get("employee_name", "")
+            self.logger.info(f"Analytics request validated - Employee: {employee_name}, Period: {period}")
+
+            # Return ONLY changed fields (Context API pattern)
+            return {
+                "status": "processing",
+                "execution_step": "request_validated",
+                "period": period,
+                "metrics_type": metrics_type
+            }
 
         except Exception as e:
             self.logger.error(f"Error validating request: {e}")
-            state["error_logs"] = state.get("error_logs", []) + [str(e)]
-            state["status"] = "failed"
-            return state
 
-    async def fetch_sales_data(self, state: SalesState) -> SalesState:
-        """Fetch sales data from database"""
+            # Log error in context if possible
+            if hasattr(runtime.context, 'add_error'):
+                runtime.context.add_error(f"Request validation failed: {str(e)}")
+
+            # Return failure status
+            return {
+                "status": "failed",
+                "execution_step": "validation_failed"
+            }
+
+    async def fetch_sales_data(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext]
+    ) -> Dict[str, Any]:
+        """
+        Fetch sales data from database
+
+        Args:
+            state: Current workflow state
+            runtime: Runtime with context access
+
+        Returns:
+            Partial state update
+        """
         try:
+            # Access context
+            session_id = getattr(runtime.context, "session_id", "unknown")
+            self.logger.info(f"Fetching sales data for session: {session_id}")
+
             employee_name = state.get("employee_name", "")
             period = state.get("period", "monthly")
 
@@ -86,25 +164,55 @@ class SalesAnalyticsAgent(BaseAgent):
             # TODO: Connect to real sales database later
             mock_data = self._generate_mock_sales_data(employee_name, period)
 
-            state["raw_data"] = mock_data
             self.logger.info(f"Fetched {len(mock_data)} sales records")
+
+            # Return partial update
+            return {
+                "execution_step": "data_fetched",
+                "raw_data": mock_data
+            }
 
         except Exception as e:
             self.logger.error(f"Error fetching sales data: {e}")
-            state["error_logs"] = state.get("error_logs", []) + [str(e)]
-            state["raw_data"] = []
 
-        return state
+            # Log error in context
+            if hasattr(runtime.context, 'add_error'):
+                runtime.context.add_error(f"Data fetch failed: {str(e)}")
 
-    async def calculate_metrics(self, state: SalesState) -> SalesState:
-        """Calculate sales metrics"""
+            return {
+                "execution_step": "data_fetch_failed",
+                "raw_data": []
+            }
+
+    async def calculate_metrics(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext]
+    ) -> Dict[str, Any]:
+        """
+        Calculate sales metrics
+
+        Args:
+            state: Current workflow state
+            runtime: Runtime with context access
+
+        Returns:
+            Partial state update
+        """
         try:
+            # Access context for logging
+            user_id = getattr(runtime.context, "user_id", "unknown")
+            self.logger.info(f"Calculating metrics for user: {user_id}")
+
             raw_data = state.get("raw_data", [])
 
             if not raw_data:
-                state["statistics"] = {}
-                state["aggregated_data"] = {}
-                return state
+                return {
+                    "execution_step": "metrics_calculated",
+                    "statistics": {},
+                    "aggregated_data": {},
+                    "charts_data": []
+                }
 
             # Calculate basic statistics
             total_sales = sum(d.get("amount", 0) for d in raw_data)
@@ -112,7 +220,7 @@ class SalesAnalyticsAgent(BaseAgent):
             max_sale = max((d.get("amount", 0) for d in raw_data), default=0)
             min_sale = min((d.get("amount", 0) for d in raw_data), default=0)
 
-            state["statistics"] = {
+            statistics = {
                 "total_sales": total_sales,
                 "average_sale": avg_sales,
                 "max_sale": max_sale,
@@ -129,10 +237,8 @@ class SalesAnalyticsAgent(BaseAgent):
                 aggregated[period_key]["count"] += 1
                 aggregated[period_key]["amount"] += record.get("amount", 0)
 
-            state["aggregated_data"] = aggregated
-
             # Prepare chart data
-            state["charts_data"] = [
+            charts_data = [
                 {
                     "type": "line",
                     "title": "Sales Trend",
@@ -145,15 +251,48 @@ class SalesAnalyticsAgent(BaseAgent):
 
             self.logger.info("Metrics calculated successfully")
 
+            # Return partial update
+            return {
+                "execution_step": "metrics_calculated",
+                "statistics": statistics,
+                "aggregated_data": aggregated,
+                "charts_data": charts_data
+            }
+
         except Exception as e:
             self.logger.error(f"Error calculating metrics: {e}")
-            state["error_logs"] = state.get("error_logs", []) + [str(e)]
 
-        return state
+            # Log error in context
+            if hasattr(runtime.context, 'add_error'):
+                runtime.context.add_error(f"Metrics calculation failed: {str(e)}")
 
-    async def generate_insights(self, state: SalesState) -> SalesState:
-        """Generate insights from the metrics"""
+            return {
+                "execution_step": "metrics_calculation_failed",
+                "statistics": {},
+                "aggregated_data": {},
+                "charts_data": []
+            }
+
+    async def generate_insights(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext]
+    ) -> Dict[str, Any]:
+        """
+        Generate insights from the metrics
+
+        Args:
+            state: Current workflow state
+            runtime: Runtime with context access
+
+        Returns:
+            Partial state update
+        """
         try:
+            # Access context
+            session_id = getattr(runtime.context, "session_id", "unknown")
+            self.logger.info(f"Generating insights for session: {session_id}")
+
             statistics = state.get("statistics", {})
             aggregated = state.get("aggregated_data", {})
 
@@ -176,20 +315,47 @@ class SalesAnalyticsAgent(BaseAgent):
                     trend = "증가" if change > 0 else "감소"
                     insights.append(f"전월 대비 {abs(change):.1f}% {trend}")
 
-            state["insights"] = insights
             self.logger.info(f"Generated {len(insights)} insights")
+
+            # Return partial update
+            return {
+                "execution_step": "insights_generated",
+                "insights": insights
+            }
 
         except Exception as e:
             self.logger.error(f"Error generating insights: {e}")
-            state["error_logs"] = state.get("error_logs", []) + [str(e)]
-            state["insights"] = []
 
-        return state
+            # Log error in context
+            if hasattr(runtime.context, 'add_error'):
+                runtime.context.add_error(f"Insight generation failed: {str(e)}")
 
-    async def format_report(self, state: SalesState) -> SalesState:
-        """Format the final analytics report"""
+            return {
+                "execution_step": "insight_generation_failed",
+                "insights": []
+            }
+
+    async def format_report(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext]
+    ) -> Dict[str, Any]:
+        """
+        Format the final analytics report
+
+        Args:
+            state: Current workflow state
+            runtime: Runtime with context access
+
+        Returns:
+            Partial state update with final report
+        """
         try:
-            state["final_report"] = {
+            # Access context
+            user_id = getattr(runtime.context, "user_id", "unknown")
+            self.logger.info(f"Formatting report for user: {user_id}")
+
+            final_report = {
                 "status": "success",
                 "employee": state.get("employee_name", ""),
                 "period": state.get("period", ""),
@@ -200,19 +366,32 @@ class SalesAnalyticsAgent(BaseAgent):
                 "generated_at": datetime.now().isoformat()
             }
 
-            state["status"] = "completed"
             self.logger.info("Sales analytics report generated successfully")
+
+            # Return partial update
+            return {
+                "status": "completed",
+                "execution_step": "report_formatted",
+                "final_report": final_report
+            }
 
         except Exception as e:
             self.logger.error(f"Error formatting report: {e}")
-            state["error_logs"] = state.get("error_logs", []) + [str(e)]
-            state["status"] = "failed"
-            state["final_report"] = {
-                "status": "error",
-                "error": str(e)
+
+            # Log error in context
+            if hasattr(runtime.context, 'add_error'):
+                runtime.context.add_error(f"Report formatting failed: {str(e)}")
+
+            return {
+                "status": "failed",
+                "execution_step": "report_formatting_failed",
+                "final_report": {
+                    "status": "error",
+                    "error": str(e)
+                }
             }
 
-        return state
+    # ==================== Helper Methods ====================
 
     def _generate_mock_sales_data(self, employee_name: str, period: str) -> List[Dict[str, Any]]:
         """Generate mock sales data for testing"""
