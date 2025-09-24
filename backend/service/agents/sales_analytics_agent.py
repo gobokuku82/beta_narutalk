@@ -147,7 +147,7 @@ class SalesAnalyticsAgent(BaseAgent):
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
         """
-        Generate SQL query from parsed components
+        Generate SQL query from parsed components using LLM or rule-based approach
 
         Args:
             state: Current workflow state
@@ -158,12 +158,32 @@ class SalesAnalyticsAgent(BaseAgent):
         """
         try:
             session_id = getattr(runtime.context, "session_id", "unknown")
+            original_query = getattr(runtime.context, "original_query", "")
             self.logger.info(f"Generating SQL for session: {session_id}")
 
             parsed_query = state.get("parsed_query", {})
 
-            # Generate SQL using the tool
-            sql, explanation = self.sql_generator.generate_sql(parsed_query)
+            # Try LLM-based SQL generation first if available
+            if self.sql_generator.use_llm:
+                try:
+                    # Get intent result if available from context
+                    intent_result = getattr(runtime.context, "intent_result", None)
+
+                    # Use LLM to generate SQL
+                    sql, explanation = await self.sql_generator.generate_sql_with_llm(
+                        original_query,
+                        parsed_query,
+                        intent_result
+                    )
+
+                    self.logger.info("Using LLM-generated SQL")
+                except Exception as llm_error:
+                    self.logger.warning(f"LLM SQL generation failed, falling back to rule-based: {llm_error}")
+                    # Fall back to rule-based
+                    sql, explanation = self.sql_generator.generate_sql(parsed_query)
+            else:
+                # Use rule-based SQL generation
+                sql, explanation = self.sql_generator.generate_sql(parsed_query)
 
             # Validate SQL for safety
             if not self.sql_generator.validate_sql(sql):
