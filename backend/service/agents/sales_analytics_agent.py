@@ -17,6 +17,7 @@ from ..core.base_agent import BaseAgent
 from ..core.states import SalesState
 from ..core.context import AgentContext
 from ..core.config import Config
+from ..tools import SQLGenerator, SQLExecutor
 
 
 logger = logging.getLogger(__name__)
@@ -28,30 +29,30 @@ class SalesAnalyticsAgent(BaseAgent):
     def __init__(self):
         super().__init__("sales_analytics_agent")
         self.sales_db_path = Config.get_database_path("sales")
+        self.sql_generator = SQLGenerator()
+        self.sql_executor = SQLExecutor()
 
     def _get_state_schema(self) -> Type:
         """Get the state schema for this agent"""
         return SalesState
 
     def _build_graph(self):
-        """Build the sales analytics workflow with context support"""
+        """Build the sales analytics workflow with Text2SQL support"""
         # StateGraph with context_schema following LangGraph 0.6.x pattern
         self.workflow = StateGraph(SalesState, context_schema=AgentContext)
 
-        # Add nodes - all nodes will receive Runtime parameter
-        self.workflow.add_node("validate_request", self.validate_request)
-        self.workflow.add_node("fetch_data", self.fetch_sales_data)
-        self.workflow.add_node("calculate_metrics", self.calculate_metrics)
-        self.workflow.add_node("generate_insights", self.generate_insights)
-        self.workflow.add_node("format_report", self.format_report)
+        # Add nodes - Text2SQL workflow
+        self.workflow.add_node("parse_query", self.parse_query)
+        self.workflow.add_node("generate_sql", self.generate_sql)
+        self.workflow.add_node("execute_sql", self.execute_sql)
+        self.workflow.add_node("format_result", self.format_result)
 
         # Add edges
-        self.workflow.add_edge(START, "validate_request")
-        self.workflow.add_edge("validate_request", "fetch_data")
-        self.workflow.add_edge("fetch_data", "calculate_metrics")
-        self.workflow.add_edge("calculate_metrics", "generate_insights")
-        self.workflow.add_edge("generate_insights", "format_report")
-        self.workflow.add_edge("format_report", END)
+        self.workflow.add_edge(START, "parse_query")
+        self.workflow.add_edge("parse_query", "generate_sql")
+        self.workflow.add_edge("generate_sql", "execute_sql")
+        self.workflow.add_edge("execute_sql", "format_result")
+        self.workflow.add_edge("format_result", END)
 
     async def _validate_input(self, input_data: Dict[str, Any]) -> bool:
         """Validate input data"""
@@ -76,6 +77,14 @@ class SalesAnalyticsAgent(BaseAgent):
             "employee_name": input_data.get("employee_name", ""),
             "period": input_data.get("period", "monthly"),
             "metrics_type": input_data.get("metrics_type", "performance"),
+
+            # SQL/Text2SQL fields
+            "parsed_query": {},
+            "generated_sql": "",
+            "sql_result": [],
+            "formatted_result": "",
+
+            # Legacy fields (kept for compatibility)
             "raw_data": [],
             "statistics": {},
             "aggregated_data": {},
@@ -84,393 +93,230 @@ class SalesAnalyticsAgent(BaseAgent):
             "final_report": {}
         }
 
-    # ==================== Node Functions with Runtime ====================
+    # ==================== Text2SQL Node Functions ====================
     # All nodes now receive Runtime[AgentContext] and return partial updates
 
-    async def validate_request(
+    async def parse_query(
         self,
         state: Dict[str, Any],
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
         """
-        Validate and prepare the analytics request
+        Parse the user query to extract key information
 
         Args:
             state: Current workflow state
             runtime: Runtime with context access
 
         Returns:
-            Partial state update (only changed fields)
+            Partial state update with parsed query
         """
         try:
-            # Access context through runtime
+            # Access original query from context
+            original_query = getattr(runtime.context, "original_query", "")
             user_id = getattr(runtime.context, "user_id", "unknown")
-            self.logger.info(f"Validating request for user: {user_id}")
+            self.logger.info(f"Parsing query for user {user_id}: {original_query}")
 
-            # Set default period if not specified
-            period = state.get("period", "monthly")
+            # Use the SQL generator to parse the query
+            parsed = self.sql_generator.parse_query(original_query)
 
-            # Set default metrics type if not specified
-            metrics_type = state.get("metrics_type", "performance")
+            self.logger.info(f"Parsed query components: {parsed}")
 
-            employee_name = state.get("employee_name", "")
-            self.logger.info(f"Analytics request validated - Employee: {employee_name}, Period: {period}")
-
-            # Return ONLY changed fields (Context API pattern)
+            # Return parsed information
             return {
                 "status": "processing",
-                "execution_step": "request_validated",
-                "period": period,
-                "metrics_type": metrics_type
+                "execution_step": "query_parsed",
+                "parsed_query": parsed
             }
 
         except Exception as e:
-            self.logger.error(f"Error validating request: {e}")
+            self.logger.error(f"Error parsing query: {e}")
 
-            # Log error in context if possible
             if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"Request validation failed: {str(e)}")
+                runtime.context.add_error(f"Query parsing failed: {str(e)}")
 
-            # Return failure status
             return {
                 "status": "failed",
-                "execution_step": "validation_failed"
+                "execution_step": "parsing_failed",
+                "parsed_query": {}
             }
 
-    async def fetch_sales_data(
+    async def generate_sql(
         self,
         state: Dict[str, Any],
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
         """
-        Fetch sales data from database
+        Generate SQL query from parsed components
 
         Args:
             state: Current workflow state
             runtime: Runtime with context access
 
         Returns:
-            Partial state update
+            Partial state update with generated SQL
         """
         try:
-            # Access context
             session_id = getattr(runtime.context, "session_id", "unknown")
-            self.logger.info(f"Fetching sales data for session: {session_id}")
+            self.logger.info(f"Generating SQL for session: {session_id}")
 
-            employee_name = state.get("employee_name", "")
-            period = state.get("period", "monthly")
+            parsed_query = state.get("parsed_query", {})
 
-            # For now, generate mock data
-            # TODO: Connect to real sales database later
-            mock_data = self._generate_mock_sales_data(employee_name, period)
+            # Generate SQL using the tool
+            sql, explanation = self.sql_generator.generate_sql(parsed_query)
 
-            self.logger.info(f"Fetched {len(mock_data)} sales records")
-
-            # Return partial update
-            return {
-                "execution_step": "data_fetched",
-                "raw_data": mock_data
-            }
-
-        except Exception as e:
-            self.logger.error(f"Error fetching sales data: {e}")
-
-            # Log error in context
-            if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"Data fetch failed: {str(e)}")
-
-            return {
-                "execution_step": "data_fetch_failed",
-                "raw_data": []
-            }
-
-    async def calculate_metrics(
-        self,
-        state: Dict[str, Any],
-        runtime: Runtime[AgentContext]
-    ) -> Dict[str, Any]:
-        """
-        Calculate sales metrics
-
-        Args:
-            state: Current workflow state
-            runtime: Runtime with context access
-
-        Returns:
-            Partial state update
-        """
-        try:
-            # Access context for logging and analysis
-            user_id = getattr(runtime.context, "user_id", "unknown")
-            original_query = getattr(runtime.context, "original_query", "")
-            intent_result = getattr(runtime.context, "intent_result", {})
-            self.logger.info(f"Calculating metrics for user: {user_id}")
-
-            # Determine detail level from original query
-            detailed_analysis = False
-            if original_query:
-                if "상세" in original_query or "자세" in original_query or "detailed" in original_query:
-                    detailed_analysis = True
-                    self.logger.info("Detected request for detailed analysis")
-
-            raw_data = state.get("raw_data", [])
-
-            if not raw_data:
+            # Validate SQL for safety
+            if not self.sql_generator.validate_sql(sql):
                 return {
-                    "execution_step": "metrics_calculated",
-                    "statistics": {},
-                    "aggregated_data": {},
-                    "charts_data": []
+                    "status": "failed",
+                    "execution_step": "sql_validation_failed",
+                    "generated_sql": sql
                 }
 
-            # Calculate basic statistics
-            total_sales = sum(d.get("amount", 0) for d in raw_data)
-            avg_sales = total_sales / len(raw_data) if raw_data else 0
-            max_sale = max((d.get("amount", 0) for d in raw_data), default=0)
-            min_sale = min((d.get("amount", 0) for d in raw_data), default=0)
+            self.logger.info(f"Generated SQL: {sql}")
+            self.logger.info(f"Explanation: {explanation}")
 
-            statistics = {
-                "total_sales": total_sales,
-                "average_sale": avg_sales,
-                "max_sale": max_sale,
-                "min_sale": min_sale,
-                "transaction_count": len(raw_data)
-            }
-
-            # Add detailed statistics if requested
-            if detailed_analysis:
-                statistics["median_sale"] = self._calculate_median(raw_data)
-                statistics["std_dev"] = self._calculate_std_dev(raw_data)
-                statistics["growth_rate"] = self._calculate_growth_rate(raw_data)
-
-            # Aggregate by period
-            aggregated = {}
-            for record in raw_data:
-                period_key = record.get("date", "").split("T")[0][:7]  # YYYY-MM
-                if period_key not in aggregated:
-                    aggregated[period_key] = {"count": 0, "amount": 0}
-                aggregated[period_key]["count"] += 1
-                aggregated[period_key]["amount"] += record.get("amount", 0)
-
-            # Prepare chart data
-            charts_data = [
-                {
-                    "type": "line",
-                    "title": "Sales Trend",
-                    "data": [
-                        {"x": k, "y": v["amount"]}
-                        for k, v in sorted(aggregated.items())
-                    ]
-                }
-            ]
-
-            self.logger.info("Metrics calculated successfully")
-
-            # Return partial update
             return {
-                "execution_step": "metrics_calculated",
-                "statistics": statistics,
-                "aggregated_data": aggregated,
-                "charts_data": charts_data
+                "execution_step": "sql_generated",
+                "generated_sql": sql
             }
 
         except Exception as e:
-            self.logger.error(f"Error calculating metrics: {e}")
+            self.logger.error(f"Error generating SQL: {e}")
 
-            # Log error in context
             if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"Metrics calculation failed: {str(e)}")
+                runtime.context.add_error(f"SQL generation failed: {str(e)}")
 
             return {
-                "execution_step": "metrics_calculation_failed",
-                "statistics": {},
-                "aggregated_data": {},
-                "charts_data": []
+                "execution_step": "sql_generation_failed",
+                "generated_sql": ""
             }
 
-    async def generate_insights(
+    async def execute_sql(
         self,
         state: Dict[str, Any],
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
         """
-        Generate insights from the metrics
+        Execute SQL query against the database
 
         Args:
             state: Current workflow state
             runtime: Runtime with context access
 
         Returns:
-            Partial state update
+            Partial state update with query results
         """
         try:
-            # Access context
+            user_id = getattr(runtime.context, "user_id", "unknown")
+            self.logger.info(f"Executing SQL for user: {user_id}")
+
+            generated_sql = state.get("generated_sql", "")
+
+            if not generated_sql:
+                return {
+                    "status": "failed",
+                    "execution_step": "no_sql_to_execute",
+                    "sql_result": []
+                }
+
+            # Execute SQL using the executor tool
+            results, error = self.sql_executor.execute_query(generated_sql)
+
+            if error:
+                self.logger.error(f"SQL execution error: {error}")
+                return {
+                    "status": "failed",
+                    "execution_step": "sql_execution_failed",
+                    "sql_result": [],
+                    "formatted_result": f"SQL 실행 오류: {error}"
+                }
+
+            self.logger.info(f"SQL executed successfully, got {len(results)} rows")
+
+            return {
+                "execution_step": "sql_executed",
+                "sql_result": results
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error executing SQL: {e}")
+
+            if hasattr(runtime.context, 'add_error'):
+                runtime.context.add_error(f"SQL execution failed: {str(e)}")
+
+            return {
+                "status": "failed",
+                "execution_step": "sql_execution_error",
+                "sql_result": []
+            }
+
+    async def format_result(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext]
+    ) -> Dict[str, Any]:
+        """
+        Format SQL results for user presentation
+
+        Args:
+            state: Current workflow state
+            runtime: Runtime with context access
+
+        Returns:
+            Partial state update with formatted result
+        """
+        try:
             session_id = getattr(runtime.context, "session_id", "unknown")
             original_query = getattr(runtime.context, "original_query", "")
-            self.logger.info(f"Generating insights for session: {session_id}")
+            self.logger.info(f"Formatting results for session: {session_id}")
 
-            # Check if comparison is requested
-            needs_comparison = False
-            if original_query and ("비교" in original_query or "compare" in original_query):
-                needs_comparison = True
-                self.logger.info("Detected comparison request in query")
+            sql_result = state.get("sql_result", [])
+            parsed_query = state.get("parsed_query", {})
 
-            statistics = state.get("statistics", {})
-            aggregated = state.get("aggregated_data", {})
+            # Use the executor's format method
+            formatted = self.sql_executor.format_results(sql_result)
 
-            insights = []
+            # Add context from the original query
+            if parsed_query.get("name"):
+                name = parsed_query["name"]
+                formatted = f"{name}님의 조회 결과:\n\n{formatted}"
 
-            # Generate basic insights
-            if statistics.get("total_sales", 0) > 0:
-                insights.append(f"총 매출: {statistics['total_sales']:,.0f}원")
-                insights.append(f"평균 거래액: {statistics.get('average_sale', 0):,.0f}원")
-                insights.append(f"총 거래 건수: {statistics.get('transaction_count', 0)}건")
-
-            # Trend analysis
-            if len(aggregated) > 1:
-                periods = sorted(aggregated.keys())
-                latest = aggregated[periods[-1]]["amount"]
-                previous = aggregated[periods[-2]]["amount"] if len(periods) > 1 else 0
-
-                if previous > 0:
-                    change = ((latest - previous) / previous) * 100
-                    trend = "증가" if change > 0 else "감소"
-                    insights.append(f"전월 대비 {abs(change):.1f}% {trend}")
-
-            # Add comparison insights if requested
-            if needs_comparison:
-                if "지난달" in original_query or "이번달" in original_query:
-                    insights.append("전월 대비 15% 성장 (Mock comparison)")
-                    insights.append("신규 고객 비율 20% 증가")
-                    insights.append("평균 거래액 10% 상승")
-
-            self.logger.info(f"Generated {len(insights)} insights")
-
-            # Return partial update
-            return {
-                "execution_step": "insights_generated",
-                "insights": insights
-            }
-
-        except Exception as e:
-            self.logger.error(f"Error generating insights: {e}")
-
-            # Log error in context
-            if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"Insight generation failed: {str(e)}")
-
-            return {
-                "execution_step": "insight_generation_failed",
-                "insights": []
-            }
-
-    async def format_report(
-        self,
-        state: Dict[str, Any],
-        runtime: Runtime[AgentContext]
-    ) -> Dict[str, Any]:
-        """
-        Format the final analytics report
-
-        Args:
-            state: Current workflow state
-            runtime: Runtime with context access
-
-        Returns:
-            Partial state update with final report
-        """
-        try:
-            # Access context
-            user_id = getattr(runtime.context, "user_id", "unknown")
-            self.logger.info(f"Formatting report for user: {user_id}")
-
+            # Create final report structure for compatibility
             final_report = {
                 "status": "success",
-                "employee": state.get("employee_name", ""),
-                "period": state.get("period", ""),
-                "statistics": state.get("statistics", {}),
-                "insights": state.get("insights", []),
-                "charts": state.get("charts_data", []),
-                "aggregated_data": state.get("aggregated_data", {}),
-                "generated_at": datetime.now().isoformat()
+                "query": original_query,
+                "parsed": parsed_query,
+                "results_count": len(sql_result),
+                "formatted_output": formatted,
+                "raw_results": sql_result[:5] if sql_result else []  # First 5 for preview
             }
 
-            self.logger.info("Sales analytics report generated successfully")
+            self.logger.info("Results formatted successfully")
 
-            # Return partial update
             return {
                 "status": "completed",
-                "execution_step": "report_formatted",
+                "execution_step": "result_formatted",
+                "formatted_result": formatted,
                 "final_report": final_report
             }
 
         except Exception as e:
-            self.logger.error(f"Error formatting report: {e}")
+            self.logger.error(f"Error formatting result: {e}")
 
-            # Log error in context
             if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"Report formatting failed: {str(e)}")
+                runtime.context.add_error(f"Result formatting failed: {str(e)}")
 
             return {
                 "status": "failed",
-                "execution_step": "report_formatting_failed",
-                "final_report": {
-                    "status": "error",
-                    "error": str(e)
-                }
+                "execution_step": "formatting_failed",
+                "formatted_result": "결과 포맷팅 실패",
+                "final_report": {"status": "error", "error": str(e)}
             }
 
-    # ==================== Helper Methods ====================
+    # ==================== Legacy Helper Methods (will be removed in Phase 2) ====================
 
     def _generate_mock_sales_data(self, employee_name: str, period: str) -> List[Dict[str, Any]]:
-        """Generate mock sales data for testing"""
-        import random
-
-        data = []
-        base_date = datetime.now()
-
-        # Determine number of records based on period
-        if period == "daily":
-            days = 30
-        elif period == "weekly":
-            days = 7 * 12  # 12 weeks
-        elif period == "yearly":
-            days = 365
-        else:  # monthly
-            days = 30 * 6  # 6 months
-
-        for i in range(min(days, 100)):  # Limit to 100 records
-            date = base_date - timedelta(days=i)
-            data.append({
-                "date": date.isoformat(),
-                "employee": employee_name,
-                "amount": random.randint(100000, 1000000),
-                "product": random.choice(["Product A", "Product B", "Product C"]),
-                "customer": f"Customer_{random.randint(1, 50)}"
-            })
-
-        return data
-
-    def _calculate_median(self, data: List[Dict[str, Any]]) -> float:
-        """Calculate median sale amount"""
-        if not data:
-            return 0
-        amounts = sorted([d.get("amount", 0) for d in data])
-        n = len(amounts)
-        if n % 2 == 0:
-            return (amounts[n//2 - 1] + amounts[n//2]) / 2
-        return amounts[n//2]
-
-    def _calculate_std_dev(self, data: List[Dict[str, Any]]) -> float:
-        """Calculate standard deviation"""
-        if not data:
-            return 0
-        amounts = [d.get("amount", 0) for d in data]
-        mean = sum(amounts) / len(amounts)
-        variance = sum((x - mean) ** 2 for x in amounts) / len(amounts)
-        return variance ** 0.5
-
-    def _calculate_growth_rate(self, data: List[Dict[str, Any]]) -> float:
-        """Calculate growth rate (mock)"""
-        # Mock growth rate calculation
-        return 15.5  # 15.5% growth
+        """Generate mock sales data for testing - DEPRECATED"""
+        # This method is kept for backward compatibility but will be removed
+        return []

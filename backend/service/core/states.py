@@ -51,6 +51,14 @@ class SalesState(TypedDict):
     employee_name: str
     period: str  # daily, weekly, monthly, yearly
     metrics_type: str  # performance, revenue, targets
+
+    # SQL/Text2SQL related fields
+    parsed_query: Dict[str, Any]  # Parsed query information {name, month, action, etc}
+    generated_sql: str  # Generated SQL query
+    sql_result: List[Dict[str, Any]]  # SQL execution results
+    formatted_result: str  # Formatted result for user
+
+    # Legacy fields (will be phased out gradually)
     raw_data: List[Dict[str, Any]]
     aggregated_data: Dict[str, Any]
     statistics: Dict[str, float]
