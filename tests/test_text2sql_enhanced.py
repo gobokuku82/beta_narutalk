@@ -5,6 +5,12 @@ LLM 기반 SQL 생성 및 실행 테스트
 
 import asyncio
 import logging
+import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from backend.service.tools import SQLGenerator, SQLExecutor, SchemaContext
 
 # 로깅 설정

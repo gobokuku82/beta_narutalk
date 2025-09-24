@@ -5,8 +5,14 @@
 
 import asyncio
 import logging
+import sys
+import os
 from datetime import datetime
 from typing import Dict, Any
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from backend.service.agents import (
     SearchAgent,
     SalesAnalyticsAgent,
@@ -242,18 +248,31 @@ async def run_single_query():
 
     orchestrator = InteractiveOrchestrator()
 
+    # 예시 쿼리 목록
+    example_queries = [
+        "최시우 실적 분석해줘",
+        "김철수 직원 정보 찾아줘",
+        "휴가 규정 확인해줘",
+        "3월 실적 보고서 만들어줘",
+        "경비 처리 규정 준수 확인"
+    ]
+
     print("\n예시 쿼리:")
-    print("  1. 최시우 실적 분석해줘")
-    print("  2. 김철수 직원 정보 찾아줘")
-    print("  3. 휴가 규정 확인해줘")
-    print("  4. 3월 실적 보고서 만들어줘")
-    print("  5. 경비 처리 규정 준수 확인")
+    for i, q in enumerate(example_queries, 1):
+        print(f"  {i}. {q}")
 
-    query = input("\n쿼리 입력 (또는 Enter로 예시 사용): ").strip()
+    user_input = input("\n쿼리 입력 (1-5 선택 또는 직접 입력, Enter로 1번 사용): ").strip()
 
-    if not query:
-        query = "최시우 실적 분석해줘"
-        print(f"→ 예시 쿼리 사용: {query}")
+    # 번호 선택 처리
+    if user_input in ['1', '2', '3', '4', '5']:
+        query = example_queries[int(user_input) - 1]
+        print(f"→ 예시 {user_input}번 선택: {query}")
+    elif not user_input:
+        query = example_queries[0]
+        print(f"→ 예시 1번 사용: {query}")
+    else:
+        query = user_input
+        print(f"→ 직접 입력: {query}")
 
     await orchestrator.process_query(query)
 

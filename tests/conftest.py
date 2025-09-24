@@ -85,14 +85,18 @@ def pytest_configure(config):
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
-# 테스트 리포트 커스터마이징
-def pytest_html_results_table_header(cells):
-    """HTML 리포트 테이블 헤더 커스터마이징"""
-    cells.insert(1, '<th class="sortable">Module</th>')
+# 테스트 리포트 커스터마이징 (pytest-html이 설치된 경우에만)
+try:
+    import pytest_html
+    def pytest_html_results_table_header(cells):
+        """HTML 리포트 테이블 헤더 커스터마이징"""
+        cells.insert(1, '<th class="sortable">Module</th>')
 
-def pytest_html_results_table_row(report, cells):
-    """HTML 리포트 테이블 행 커스터마이징"""
-    cells.insert(1, f'<td>{report.location[0]}</td>')
+    def pytest_html_results_table_row(report, cells):
+        """HTML 리포트 테이블 행 커스터마이징"""
+        cells.insert(1, f'<td>{report.location[0]}</td>')
+except ImportError:
+    pass  # pytest-html not installed, skip customization
 
 # 테스트 마커 정의
 def pytest_collection_modifyitems(config, items):

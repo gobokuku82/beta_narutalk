@@ -61,26 +61,52 @@ class LLMManager:
         Returns:
             Intent analysis result with agent routing
         """
-        system_prompt = """당신은 사용자 의도를 분석하는 전문가입니다.
-사용자 쿼리를 분석하여 적절한 에이전트를 선택하고 신뢰도를 평가하세요.
+        system_prompt = """You are an expert in analyzing user intent and routing to appropriate agents.
 
-사용 가능한 에이전트:
-1. search_agent - HR 정보 검색, 인사 규정 검색
-2. sales_analytics - 실적 분석, 매출 통계, 트렌드 분석
-3. compliance_check - 규정 준수 확인, 정책 검토
-4. document_generation - 보고서 생성, 문서 작성
+Available Agents with Detailed Descriptions:
 
-JSON 형식으로 응답:
+1. search_agent
+   - Description: Searches and retrieves information from HR database and organizational data
+   - Functions: Employee search, department info, HR policies, organizational structure
+   - Keywords: employee, staff, person, team, department, organization, HR, policy, rule
+   - Examples: "김철수 직원 정보", "영업팀 구성원", "인사 규정", "조직도"
+
+2. sales_analytics
+   - Description: Analyzes sales performance, calculates statistics, and identifies trends
+   - Functions: Sales analysis, performance metrics, trend analysis, ranking, statistics
+   - Keywords: sales, revenue, performance, achievement, statistics, trend, analysis, ranking
+   - Examples: "3월 실적 분석", "매출 통계", "실적 순위", "성장률 분석"
+
+3. compliance_check
+   - Description: Checks compliance with regulations and company policies
+   - Functions: Policy compliance verification, violation detection, regulatory check
+   - Keywords: compliance, regulation, policy, violation, check, verify, audit, rule
+   - Examples: "규정 위반 확인", "정책 준수 여부", "감사 사항 검토"
+
+4. document_generation
+   - Description: Generates reports, documents, and formatted outputs
+   - Functions: Report creation, document formatting, summary generation, template filling
+   - Keywords: report, document, generate, create, write, format, summary, template
+   - Examples: "월간 보고서 작성", "실적 요약 문서", "분석 리포트 생성"
+
+Selection Rules:
+- Analyze the Korean query carefully
+- One query can require multiple agents (e.g., analyze sales AND generate report)
+- Select agents based on actual functions needed, not just keywords
+- Consider dependencies between agents
+
+Respond in JSON format:
 {
-    "intent": "primary_intent",
+    "intent": "primary_intent_in_english",
     "agents": ["agent1", "agent2"],
     "confidence": 0.95,
     "entities": {
-        "person": "이름",
-        "period": "기간",
-        "type": "유형"
+        "person": "name_if_exists",
+        "period": "time_period",
+        "type": "query_type"
     },
-    "keywords": ["키워드1", "키워드2"]
+    "keywords": ["keyword1", "keyword2"],
+    "reasoning": "brief explanation of why these agents were selected"
 }"""
 
         try:
@@ -91,20 +117,34 @@ JSON 형식으로 응답:
 
             response = await self.clients["intent"].ainvoke(messages)
 
+            # Log raw response for debugging
+            logger.debug(f"Raw LLM response: {response.content}")
+
             # Parse JSON response
             try:
-                result = json.loads(response.content)
+                # Clean response content - remove markdown code blocks if present
+                content = response.content.strip()
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
+
+                result = json.loads(content)
                 result["original_query"] = query
                 logger.info(f"Intent analyzed: {result.get('intent')} with confidence {result.get('confidence')}")
                 return result
-            except json.JSONDecodeError:
-                logger.warning("Failed to parse LLM response as JSON, using fallback")
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse LLM response as JSON: {e}")
+                logger.error(f"Raw response was: {response.content}")
+
+                # Return failure instead of fallback
                 return {
-                    "intent": "search",
-                    "agents": ["search_agent"],
-                    "confidence": 0.5,
+                    "intent": "unknown",
+                    "agents": [],  # Empty list - no agents selected
+                    "confidence": 0.0,
                     "entities": {},
                     "keywords": query.split(),
+                    "error": "Failed to parse LLM response",
                     "original_query": query
                 }
 
