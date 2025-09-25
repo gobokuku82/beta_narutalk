@@ -18,12 +18,13 @@ class SQLExecutor:
     """Execute SQL queries on SQLite databases with enhanced safety and monitoring"""
 
     def __init__(self):
-        # Database paths
+        # Database paths - use absolute paths from project root
+        base_path = Path(__file__).parent.parent.parent.parent  # backend/service/tools -> project root
         self.db_paths = {
-            "sales_performance": Path("database/storage/sales_performance/sales_performance_db.db"),
-            "sales_target": Path("database/storage/sales_performance/sales_target_db.db"),
-            "clients": Path("database/storage/sales_performance/clients_db.db"),
-            "hr_data": Path("database/storage/hr_information/hr_data.db")
+            "sales_performance": base_path / "database" / "storage" / "sales_performance" / "sales_performance_db.db",
+            "sales_target": base_path / "database" / "storage" / "sales_performance" / "sales_target_db.db",
+            "clients": base_path / "database" / "storage" / "sales_performance" / "clients_db.db",
+            "hr_data": base_path / "database" / "storage" / "hr_information" / "hr_data.db"
         }
 
         # Default database

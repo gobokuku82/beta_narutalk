@@ -23,11 +23,12 @@ class CrossDBAnalysisTool:
         """Initialize cross-database analysis tool"""
         self.logger = logger
 
-        # Database paths
+        # Database paths - use absolute paths from project root
+        base_path = Path(__file__).parent.parent.parent.parent  # backend/service/tools -> project root
         self.db_paths = {
-            "performance": Path("database/storage/sales_performance/sales_performance_db.db"),
-            "target": Path("database/storage/sales_performance/sales_target_db.db"),
-            "clients": Path("database/storage/sales_performance/clients_db.db")
+            "performance": base_path / "database" / "storage" / "sales_performance" / "sales_performance_db.db",
+            "target": base_path / "database" / "storage" / "sales_performance" / "sales_target_db.db",
+            "clients": base_path / "database" / "storage" / "sales_performance" / "clients_db.db"
         }
 
         # Initialize calculation tools

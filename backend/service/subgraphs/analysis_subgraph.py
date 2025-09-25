@@ -8,6 +8,11 @@ import logging
 from typing import TypedDict, Dict, Any, List, Optional, Annotated, Union
 from datetime import datetime
 import json
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from project root
+load_dotenv(Path(__file__).parent.parent.parent.parent / '.env')
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.runtime import Runtime
@@ -18,7 +23,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 # Import calculation tools
 from ..tools.calculation_tool import CalculationTool
 from ..tools.trend_analysis_tool import TrendAnalysisTool
-from ..tools.cross_db_analysis_tool import CrossDbAnalysisTool
+from ..tools.cross_db_analysis_tool import CrossDBAnalysisTool as CrossDbAnalysisTool
 
 # Import states and context from core
 from ..core.states import AnalysisState
@@ -88,12 +93,14 @@ class AnalysisSubgraph:
             2. TrendAnalysisTool: Time series analysis, trends, patterns
             3. CrossDbAnalysisTool: Cross-database analysis, correlations
 
-            Return a JSON object with:
+            Return ONLY a valid JSON object (no markdown, no extra text):
             {{
                 "tools": [list of tool names to use],
                 "analysis_depth": "shallow" | "normal" | "deep",
                 "reason": "brief explanation"
             }}
+
+            Example: {{"tools": ["CalculationTool", "TrendAnalysisTool"], "analysis_depth": "normal", "reason": "Need basic metrics and trends"}}
             """
 
             messages = [
@@ -102,7 +109,15 @@ class AnalysisSubgraph:
             ]
 
             response = await self.llm.ainvoke(messages)
-            selection = json.loads(response.content)
+            # Extract JSON from response - handle potential markdown formatting
+            content = response.content.strip()
+            if content.startswith("```"):
+                # Remove markdown code blocks
+                content = content.split("```")[1]
+                if content.startswith("json"):
+                    content = content[4:]
+                content = content.strip()
+            selection = json.loads(content)
 
             self.logger.info(f"Selected analysis tools: {selection['tools']}")
 
@@ -110,8 +125,8 @@ class AnalysisSubgraph:
                 "analysis_params": {
                     "selected_tools": selection["tools"],
                     "analysis_depth": selection.get("analysis_depth", "normal")
-                },
-                "analysis_status": "tools_selected"
+                }
+                # Don't update analysis_status here - let final report do it
             }
 
         except Exception as e:
@@ -208,8 +223,8 @@ class AnalysisSubgraph:
             self.logger.info(f"Calculated {len(metrics)} basic metrics")
 
             return {
-                "basic_metrics": metrics,
-                "analysis_status": "basic_completed"
+                "basic_metrics": metrics
+                # Don't update analysis_status here
             }
 
         except Exception as e:
@@ -271,8 +286,8 @@ class AnalysisSubgraph:
             self.logger.info(f"Identified {len(trends)} trend patterns")
 
             return {
-                "trend_analysis": trends,
-                "analysis_status": "trends_analyzed"
+                "trend_analysis": trends
+                # Don't update analysis_status here
             }
 
         except Exception as e:
@@ -344,8 +359,8 @@ class AnalysisSubgraph:
             self.logger.info(f"Completed {len(comparisons)} comparative analyses")
 
             return {
-                "comparative_analysis": comparisons,
-                "analysis_status": "comparison_completed"
+                "comparative_analysis": comparisons
+                # Don't update analysis_status here
             }
 
         except Exception as e:
@@ -425,8 +440,8 @@ class AnalysisSubgraph:
             self.logger.info(f"Generated {len(insights)} insights")
 
             return {
-                "insights": insights,
-                "analysis_status": "insights_generated"
+                "insights": insights
+                # Don't update analysis_status here
             }
 
         except Exception as e:

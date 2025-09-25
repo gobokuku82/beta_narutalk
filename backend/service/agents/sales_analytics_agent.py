@@ -10,6 +10,11 @@ import logging
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from project root
+load_dotenv(Path(__file__).parent.parent.parent.parent / '.env')
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -89,9 +94,8 @@ class SalesAnalyticsAgent:
         # Get model config
         model_config = self.config.get_model_config("planning")
         
-        # Initialize LLM
+        # Initialize LLM (api_key will be set automatically from environment)
         self.planner_llm = ChatOpenAI(
-            api_key=api_key,  # Will be overridden by context at runtime
             **model_config
         )
         self.use_llm_planning = True

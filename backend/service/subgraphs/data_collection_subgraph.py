@@ -10,6 +10,10 @@ from datetime import datetime
 import sqlite3
 from pathlib import Path
 import json
+from dotenv import load_dotenv
+
+# Load environment variables from project root
+load_dotenv(Path(__file__).parent.parent.parent.parent / '.env')
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.runtime import Runtime
@@ -37,17 +41,19 @@ class DataCollectionSubgraph:
     def __init__(self):
         """Initialize data collection subgraph"""
         self.logger = logger
+        # Use absolute paths from project root
+        base_path = Path(__file__).parent.parent.parent.parent  # backend/service/subgraphs -> project root
         self.db_paths = {
-            "performance": Path("database/storage/sales_performance/sales_performance_db.db"),
-            "target": Path("database/storage/sales_performance/sales_target_db.db"),
-            "clients": Path("database/storage/sales_performance/clients_db.db")
+            "performance": base_path / "database" / "storage" / "sales_performance" / "sales_performance_db.db",
+            "target": base_path / "database" / "storage" / "sales_performance" / "sales_target_db.db",
+            "clients": base_path / "database" / "storage" / "sales_performance" / "clients_db.db"
         }
 
         # Initialize tools
         self.sql_executor = SQLExecutor()
         self.sql_generator = SQLGenerator()
 
-        # Initialize LLM for tool selection
+        # Initialize LLM for tool selection (api_key from environment)
         self.llm = ChatOpenAI(
             model="gpt-4o-mini",
             temperature=0.3,
@@ -88,11 +94,13 @@ class DataCollectionSubgraph:
 
             User query: {original_query}
 
-            Return a JSON object with:
+            Return ONLY a valid JSON object (no markdown, no extra text):
             {{
                 "databases": [list of database names to query],
                 "reason": "brief explanation"
             }}
+
+            Example: {{"databases": ["sales_performance_db", "sales_target_db"], "reason": "Need sales and target data"}}
             """
 
             messages = [
@@ -101,13 +109,21 @@ class DataCollectionSubgraph:
             ]
 
             response = await self.llm.ainvoke(messages)
-            selection = json.loads(response.content)
+            # Extract JSON from response - handle potential markdown formatting
+            content = response.content.strip()
+            if content.startswith("```"):
+                # Remove markdown code blocks
+                content = content.split("```")[1]
+                if content.startswith("json"):
+                    content = content[4:]
+                content = content.strip()
+            selection = json.loads(content)
 
             self.logger.info(f"Selected databases: {selection['databases']}")
 
             return {
-                "target_databases": selection["databases"],
-                "collection_status": "databases_selected"
+                "target_databases": selection["databases"]
+                # Don't update collection_status here - let aggregate do it
             }
 
         except Exception as e:
@@ -186,8 +202,8 @@ class DataCollectionSubgraph:
 
             # Return partial update (LangGraph 0.6.x pattern)
             return {
-                "performance_data": data,
-                "collection_status": "performance_collected"
+                "performance_data": data
+                # Don't update collection_status here - let aggregate do it
             }
 
         except Exception as e:
@@ -200,7 +216,7 @@ class DataCollectionSubgraph:
     async def collect_target_data(
         self,
         state: DataCollectionState,
-        runtime: Runtime[DataCollectionContext]
+        runtime: Runtime[SubgraphContext]
     ) -> Dict[str, Any]:
         """
         Collect sales target data
@@ -246,8 +262,8 @@ class DataCollectionSubgraph:
 
             # Return partial update
             return {
-                "target_data": data,
-                "collection_status": "target_collected"
+                "target_data": data
+                # Don't update collection_status here - let aggregate do it
             }
 
         except Exception as e:
@@ -260,7 +276,7 @@ class DataCollectionSubgraph:
     async def collect_client_data(
         self,
         state: DataCollectionState,
-        runtime: Runtime[DataCollectionContext]
+        runtime: Runtime[SubgraphContext]
     ) -> Dict[str, Any]:
         """
         Collect client data
@@ -327,8 +343,8 @@ class DataCollectionSubgraph:
 
             # Return partial update
             return {
-                "client_data": data,
-                "collection_status": "client_collected"
+                "client_data": data
+                # Don't update collection_status here - let aggregate do it
             }
 
         except Exception as e:
@@ -341,7 +357,7 @@ class DataCollectionSubgraph:
     async def aggregate_data(
         self,
         state: DataCollectionState,
-        runtime: Runtime[DataCollectionContext]
+        runtime: Runtime[SubgraphContext]
     ) -> Dict[str, Any]:
         """
         Aggregate collected data
