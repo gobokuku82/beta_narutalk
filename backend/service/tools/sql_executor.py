@@ -51,10 +51,13 @@ class SQLExecutor:
         try:
             conn = sqlite3.connect(str(db_path), timeout=timeout)
             conn.row_factory = sqlite3.Row
+            # Set text factory to handle UTF-8 encoding
+            conn.text_factory = str
             # Set pragmas for performance and safety
             conn.execute("PRAGMA journal_mode=WAL")  # Write-Ahead Logging
             conn.execute("PRAGMA synchronous=NORMAL")  # Balance safety/speed
             conn.execute("PRAGMA temp_store=MEMORY")  # Use memory for temp tables
+            conn.execute("PRAGMA encoding='UTF-8'")  # Ensure UTF-8 encoding
             yield conn
         finally:
             if conn:

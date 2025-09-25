@@ -158,9 +158,7 @@ class SalesAnalyticsAgent:
             
             logger.info(f"Planning for user {user_id}: {query}")
             
-            # Update LLM API key if provided in context
-            if api_key and self.planner_llm:
-                self.planner_llm.api_key = api_key
+            # API key is already loaded from environment, no need to update at runtime
             
             # Build prompt
             prompt = self._build_planning_prompt(query, language)
