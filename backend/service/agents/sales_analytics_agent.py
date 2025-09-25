@@ -22,9 +22,7 @@ from ..core.context import AgentContext
 from ..core.config import Config
 from ..tools import SQLGenerator, SQLExecutor
 from ..subgraphs import DataCollectionSubgraph, AnalysisSubgraph
-from ..tools.calculation_tool import get_calculation_tool
-from ..tools.trend_analysis_tool import get_trend_analysis_tool
-from ..tools.cross_db_analysis_tool import get_cross_db_analysis_tool
+# Tools are now used by subgraphs, not directly by the agent
 
 
 logger = logging.getLogger(__name__)
@@ -58,12 +56,8 @@ class SalesAnalyticsAgent(BaseAgent):
         self.data_collection_subgraph = DataCollectionSubgraph()
         self.analysis_subgraph = AnalysisSubgraph()
 
-        # Initialize Tools
-        self.tools = {
-            "calculation": get_calculation_tool(),
-            "trend": get_trend_analysis_tool(),
-            "cross_db": get_cross_db_analysis_tool()
-        }
+        # Tools are now managed by subgraphs, not the agent
+        # Agent only orchestrates subgraph execution
 
         # Execution logger for learning
         self.execution_logs = []
@@ -525,41 +519,30 @@ Return JSON format:
 
             results = {}
 
-            # 1. Execute Subgraphs if needed
+            # 1. Execute Data Collection Subgraph if needed (Tool-free)
             if "data_collection" in plan.get("use_subgraphs", []):
                 self.logger.info("Executing data_collection subgraph")
                 collection_result = await self.invoke_data_collection_subgraph(state, runtime)
                 results["collected_data"] = collection_result
 
+            # 2. Execute Analysis Subgraph if needed (with tool hints)
             if "analysis" in plan.get("use_subgraphs", []):
                 self.logger.info("Executing analysis subgraph")
                 # Pass collected data if available
                 if "collected_data" in results:
                     state["collected_data"] = results["collected_data"]
-                analysis_result = await self.invoke_analysis_subgraph(state, runtime)
+
+                # Pass tool hints to the subgraph
+                analysis_params = {
+                    "suggested_tools": plan.get("use_tools", []),
+                    "analysis_depth": plan.get("analysis_depth", "normal")
+                }
+                analysis_result = await self.invoke_analysis_subgraph_with_params(
+                    state, runtime, analysis_params
+                )
                 results["analysis_result"] = analysis_result
 
-            # 2. Execute Tools if needed
-            tool_results = {}
-            for tool_name in plan.get("use_tools", []):
-                self.logger.info(f"Executing tool: {tool_name}")
-
-                if tool_name == "calculation":
-                    tool_result = await self.use_calculation_tool(state, results, runtime)
-                    tool_results["calculation"] = tool_result
-
-                elif tool_name == "trend":
-                    tool_result = await self.use_trend_tool(state, results, runtime)
-                    tool_results["trend"] = tool_result
-
-                elif tool_name == "cross_db":
-                    tool_result = await self.use_cross_db_tool(state, runtime)
-                    tool_results["cross_db"] = tool_result
-
-            if tool_results:
-                results["tool_results"] = tool_results
-
-            # 3. Execute SQL if needed
+            # 3. Execute SQL if needed (for simple direct queries)
             if plan.get("use_sql", False):
                 self.logger.info("Executing SQL query")
                 # Parse query first
@@ -660,7 +643,16 @@ Return JSON format:
         state: Dict[str, Any],
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
-        """Invoke analysis subgraph"""
+        """Invoke analysis subgraph (legacy method for backward compatibility)"""
+        return await self.invoke_analysis_subgraph_with_params(state, runtime, {})
+
+    async def invoke_analysis_subgraph_with_params(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext],
+        analysis_params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Invoke analysis subgraph with parameters"""
         try:
             # Build subgraph
             analysis_graph = self.analysis_subgraph.build_graph()
@@ -677,7 +669,10 @@ Return JSON format:
                 "aggregated_target": collected_data.get("aggregated_target", {}),
                 "aggregated_client": collected_data.get("aggregated_client", {}),
                 "analysis_type": "comprehensive",
-                "analysis_params": {},
+                "analysis_params": {
+                    "suggested_tools": analysis_params.get("suggested_tools", []),
+                    "analysis_depth": analysis_params.get("analysis_depth", "normal")
+                },
                 "basic_metrics": {},
                 "trend_analysis": {},
                 "comparative_analysis": {},
@@ -697,10 +692,11 @@ Return JSON format:
                 "user_id": getattr(runtime.context, "user_id", "unknown"),
                 "session_id": getattr(runtime.context, "session_id", "unknown"),
                 "request_id": getattr(runtime.context, "request_id", "unknown"),
-                "analysis_depth": "normal",
+                "analysis_depth": analysis_params.get("analysis_depth", "normal"),
                 "include_predictions": True,
                 "language": "ko",
-                "timeout": 30
+                "timeout": 30,
+                "suggested_tools": analysis_params.get("suggested_tools", [])
             }
 
             # Execute subgraph
