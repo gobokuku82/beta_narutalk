@@ -241,13 +241,13 @@ class DataCollectionSubgraph:
 
             if person_name:
                 query = """
-                SELECT * FROM 영업목표
+                SELECT * FROM 지점별목표
                 WHERE 담당자 = ?
                 """
                 query_params = (person_name,)
             else:
                 query = """
-                SELECT * FROM 영업목표
+                SELECT * FROM 지점별목표
                 """
                 query_params = ()
 
