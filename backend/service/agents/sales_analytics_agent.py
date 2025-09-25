@@ -17,6 +17,10 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.runtime import Runtime
 
+# Import tools and subgraphs
+from ..tools.sql_executor import SQLExecutor
+from ..tools.sql_generator import SQLGenerator
+
 # Import from clean architecture
 from ..core.config import Config
 from ..core.context import (
@@ -210,27 +214,55 @@ class SalesAnalyticsAgent:
             results = {}
             
             # Execute based on plan
+            state_updates = {}
+
+            # Execute SQL if needed
             if plan.get("use_sql"):
                 sql_result = await self._execute_sql(state, runtime)
                 results["sql"] = sql_result
+                if sql_result.get("rows"):
+                    state_updates["sql_result"] = sql_result["rows"]
 
+            # Execute data collection subgraph
             if "data_collection" in plan.get("use_subgraphs", []):
                 collection_result = await self._invoke_subgraph(
-                    "data_collection", state, runtime
+                    "data_collection", state, runtime, plan
                 )
                 results["collection"] = collection_result
 
+                # Update state with collection results
+                if collection_result.get("status") == "completed":
+                    data = collection_result.get("data_collection_result", {})
+                    state_updates["data_collection_result"] = data
+                    state_updates["collected_data"] = {
+                        "performance": data.get("aggregated_performance", {}),
+                        "target": data.get("aggregated_target", {}),
+                        "client": data.get("aggregated_client", {})
+                    }
+
+            # Execute analysis subgraph
             if "analysis" in plan.get("use_subgraphs", []):
+                # Update state with collected data before analysis
+                updated_state = {**state, **state_updates}
                 analysis_result = await self._invoke_subgraph(
-                    "analysis", state, runtime, plan
+                    "analysis", updated_state, runtime, plan
                 )
                 results["analysis"] = analysis_result
-            
-            # Return partial update
+
+                # Update state with analysis results
+                if analysis_result.get("status") == "completed":
+                    data = analysis_result.get("analysis_result", {})
+                    state_updates["analysis_result"] = data
+                    state_updates["insights"] = data.get("insights", [])
+                    state_updates["statistics"] = data.get("basic_metrics", {})
+                    state_updates["aggregated_data"] = data.get("analysis_report", {})
+
+            # Return partial update with all state changes
             return {
                 "execution_results": results,
                 "execution_step": "executed",
-                "status": "processing"
+                "status": "processing",
+                **state_updates
             }
             
         except Exception as e:
@@ -519,27 +551,48 @@ Return JSON:
         state: SalesState,
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
-        """Execute SQL query"""
-        # TODO: Implement actual SQL execution
-        # When implementing:
-        # 1. Get generated_sql from state
-        # 2. Connect to appropriate database (using Config.DATABASES)
-        # 3. Execute query with proper error handling
-        # 4. Return actual results
-        # Example:
-        # sql = state.get("generated_sql")
-        # db_path = self.config.get_database_path("sales_performance")
-        # async with aiosqlite.connect(db_path) as db:
-        #     async with db.execute(sql) as cursor:
-        #         rows = await cursor.fetchall()
-        #         return {"rows": rows, "count": len(rows)}
+        """Execute SQL query using SQLExecutor tool"""
+        try:
+            # Get generated SQL from state
+            sql = state.get("generated_sql")
+            if not sql:
+                logger.warning("No SQL query generated")
+                return {"rows": [], "count": 0, "error": "No SQL query to execute"}
 
-        # Mock implementation for now
-        logger.warning("Mock SQL execution - returning sample data")
-        return {
-            "rows": [{"employee": "김철수", "sales": 1500000}],
-            "count": 1
-        }
+            # Initialize SQL executor
+            sql_executor = SQLExecutor()
+
+            # Determine database based on query content
+            db_name = "sales_performance"  # Default
+            if "영업목표" in sql:
+                db_name = "sales_target"
+            elif "거래처" in sql:
+                db_name = "clients"
+
+            # Execute query
+            results, error = sql_executor.execute_query(
+                sql=sql,
+                db_name=db_name
+            )
+
+            if error:
+                logger.error(f"SQL execution error: {error}")
+                return {"rows": [], "count": 0, "error": error}
+
+            logger.info(f"SQL executed successfully, returned {len(results)} rows")
+            return {
+                "rows": results,
+                "count": len(results),
+                "database": db_name
+            }
+
+        except Exception as e:
+            logger.error(f"Error executing SQL: {e}")
+            return {
+                "rows": [],
+                "count": 0,
+                "error": str(e)
+            }
     
     async def _invoke_subgraph(
         self,
@@ -549,36 +602,117 @@ Return JSON:
         plan: Optional[Dict] = None
     ) -> Dict[str, Any]:
         """Invoke a subgraph"""
-        # Create subgraph context
-        subgraph_context = create_subgraph_context(
-            parent_context=dict(runtime.context),
-            parent_agent=self.agent_name,
-            subgraph_name=subgraph_name
-        )
-        
-        # Add specific parameters
-        if plan:
-            subgraph_context["suggested_tools"] = plan.get("use_tools", [])
-            subgraph_context["analysis_depth"] = plan.get("analysis_depth", "normal")
+        try:
+            # Create subgraph context
+            subgraph_context = create_subgraph_context(
+                parent_context=dict(runtime.context),
+                parent_agent=self.agent_name,
+                subgraph_name=subgraph_name
+            )
 
-        # TODO: Implement actual subgraph invocation
-        # When implementing:
-        # 1. Import actual subgraph classes (DataCollectionSubgraph, AnalysisSubgraph)
-        # 2. Create subgraph instance
-        # 3. Build and compile subgraph
-        # 4. Invoke with state and subgraph_context
-        # Example:
-        # if subgraph_name == "data_collection":
-        #     from ..subgraphs import DataCollectionSubgraph
-        #     subgraph = DataCollectionSubgraph()
-        #     graph = subgraph.build_graph()
-        #     app = graph.compile()
-        #     result = await app.ainvoke(state, context=subgraph_context)
-        #     return result
+            # Add specific parameters
+            if plan:
+                subgraph_context["suggested_tools"] = plan.get("use_tools", [])
+                subgraph_context["analysis_depth"] = plan.get("analysis_depth", "normal")
 
-        # Mock subgraph execution for now
-        logger.warning(f"Mock execution of {subgraph_name} subgraph")
-        return {"status": "completed", "data": {}}
+            # Import and execute appropriate subgraph
+            if subgraph_name == "data_collection":
+                from ..subgraphs.data_collection_subgraph import DataCollectionSubgraph
+
+                # Create subgraph
+                subgraph = DataCollectionSubgraph()
+                graph = subgraph.build_graph()
+                app = graph.compile()
+
+                # Prepare subgraph state
+                subgraph_state = {
+                    "query_params": {
+                        "original_query": state.get("query"),
+                        "person_name": state.get("employee_name"),
+                        "period": state.get("period"),
+                        "client_id": state.get("parsed_query", {}).get("client_id")
+                    },
+                    "target_databases": [],
+                    "performance_data": [],
+                    "target_data": [],
+                    "client_data": [],
+                    "aggregated_performance": {},
+                    "aggregated_target": {},
+                    "aggregated_client": {},
+                    "collection_status": "pending",
+                    "errors": []
+                }
+
+                # Invoke subgraph
+                result = await app.ainvoke(subgraph_state, context=subgraph_context)
+
+                # Return collected data
+                return {
+                    "status": "completed",
+                    "data_collection_result": {
+                        "performance_data": result.get("performance_data", []),
+                        "target_data": result.get("target_data", []),
+                        "client_data": result.get("client_data", []),
+                        "aggregated_performance": result.get("aggregated_performance", {}),
+                        "aggregated_target": result.get("aggregated_target", {}),
+                        "aggregated_client": result.get("aggregated_client", {})
+                    }
+                }
+
+            elif subgraph_name == "analysis":
+                from ..subgraphs.analysis_subgraph import AnalysisSubgraph
+
+                # Create subgraph
+                subgraph = AnalysisSubgraph()
+                graph = subgraph.build_graph()
+                app = graph.compile()
+
+                # Get data from previous collection
+                collection_result = state.get("data_collection_result", {})
+
+                # Prepare subgraph state
+                subgraph_state = {
+                    "performance_data": collection_result.get("performance_data", []),
+                    "target_data": collection_result.get("target_data", []),
+                    "client_data": collection_result.get("client_data", []),
+                    "aggregated_performance": collection_result.get("aggregated_performance", {}),
+                    "aggregated_target": collection_result.get("aggregated_target", {}),
+                    "aggregated_client": collection_result.get("aggregated_client", {}),
+                    "analysis_type": plan.get("analysis_type", "comprehensive") if plan else "comprehensive",
+                    "analysis_params": {},
+                    "basic_metrics": {},
+                    "trend_analysis": {},
+                    "comparative_analysis": {},
+                    "insights": [],
+                    "analysis_report": {},
+                    "analysis_status": "pending",
+                    "errors": []
+                }
+
+                # Invoke subgraph
+                result = await app.ainvoke(subgraph_state, context=subgraph_context)
+
+                # Return analysis results
+                return {
+                    "status": "completed",
+                    "analysis_result": {
+                        "basic_metrics": result.get("basic_metrics", {}),
+                        "trend_analysis": result.get("trend_analysis", {}),
+                        "comparative_analysis": result.get("comparative_analysis", {}),
+                        "insights": result.get("insights", []),
+                        "analysis_report": result.get("analysis_report", {})
+                    }
+                }
+            else:
+                logger.warning(f"Unknown subgraph: {subgraph_name}")
+                return {"status": "failed", "error": f"Unknown subgraph: {subgraph_name}"}
+
+        except Exception as e:
+            logger.error(f"Error invoking subgraph {subgraph_name}: {e}")
+            return {
+                "status": "failed",
+                "error": str(e)
+            }
     
     # ================ Public Interface ================
     
