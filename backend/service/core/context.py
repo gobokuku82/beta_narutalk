@@ -1,155 +1,140 @@
 """
-Context definitions for all agents and orchestrator
-Following LangGraph 0.6.x Context API patterns
+Context Definitions for LangGraph 0.6.x
+Runtime metadata passed through the context parameter
 """
 
 from typing import TypedDict, Optional, Dict, List, Any
+import os
+from datetime import datetime
+import uuid
 
+
+# ============ Context Definitions ============
 
 class AgentContext(TypedDict):
     """
-    Runtime context for all agents (required and optional fields)
-    This is passed to agents via the context parameter in invoke/stream
-    
-    Required fields: Must always be present
-    Optional fields: May be None or omitted
+    Runtime context for agents
+    Contains metadata and configuration passed at execution time
+    This is READ-ONLY during execution
     """
     
     # ========== Required Fields ==========
-    # These MUST be provided by supervisor/orchestrator
-    user_id: str  # User identifier
-    session_id: str  # Session identifier for conversation continuity
+    user_id: str                # User identifier
+    session_id: str             # Session identifier
     
-    # ========== Optional Fields ==========
-    # These can be None or omitted
-    request_id: Optional[str]  # Unique request identifier
-    original_query: Optional[str]  # Original user query text
+    # ========== Optional Runtime Info ==========
+    request_id: Optional[str]   # Unique request ID
+    timestamp: Optional[str]    # Request timestamp
+    original_query: Optional[str]  # Original user input
     
-    # Authentication & API Keys
-    api_keys: Optional[Dict[str, str]]  # API keys for various services
+    # ========== Authentication & Security ==========
+    api_keys: Optional[Dict[str, str]]  # Service API keys (runtime injection)
+    auth_token: Optional[str]   # Authentication token
+    permissions: Optional[List[str]]  # User permissions
     
-    # User permissions and settings
-    permissions: Optional[List[str]]  # User permissions list
-    language: Optional[str]  # User's preferred language (default: 'ko')
-    timezone: Optional[str]  # User's timezone
+    # ========== User Settings ==========
+    language: Optional[str]     # User language (ko, en, etc.)
+    timezone: Optional[str]     # User timezone
+    preferences: Optional[Dict[str, Any]]  # User preferences
     
-    # Database and storage
-    db_connections: Optional[Dict[str, str]]  # Database connection strings
-    db_paths: Optional[Dict[str, str]]  # File-based database paths
+    # ========== Runtime Configuration ==========
+    # These can override Config defaults
+    model_overrides: Optional[Dict[str, str]]  # Override default models
+    timeout_overrides: Optional[Dict[str, int]]  # Override timeouts
+    feature_flags: Optional[Dict[str, bool]]  # User-specific features
     
-    # Runtime configuration
-    timeout: Optional[int]  # Operation timeout in seconds
-    max_retries: Optional[int]  # Maximum retry attempts
+    # ========== Execution Control ==========
     debug_mode: Optional[bool]  # Enable debug logging
+    dry_run: Optional[bool]     # Simulation mode
+    strict_mode: Optional[bool]  # Strict error handling
+    max_retries: Optional[int]  # Override retry count
     
-    # Feature flags
-    feature_flags: Optional[Dict[str, bool]]  # Feature toggles
+    # ========== Orchestration Data ==========
+    # From supervisor/orchestrator
+    intent_result: Optional[Dict[str, Any]]  # Intent analysis
+    supervisor_hints: Optional[Dict[str, Any]]  # Execution hints
+    parent_context: Optional[Dict[str, Any]]  # Parent agent context
     
-    # Intent and planning (from supervisor/orchestrator)
-    intent_result: Optional[Dict[str, Any]]  # Intent analysis result
-    supervisor_context: Optional[Dict[str, Any]]  # Additional context from supervisor
-    
-    # Execution hints (for subgraphs)
-    suggested_tools: Optional[List[str]]  # Tool usage hints
-    analysis_depth: Optional[str]  # Analysis depth: shallow, normal, deep
-    
-    # Async execution
-    parallel_execution: Optional[bool]  # Enable parallel processing
-    
-    # Error handling
-    error_handling_mode: Optional[str]  # strict, lenient, fallback
-    
-    # Caching
-    cache_enabled: Optional[bool]  # Enable caching
-    cache_ttl: Optional[int]  # Cache time-to-live in seconds
+    # ========== Database Connections ==========
+    # Runtime database connections (if not using file-based)
+    db_connections: Optional[Dict[str, str]]  # Connection strings
+    db_credentials: Optional[Dict[str, Dict[str, str]]]  # DB credentials
 
 
 class SubgraphContext(TypedDict):
     """
-    Context specifically for subgraphs
-    Inherits from parent agent's context but may have additional fields
+    Minimal context for subgraphs
+    Filtered subset of AgentContext
     """
     
-    # Required (inherited from parent)
+    # ========== Required (inherited) ==========
     user_id: str
     session_id: str
     
-    # Optional (inherited from parent)
+    # ========== Optional (filtered) ==========
     request_id: Optional[str]
     language: Optional[str]
-    timeout: Optional[int]
     debug_mode: Optional[bool]
     
-    # Subgraph-specific
-    parent_agent: Optional[str]  # Name of parent agent
-    subgraph_name: Optional[str]  # Name of current subgraph
-    iteration: Optional[int]  # Iteration number if in loop
+    # ========== Subgraph Specific ==========
+    parent_agent: Optional[str]  # Parent agent name
+    subgraph_name: Optional[str]  # Current subgraph
+    iteration: Optional[int]     # Loop iteration
     
-    # Data paths (for data collection subgraphs)
-    db_paths: Optional[Dict[str, str]]
-    
-    # Analysis parameters (for analysis subgraphs)
-    analysis_depth: Optional[str]
-    include_predictions: Optional[bool]
-    suggested_tools: Optional[List[str]]
-    
-    # Execution control
-    parallel_execution: Optional[bool]
-    max_workers: Optional[int]
+    # ========== Execution Hints ==========
+    suggested_tools: Optional[List[str]]  # Tool hints
+    analysis_depth: Optional[str]  # shallow, normal, deep
+    parallel_execution: Optional[bool]  # Enable parallelism
+    max_workers: Optional[int]   # Worker limit
 
 
 class SupervisorContext(TypedDict):
     """
-    Context for the main supervisor/orchestrator
-    Contains global settings and coordination data
+    Context for main supervisor/orchestrator
+    Contains global coordination data
     """
     
-    # Required fields
+    # ========== Required ==========
     user_id: str
     session_id: str
-    conversation_id: str  # Long-term conversation identifier
+    conversation_id: str  # Long-term conversation ID
     
-    # Optional fields
+    # ========== Optional ==========
     request_id: Optional[str]
+    timestamp: Optional[str]
     original_query: Optional[str]
     
-    # User profile and settings
-    user_profile: Optional[Dict[str, Any]]  # User profile data
-    user_preferences: Optional[Dict[str, Any]]  # User preferences
-    
-    # Organization and team
+    # ========== User Profile ==========
+    user_profile: Optional[Dict[str, Any]]
+    user_role: Optional[str]
     organization_id: Optional[str]
-    team_id: Optional[str]
     department: Optional[str]
     
-    # Global configuration
+    # ========== Global Settings ==========
     api_keys: Optional[Dict[str, str]]
-    feature_flags: Optional[Dict[str, bool]]
+    global_features: Optional[Dict[str, bool]]
+    global_limits: Optional[Dict[str, int]]
     
-    # Coordination data
-    active_agents: Optional[List[str]]  # Currently active agents
-    agent_dependencies: Optional[Dict[str, List[str]]]  # Agent dependencies
-    execution_order: Optional[List[str]]  # Execution sequence
+    # ========== Orchestration Control ==========
+    execution_mode: Optional[str]  # sequential, parallel, adaptive
+    priority_agents: Optional[List[str]]  # High priority agents
+    excluded_agents: Optional[List[str]]  # Disabled agents
     
-    # Resource limits
-    max_execution_time: Optional[int]  # Maximum total execution time
-    max_parallel_agents: Optional[int]  # Maximum parallel agents
-    
-    # Monitoring and logging
-    enable_monitoring: Optional[bool]
-    log_level: Optional[str]  # debug, info, warning, error
-    trace_id: Optional[str]  # Distributed tracing ID
+    # ========== Monitoring ==========
+    trace_id: Optional[str]  # Distributed tracing
+    monitoring_level: Optional[str]  # off, basic, detailed
+    collect_metrics: Optional[bool]
 
 
-# ========== Helper Functions ==========
+# ============ Context Factory Functions ============
 
 def create_agent_context(
     user_id: str,
     session_id: str,
     **kwargs
-) -> AgentContext:
+) -> Dict[str, Any]:
     """
-    Create an AgentContext with required fields and optional kwargs
+    Create AgentContext with required fields and optional values
     
     Args:
         user_id: User identifier
@@ -157,89 +142,201 @@ def create_agent_context(
         **kwargs: Optional context fields
         
     Returns:
-        AgentContext with all fields properly set
+        Context dictionary ready for LangGraph
     """
-    context = AgentContext(
-        user_id=user_id,
-        session_id=session_id,
-        request_id=kwargs.get('request_id'),
-        original_query=kwargs.get('original_query'),
-        api_keys=kwargs.get('api_keys'),
-        permissions=kwargs.get('permissions'),
-        language=kwargs.get('language', 'ko'),
-        timezone=kwargs.get('timezone'),
-        db_connections=kwargs.get('db_connections'),
-        db_paths=kwargs.get('db_paths'),
-        timeout=kwargs.get('timeout', 30),
-        max_retries=kwargs.get('max_retries', 3),
-        debug_mode=kwargs.get('debug_mode', False),
-        feature_flags=kwargs.get('feature_flags', {}),
-        intent_result=kwargs.get('intent_result'),
-        supervisor_context=kwargs.get('supervisor_context'),
-        suggested_tools=kwargs.get('suggested_tools'),
-        analysis_depth=kwargs.get('analysis_depth', 'normal'),
-        parallel_execution=kwargs.get('parallel_execution', False),
-        error_handling_mode=kwargs.get('error_handling_mode', 'strict'),
-        cache_enabled=kwargs.get('cache_enabled', True),
-        cache_ttl=kwargs.get('cache_ttl', 300)
-    )
-    return context
-
-
-def inherit_context(
-    parent_context: AgentContext,
-    **overrides
-) -> AgentContext:
-    """
-    Create a new context inheriting from parent with overrides
+    # Start with required fields
+    context = {
+        "user_id": user_id,
+        "session_id": session_id,
+        "request_id": kwargs.get("request_id") or f"req_{uuid.uuid4().hex[:8]}",
+        "timestamp": kwargs.get("timestamp") or datetime.now().isoformat(),
+    }
     
-    Args:
-        parent_context: Parent agent's context
-        **overrides: Fields to override or add
-        
-    Returns:
-        New AgentContext with inherited and overridden values
-    """
-    # Start with parent context
-    new_context = dict(parent_context)
+    # Add optional fields with defaults
+    context.update({
+        "original_query": kwargs.get("original_query"),
+        "api_keys": kwargs.get("api_keys", {}),
+        "auth_token": kwargs.get("auth_token"),
+        "permissions": kwargs.get("permissions", []),
+        "language": kwargs.get("language", "ko"),
+        "timezone": kwargs.get("timezone", "Asia/Seoul"),
+        "preferences": kwargs.get("preferences", {}),
+        "model_overrides": kwargs.get("model_overrides", {}),
+        "timeout_overrides": kwargs.get("timeout_overrides", {}),
+        "feature_flags": kwargs.get("feature_flags", {}),
+        "debug_mode": kwargs.get("debug_mode", False),
+        "dry_run": kwargs.get("dry_run", False),
+        "strict_mode": kwargs.get("strict_mode", True),
+        "max_retries": kwargs.get("max_retries"),
+        "intent_result": kwargs.get("intent_result"),
+        "supervisor_hints": kwargs.get("supervisor_hints"),
+        "parent_context": kwargs.get("parent_context"),
+        "db_connections": kwargs.get("db_connections"),
+        "db_credentials": kwargs.get("db_credentials")
+    })
     
-    # Apply overrides
-    new_context.update(overrides)
-    
-    return AgentContext(**new_context)
+    # Remove None values for cleaner context
+    return {k: v for k, v in context.items() if v is not None}
 
 
 def create_subgraph_context(
-    parent_context: AgentContext,
+    parent_context: Dict[str, Any],
+    parent_agent: str,
     subgraph_name: str,
     **kwargs
-) -> SubgraphContext:
+) -> Dict[str, Any]:
     """
-    Create a SubgraphContext from parent agent's context
+    Create SubgraphContext from parent agent context
     
     Args:
         parent_context: Parent agent's context
-        subgraph_name: Name of the subgraph
+        parent_agent: Parent agent name
+        subgraph_name: Subgraph name
         **kwargs: Additional subgraph-specific fields
         
     Returns:
-        SubgraphContext for the subgraph
+        Filtered context for subgraph
     """
-    context = SubgraphContext(
-        user_id=parent_context['user_id'],
-        session_id=parent_context['session_id'],
-        request_id=parent_context.get('request_id'),
-        language=parent_context.get('language'),
-        timeout=parent_context.get('timeout'),
-        debug_mode=parent_context.get('debug_mode'),
-        parent_agent=kwargs.get('parent_agent'),
-        subgraph_name=subgraph_name,
-        iteration=kwargs.get('iteration'),
-        db_paths=kwargs.get('db_paths') or parent_context.get('db_paths'),
-        analysis_depth=kwargs.get('analysis_depth') or parent_context.get('analysis_depth'),
-        include_predictions=kwargs.get('include_predictions'),
-        suggested_tools=kwargs.get('suggested_tools') or parent_context.get('suggested_tools'),
-        parallel_execution=kwargs.get('parallel_execution') or parent_context.get('parallel_execution'),
-        max_workers=kwargs.get('max_workers')
-    )
+    # Extract only necessary fields from parent
+    context = {
+        # Required
+        "user_id": parent_context["user_id"],
+        "session_id": parent_context["session_id"],
+        
+        # Optional from parent
+        "request_id": parent_context.get("request_id"),
+        "language": parent_context.get("language"),
+        "debug_mode": parent_context.get("debug_mode"),
+        
+        # Subgraph specific
+        "parent_agent": parent_agent,
+        "subgraph_name": subgraph_name,
+        "iteration": kwargs.get("iteration"),
+        
+        # Execution hints
+        "suggested_tools": kwargs.get("suggested_tools"),
+        "analysis_depth": kwargs.get("analysis_depth"),
+        "parallel_execution": kwargs.get("parallel_execution", False),
+        "max_workers": kwargs.get("max_workers")
+    }
+    
+    # Remove None values
+    return {k: v for k, v in context.items() if v is not None}
+
+
+def create_supervisor_context(
+    user_id: str,
+    session_id: str,
+    conversation_id: str,
+    **kwargs
+) -> Dict[str, Any]:
+    """
+    Create SupervisorContext for orchestrator
+    
+    Args:
+        user_id: User identifier
+        session_id: Session identifier
+        conversation_id: Long-term conversation ID
+        **kwargs: Additional supervisor fields
+        
+    Returns:
+        Supervisor context dictionary
+    """
+    context = {
+        # Required
+        "user_id": user_id,
+        "session_id": session_id,
+        "conversation_id": conversation_id,
+        "request_id": kwargs.get("request_id") or f"req_{uuid.uuid4().hex[:8]}",
+        "timestamp": kwargs.get("timestamp") or datetime.now().isoformat(),
+        
+        # Optional
+        "original_query": kwargs.get("original_query"),
+        "user_profile": kwargs.get("user_profile"),
+        "user_role": kwargs.get("user_role"),
+        "organization_id": kwargs.get("organization_id"),
+        "department": kwargs.get("department"),
+        "api_keys": kwargs.get("api_keys", {}),
+        "global_features": kwargs.get("global_features", {}),
+        "global_limits": kwargs.get("global_limits", {}),
+        "execution_mode": kwargs.get("execution_mode", "adaptive"),
+        "priority_agents": kwargs.get("priority_agents", []),
+        "excluded_agents": kwargs.get("excluded_agents", []),
+        "trace_id": kwargs.get("trace_id") or f"trace_{uuid.uuid4().hex[:12]}",
+        "monitoring_level": kwargs.get("monitoring_level", "basic"),
+        "collect_metrics": kwargs.get("collect_metrics", True)
+    }
+    
+    return {k: v for k, v in context.items() if v is not None}
+
+
+def merge_with_config_defaults(
+    context: Dict[str, Any],
+    config: Any
+) -> Dict[str, Any]:
+    """
+    Merge context with config defaults
+    Context values take precedence
+    
+    Args:
+        context: Runtime context
+        config: Config instance
+        
+    Returns:
+        Merged context with defaults
+    """
+    from .config import Config
+    
+    # Apply timeout defaults if not overridden
+    if "timeout_overrides" not in context:
+        context["timeout_overrides"] = {}
+    
+    for key, value in Config.TIMEOUTS.items():
+        if key not in context["timeout_overrides"]:
+            context["timeout_overrides"][key] = value
+    
+    # Apply model defaults if not overridden
+    if "model_overrides" not in context:
+        context["model_overrides"] = {}
+    
+    for key, value in Config.DEFAULT_MODELS.items():
+        if key not in context["model_overrides"]:
+            context["model_overrides"][key] = value
+    
+    # Apply feature flags
+    if "feature_flags" not in context:
+        context["feature_flags"] = {}
+    
+    for key, value in Config.FEATURES.items():
+        if key not in context["feature_flags"]:
+            context["feature_flags"][key] = value
+    
     return context
+
+
+def extract_api_keys_from_env() -> Dict[str, str]:
+    """
+    Extract API keys from environment variables
+    
+    Returns:
+        Dictionary of API keys
+    """
+    api_keys = {}
+    
+    # Common API key patterns
+    key_patterns = [
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GOOGLE_API_KEY",
+        "AZURE_API_KEY",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY"
+    ]
+    
+    for key in key_patterns:
+        value = os.getenv(key)
+        if value:
+            # Convert to lowercase key for consistency
+            api_keys[key.lower()] = value
+    
+    return api_keys
