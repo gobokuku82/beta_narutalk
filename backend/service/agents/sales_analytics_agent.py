@@ -1,10 +1,10 @@
 """
 Sales Analytics Agent - Sales performance analysis
-Fully compliant with LangGraph 0.6.x Context API
+Fully compliant with LangGraph 0.6.x Context API with consistent context access
 Refactored for clean architecture with proper separation of concerns
 """
 
-from typing import Dict, Any, List, Type
+from typing import Dict, Any, List, Type, Optional
 from langgraph.graph import StateGraph, START, END
 from langgraph.runtime import Runtime
 import sqlite3
@@ -34,6 +34,11 @@ class SalesAnalyticsAgent(BaseAgent):
     - Agent: Orchestration only (no direct tool usage)
     - DataCollectionSubgraph: Pure data collection (no tools)
     - AnalysisSubgraph: Autonomous tool usage based on hints
+    
+    Context Access Pattern:
+    - Use bracket notation [] for required fields (TypedDict guarantee)
+    - Use .get() for optional fields with defaults
+    - Never use direct attribute access (runtime.context.field)
     """
 
     def __init__(self):
@@ -98,57 +103,46 @@ class SalesAnalyticsAgent(BaseAgent):
             self.workflow.add_edge("execute_sql", "format_result")
             self.workflow.add_edge("format_result", END)
 
-    async def _validate_input(self, input_data: Dict[str, Any]) -> bool:
-        """Validate input data"""
-        if self.use_llm_planning:
-            if "query" not in input_data:
-                self.logger.error("Missing required field: query")
-                return False
-        else:
-            required_fields = ["employee_name"]
-            for field in required_fields:
-                if field not in input_data:
-                    self.logger.error(f"Missing required field: {field}")
-                    return False
-        return True
-
-    def _create_initial_state(self, input_data: Dict[str, Any]) -> SalesState:
+    # ==================== Helper Methods for Context Access ====================
+    
+    def _get_context_value(self, runtime: Runtime[AgentContext], key: str, default: Any = None) -> Any:
         """
-        Create initial SalesState from input data
-        Only workflow data, no context fields
+        Safely get value from context with consistent pattern
+        
+        Args:
+            runtime: Runtime object with context
+            key: Key to retrieve
+            default: Default value if key doesn't exist or is None
+            
+        Returns:
+            Value from context or default
         """
-        return SalesState(
-            # Workflow status fields
-            status="pending",
-            execution_step="starting",
+        if hasattr(runtime, 'context') and runtime.context:
+            # For TypedDict, use dictionary-style access
+            if isinstance(runtime.context, dict):
+                return runtime.context.get(key, default)
+            # Fallback for other types (shouldn't happen with TypedDict)
+            return getattr(runtime.context, key, default)
+        return default
 
-            # Query and planning
-            query=input_data.get("query", ""),
-            execution_plan={},
-            execution_results={},
-
-            # SalesState specific fields
-            employee_name=input_data.get("employee_name", ""),
-            period=input_data.get("period", "monthly"),
-            metrics_type=input_data.get("metrics_type", "performance"),
-
-            # SQL/Text2SQL fields
-            parsed_query={},
-            generated_sql="",
-            sql_result=[],
-            formatted_result="",
-
-            # Data from subgraphs
-            collected_data={},
-
-            # Legacy fields (kept for compatibility)
-            raw_data=[],
-            statistics={},
-            aggregated_data={},
-            charts_data=[],
-            insights=[],
-            final_report={}
-        )
+    def _get_required_context(self, runtime: Runtime[AgentContext], key: str) -> Any:
+        """
+        Get required context value (raises KeyError if missing)
+        
+        Args:
+            runtime: Runtime object with context
+            key: Required key
+            
+        Returns:
+            Value from context
+            
+        Raises:
+            KeyError: If required key is missing
+        """
+        if hasattr(runtime, 'context') and runtime.context:
+            # TypedDict guarantees these keys exist
+            return runtime.context[key]
+        raise KeyError(f"Required context key '{key}' is missing")
 
     # ==================== Text2SQL Node Functions ====================
     # All nodes now receive Runtime[AgentContext] and return partial updates
@@ -169,9 +163,16 @@ class SalesAnalyticsAgent(BaseAgent):
             Partial state update with parsed query
         """
         try:
-            # Access original query from context using Runtime (safe access)
-            original_query = getattr(runtime.context, 'original_query', state.get("query", ""))
-            user_id = runtime.context.user_id
+            # Get original query - optional field with fallback to state
+            original_query = self._get_context_value(
+                runtime, 
+                'original_query', 
+                state.get("query", "")
+            )
+            
+            # Get required user_id
+            user_id = self._get_required_context(runtime, 'user_id')
+            
             self.logger.info(f"Parsing query for user {user_id}: {original_query}")
 
             # Use the SQL generator to parse the query
@@ -185,6 +186,13 @@ class SalesAnalyticsAgent(BaseAgent):
                 "parsed_query": parsed
             }
 
+        except KeyError as e:
+            self.logger.error(f"Missing required context: {e}")
+            return {
+                "status": "failed",
+                "execution_step": "context_error",
+                "parsed_query": {}
+            }
         except Exception as e:
             self.logger.error(f"Error parsing query: {e}")
             return {
@@ -209,8 +217,16 @@ class SalesAnalyticsAgent(BaseAgent):
             Partial state update with generated SQL
         """
         try:
-            session_id = runtime.context.session_id
-            original_query = getattr(runtime.context, 'original_query', state.get("query", ""))
+            # Get required session_id
+            session_id = self._get_required_context(runtime, 'session_id')
+            
+            # Get optional original query
+            original_query = self._get_context_value(
+                runtime,
+                'original_query',
+                state.get("query", "")
+            )
+            
             self.logger.info(f"Generating SQL for session: {session_id}")
 
             parsed_query = state.get("parsed_query", {})
@@ -218,8 +234,8 @@ class SalesAnalyticsAgent(BaseAgent):
             # Try LLM-based SQL generation first if available
             if self.sql_generator.use_llm:
                 try:
-                    # Get intent result if available from context
-                    intent_result = getattr(runtime.context, "intent_result", None)
+                    # Get optional intent result from context
+                    intent_result = self._get_context_value(runtime, "intent_result", None)
 
                     # Use LLM to generate SQL
                     sql, explanation = await self.sql_generator.generate_sql_with_llm(
@@ -252,6 +268,13 @@ class SalesAnalyticsAgent(BaseAgent):
                 "generated_sql": sql
             }
 
+        except KeyError as e:
+            self.logger.error(f"Missing required context: {e}")
+            return {
+                "status": "failed",
+                "execution_step": "context_error",
+                "generated_sql": ""
+            }
         except Exception as e:
             self.logger.error(f"Error generating SQL: {e}")
             return {
@@ -275,7 +298,8 @@ class SalesAnalyticsAgent(BaseAgent):
             Partial state update with query results
         """
         try:
-            user_id = runtime.context.user_id
+            # Get required user_id
+            user_id = self._get_required_context(runtime, 'user_id')
             self.logger.info(f"Executing SQL for user: {user_id}")
 
             generated_sql = state.get("generated_sql", "")
@@ -307,6 +331,13 @@ class SalesAnalyticsAgent(BaseAgent):
                 "sql_result": results
             }
 
+        except KeyError as e:
+            self.logger.error(f"Missing required context: {e}")
+            return {
+                "status": "failed",
+                "execution_step": "context_error",
+                "sql_result": []
+            }
         except Exception as e:
             self.logger.error(f"Error executing SQL: {e}")
             return {
@@ -331,8 +362,16 @@ class SalesAnalyticsAgent(BaseAgent):
             Partial state update with formatted result
         """
         try:
-            session_id = runtime.context.session_id
-            original_query = getattr(runtime.context, 'original_query', state.get("query", ""))
+            # Get required session_id
+            session_id = self._get_required_context(runtime, 'session_id')
+            
+            # Get optional original query
+            original_query = self._get_context_value(
+                runtime,
+                'original_query',
+                state.get("query", "")
+            )
+            
             self.logger.info(f"Formatting results for session: {session_id}")
 
             sql_result = state.get("sql_result", [])
@@ -370,6 +409,14 @@ class SalesAnalyticsAgent(BaseAgent):
                 "final_report": final_report
             }
 
+        except KeyError as e:
+            self.logger.error(f"Missing required context: {e}")
+            return {
+                "status": "failed",
+                "execution_step": "context_error",
+                "formatted_result": "컨텍스트 오류",
+                "final_report": {"status": "error", "error": str(e)}
+            }
         except Exception as e:
             self.logger.error(f"Error formatting result: {e}")
             return {
@@ -398,7 +445,13 @@ class SalesAnalyticsAgent(BaseAgent):
             Partial state update with execution plan
         """
         try:
-            query = getattr(runtime.context, 'original_query', state.get("query", ""))
+            # Get query from optional context or state
+            query = self._get_context_value(
+                runtime,
+                'original_query',
+                state.get("query", "")
+            )
+            
             self.logger.info(f"LLM planning for query: {query}")
 
             # Build prompt for LLM
@@ -506,7 +559,14 @@ Return JSON format:
         """
         try:
             plan = state.get("execution_plan", {})
-            query = getattr(runtime.context, 'original_query', state.get("query", ""))
+            
+            # Get query from optional context or state
+            query = self._get_context_value(
+                runtime,
+                'original_query',
+                state.get("query", "")
+            )
+            
             self.logger.info(f"Executing plan for query: {query}")
 
             results = {}
@@ -516,14 +576,12 @@ Return JSON format:
                 self.logger.info("Executing data_collection subgraph")
                 collection_result = await self.invoke_data_collection_subgraph(state, runtime)
                 results["collected_data"] = collection_result
+                # Update state for next subgraph
+                state["collected_data"] = collection_result
 
             # 2. Execute Analysis Subgraph if needed (with tool hints)
             if "analysis" in plan.get("use_subgraphs", []):
                 self.logger.info("Executing analysis subgraph with tool hints")
-
-                # Prepare collected data for analysis
-                if "collected_data" in results:
-                    state["collected_data"] = results["collected_data"]
 
                 # Pass tool hints and depth to the subgraph
                 analysis_params = {
@@ -600,11 +658,11 @@ Return JSON format:
             # Compile subgraph
             compiled_graph = collection_graph.compile()
 
-            # Create context for subgraph from runtime context
+            # Create context for subgraph from runtime context (consistent pattern)
             subgraph_context = {
-                "user_id": runtime.context.user_id,
-                "session_id": runtime.context.session_id,
-                "request_id": getattr(runtime.context, 'request_id', "unknown"),
+                "user_id": self._get_required_context(runtime, 'user_id'),
+                "session_id": self._get_required_context(runtime, 'session_id'),
+                "request_id": self._get_context_value(runtime, 'request_id', "unknown"),
                 "db_paths": {
                     "performance": "database/storage/sales_performance/sales_performance_db.db",
                     "target": "database/storage/sales_performance/sales_target_db.db",
@@ -623,6 +681,9 @@ Return JSON format:
             self.logger.info(f"Data collection completed with status: {result.get('collection_status')}")
             return result
 
+        except KeyError as e:
+            self.logger.error(f"Missing required context for subgraph: {e}")
+            return {"error": f"Context error: {str(e)}"}
         except Exception as e:
             self.logger.error(f"Error invoking data collection subgraph: {e}")
             return {"error": str(e)}
@@ -676,14 +737,14 @@ Return JSON format:
             # Compile subgraph
             compiled_graph = analysis_graph.compile()
 
-            # Create context for subgraph with tool suggestions
+            # Create context for subgraph with tool suggestions (consistent pattern)
             subgraph_context = {
-                "user_id": runtime.context.user_id,
-                "session_id": runtime.context.session_id,
-                "request_id": getattr(runtime.context, 'request_id', "unknown"),
+                "user_id": self._get_required_context(runtime, 'user_id'),
+                "session_id": self._get_required_context(runtime, 'session_id'),
+                "request_id": self._get_context_value(runtime, 'request_id', "unknown"),
                 "analysis_depth": analysis_params.get("analysis_depth", "normal"),
                 "include_predictions": True,
-                "language": "ko",
+                "language": self._get_context_value(runtime, 'language', "ko"),
                 "timeout": 30,
                 "suggested_tools": analysis_params.get("suggested_tools", [])
             }
@@ -697,9 +758,76 @@ Return JSON format:
             self.logger.info(f"Analysis completed with status: {result.get('analysis_status')}")
             return result
 
+        except KeyError as e:
+            self.logger.error(f"Missing required context for subgraph: {e}")
+            return {"error": f"Context error: {str(e)}"}
         except Exception as e:
             self.logger.error(f"Error invoking analysis subgraph: {e}")
             return {"error": str(e)}
+
+    # ==================== Public Run Method ====================
+    
+    async def run(
+        self, 
+        query: str, 
+        user_id: str, 
+        session_id: Optional[str] = None,
+        request_id: Optional[str] = None,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Public method to run the agent
+        
+        Args:
+            query: User query
+            user_id: User identifier (required)
+            session_id: Session identifier (optional, generated if not provided)
+            request_id: Request identifier (optional, generated if not provided)
+            **kwargs: Additional context parameters
+            
+        Returns:
+            Execution result
+        """
+        from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+        import uuid
+        
+        # Generate IDs if not provided
+        if not session_id:
+            session_id = f"session_{uuid.uuid4().hex[:8]}"
+        if not request_id:
+            request_id = f"req_{uuid.uuid4().hex[:8]}"
+        
+        # Prepare context following AgentContext schema
+        context = {
+            "user_id": user_id,
+            "session_id": session_id,
+            "request_id": request_id,
+            "original_query": query,
+            # Optional fields from kwargs
+            "api_keys": kwargs.get("api_keys", {}),
+            "permissions": kwargs.get("permissions", []),
+            "language": kwargs.get("language", "ko"),
+            "debug_mode": kwargs.get("debug_mode", False),
+            "feature_flags": kwargs.get("feature_flags", {}),
+            # Additional fields that might be passed from supervisor
+            "intent_result": kwargs.get("intent_result"),
+            "supervisor_context": kwargs.get("supervisor_context", {})
+        }
+        
+        # Create initial state
+        initial_state = self._create_initial_state({"query": query})
+        
+        # Compile and run with checkpointer
+        async with AsyncSqliteSaver.from_conn_string(":memory:") as checkpointer:
+            app = self.workflow.compile(checkpointer=checkpointer)
+            
+            result = await app.ainvoke(
+                initial_state,
+                config={"configurable": {"thread_id": f"sales_{session_id}"}},
+                context=context
+            )
+            
+            return result
 
     # ==================== Helper Methods ====================
 
@@ -757,9 +885,3 @@ Return JSON format:
                 f.write(json.dumps(log_entry) + "\n")
         except Exception as e:
             self.logger.warning(f"Failed to save execution log: {e}")
-
-    # ==================== Legacy Helper Methods (will be removed in Phase 2) ====================
-
-    def _generate_mock_sales_data(self, employee_name: str, period: str) -> List[Dict[str, Any]]:
-        """Generate mock sales data for testing - DEPRECATED"""
-        return []
