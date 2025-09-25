@@ -10,7 +10,7 @@ from datetime import datetime
 import uuid
 
 
-# ============ Agent Context (Active) ============
+# ============ Context Types ============
 
 class AgentContext(TypedDict):
     """
@@ -42,6 +42,31 @@ class AgentContext(TypedDict):
     dry_run: Optional[bool]     # Simulation mode
     strict_mode: Optional[bool]  # Strict error handling
     max_retries: Optional[int]  # Override retry count
+
+
+class SubgraphContext(TypedDict):
+    """
+    Context for subgraphs (filtered subset of AgentContext)
+    Used when invoking DataCollectionSubgraph, AnalysisSubgraph, etc.
+    """
+
+    # ========== Required (from parent) ==========
+    user_id: str
+    session_id: str
+
+    # ========== Optional (from parent) ==========
+    request_id: Optional[str]
+    language: Optional[str]
+    debug_mode: Optional[bool]
+
+    # ========== Subgraph Identification ==========
+    parent_agent: str           # Name of parent agent
+    subgraph_name: str         # Name of current subgraph
+
+    # ========== Subgraph Parameters ==========
+    suggested_tools: Optional[List[str]]  # Tool hints for subgraph
+    analysis_depth: Optional[str]         # shallow, normal, deep
+    db_paths: Optional[Dict[str, str]]   # Database paths for data collection
 
 
 # ============ Context Factory Functions ============
@@ -113,6 +138,48 @@ def merge_with_config_defaults(
             context["timeout_overrides"][key] = Config.TIMEOUTS.get(key, 30)
 
     return context
+
+
+def create_subgraph_context(
+    parent_context: Dict[str, Any],
+    parent_agent: str,
+    subgraph_name: str,
+    **kwargs
+) -> Dict[str, Any]:
+    """
+    Create context for subgraphs (filtered subset of parent context)
+
+    Args:
+        parent_context: Parent agent's context
+        parent_agent: Parent agent name
+        subgraph_name: Subgraph name
+        **kwargs: Additional subgraph-specific parameters
+
+    Returns:
+        Filtered context for subgraph
+    """
+    context = {
+        # Required fields from parent
+        "user_id": parent_context["user_id"],
+        "session_id": parent_context["session_id"],
+
+        # Optional fields from parent
+        "request_id": parent_context.get("request_id"),
+        "language": parent_context.get("language", "ko"),
+        "debug_mode": parent_context.get("debug_mode", False),
+
+        # Subgraph identification
+        "parent_agent": parent_agent,
+        "subgraph_name": subgraph_name,
+
+        # Subgraph-specific parameters
+        "suggested_tools": kwargs.get("suggested_tools", []),
+        "analysis_depth": kwargs.get("analysis_depth", "normal"),
+        "db_paths": kwargs.get("db_paths", {}),
+    }
+
+    # Remove None values for cleaner context
+    return {k: v for k, v in context.items() if v is not None}
 
 
 def extract_api_keys_from_env() -> Dict[str, str]:

@@ -11,7 +11,9 @@ from .states import (
 )
 from .context import (
     AgentContext,
+    SubgraphContext,
     create_agent_context,
+    create_subgraph_context,
     merge_with_config_defaults,
     extract_api_keys_from_env
 )
@@ -28,7 +30,9 @@ __all__ = [
     "get_state_summary",
     # Contexts
     "AgentContext",
+    "SubgraphContext",
     "create_agent_context",
+    "create_subgraph_context",
     "merge_with_config_defaults",
     "extract_api_keys_from_env",
     # Config

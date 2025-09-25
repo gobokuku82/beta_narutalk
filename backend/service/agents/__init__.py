@@ -2,15 +2,11 @@
 Agents module
 """
 
-from .search_agent import SearchAgent
+# Only import the cleaned agent for now
+# Other agents need to be updated to match the new architecture
 from .sales_analytics_agent import SalesAnalyticsAgent
-from .compliance_check_agent import ComplianceCheckAgent
-from .document_generation_agent import DocumentGenerationAgent
 
 
 __all__ = [
-    "SearchAgent",
-    "SalesAnalyticsAgent",
-    "ComplianceCheckAgent",
-    "DocumentGenerationAgent"
+    "SalesAnalyticsAgent"
 ]

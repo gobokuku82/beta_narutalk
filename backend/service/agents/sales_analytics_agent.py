@@ -9,7 +9,7 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -20,6 +20,7 @@ from langgraph.runtime import Runtime
 # Import from clean architecture
 from ..core.config import Config
 from ..core.context import (
+    AgentContext,
     create_agent_context,
     create_subgraph_context,
     extract_api_keys_from_env,
@@ -519,7 +520,22 @@ Return JSON:
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
         """Execute SQL query"""
-        # Mock implementation
+        # TODO: Implement actual SQL execution
+        # When implementing:
+        # 1. Get generated_sql from state
+        # 2. Connect to appropriate database (using Config.DATABASES)
+        # 3. Execute query with proper error handling
+        # 4. Return actual results
+        # Example:
+        # sql = state.get("generated_sql")
+        # db_path = self.config.get_database_path("sales_performance")
+        # async with aiosqlite.connect(db_path) as db:
+        #     async with db.execute(sql) as cursor:
+        #         rows = await cursor.fetchall()
+        #         return {"rows": rows, "count": len(rows)}
+
+        # Mock implementation for now
+        logger.warning("Mock SQL execution - returning sample data")
         return {
             "rows": [{"employee": "김철수", "sales": 1500000}],
             "count": 1
@@ -544,8 +560,24 @@ Return JSON:
         if plan:
             subgraph_context["suggested_tools"] = plan.get("use_tools", [])
             subgraph_context["analysis_depth"] = plan.get("analysis_depth", "normal")
-        
-        # Mock subgraph execution
+
+        # TODO: Implement actual subgraph invocation
+        # When implementing:
+        # 1. Import actual subgraph classes (DataCollectionSubgraph, AnalysisSubgraph)
+        # 2. Create subgraph instance
+        # 3. Build and compile subgraph
+        # 4. Invoke with state and subgraph_context
+        # Example:
+        # if subgraph_name == "data_collection":
+        #     from ..subgraphs import DataCollectionSubgraph
+        #     subgraph = DataCollectionSubgraph()
+        #     graph = subgraph.build_graph()
+        #     app = graph.compile()
+        #     result = await app.ainvoke(state, context=subgraph_context)
+        #     return result
+
+        # Mock subgraph execution for now
+        logger.warning(f"Mock execution of {subgraph_name} subgraph")
         return {"status": "completed", "data": {}}
     
     # ================ Public Interface ================
