@@ -59,6 +59,29 @@ class SQLExecutor:
             if conn:
                 conn.close()
 
+    def execute(
+        self,
+        query: str,
+        params: Optional[Tuple] = None,
+        database: str = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Execute SQL query (simplified interface for subgraphs)
+
+        Args:
+            query: SQL query to execute
+            params: Query parameters
+            database: Database name
+
+        Returns:
+            List of result dictionaries
+        """
+        results, error = self.execute_query(query, database, params)
+        if error:
+            logger.error(f"SQL execution error: {error}")
+            return []
+        return results
+
     def execute_query(
         self,
         sql: str,

@@ -24,6 +24,136 @@ class TrendAnalysisTool:
 
     # ============== Historical Trend Analysis ==============
 
+    def analyze_trend(
+        self,
+        values: List[float]
+    ) -> Dict[str, Any]:
+        """
+        Analyze trend from values (simplified interface for subgraphs)
+
+        Args:
+            values: List of numeric values
+
+        Returns:
+            Trend analysis dictionary
+        """
+        if not values or len(values) < 2:
+            return {"trend_type": "insufficient_data"}
+
+        # Calculate trend using linear regression
+        x = np.arange(len(values))
+        y = np.array(values)
+
+        slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+
+        # Determine trend type
+        if slope > 0.01:
+            trend_type = "increasing"
+        elif slope < -0.01:
+            trend_type = "decreasing"
+        else:
+            trend_type = "stable"
+
+        return {
+            "trend_type": trend_type,
+            "slope": float(slope),
+            "r_squared": float(r_value ** 2)
+        }
+
+    def calculate_moving_average(
+        self,
+        values: List[float],
+        window: int = 3
+    ) -> List[float]:
+        """
+        Calculate moving average
+
+        Args:
+            values: List of values
+            window: Window size for moving average
+
+        Returns:
+            List of moving averages
+        """
+        if len(values) < window:
+            return values
+
+        moving_avg = []
+        for i in range(len(values) - window + 1):
+            avg = sum(values[i:i+window]) / window
+            moving_avg.append(avg)
+
+        return moving_avg
+
+    def calculate_growth_rates(
+        self,
+        values: List[float]
+    ) -> List[float]:
+        """
+        Calculate period-over-period growth rates
+
+        Args:
+            values: List of values
+
+        Returns:
+            List of growth rates (as percentages)
+        """
+        if len(values) < 2:
+            return []
+
+        growth_rates = []
+        for i in range(1, len(values)):
+            if values[i-1] != 0:
+                rate = ((values[i] - values[i-1]) / values[i-1]) * 100
+                growth_rates.append(rate)
+            else:
+                growth_rates.append(0)
+
+        return growth_rates
+
+    def detect_seasonality(
+        self,
+        values: List[float]
+    ) -> bool:
+        """
+        Simple seasonality detection
+
+        Args:
+            values: List of values
+
+        Returns:
+            True if seasonality detected
+        """
+        if len(values) < 12:  # Need at least 12 months
+            return False
+
+        # Simple check: compare quarters or months
+        # This is a simplified version
+        return len(values) >= 12
+
+    def calculate_volatility(
+        self,
+        values: List[float]
+    ) -> float:
+        """
+        Calculate volatility (coefficient of variation)
+
+        Args:
+            values: List of values
+
+        Returns:
+            Volatility percentage
+        """
+        if not values:
+            return 0
+
+        mean_val = np.mean(values)
+        std_val = np.std(values)
+
+        if mean_val != 0:
+            return (std_val / mean_val) * 100
+        return 0
+
     def analyze_historical_trend(
         self,
         data: List[float],

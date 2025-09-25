@@ -12,81 +12,123 @@ import json
 from langgraph.graph import StateGraph, START, END
 from langgraph.runtime import Runtime
 from operator import add
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
 
 # Import calculation tools
-from ..tools.calculation_tool import get_calculation_tool
-from ..tools.trend_analysis_tool import get_trend_analysis_tool
-from ..tools.cross_db_analysis_tool import get_cross_db_analysis_tool
+from ..tools.calculation_tool import CalculationTool
+from ..tools.trend_analysis_tool import TrendAnalysisTool
+from ..tools.cross_db_analysis_tool import CrossDbAnalysisTool
+
+# Import states and context from core
+from ..core.states import AnalysisState
+from ..core.context import SubgraphContext
 
 logger = logging.getLogger(__name__)
-
-
-# ============== State Definitions ==============
-
-class AnalysisState(TypedDict):
-    """State for analysis workflow"""
-    # Input data
-    performance_data: List[Dict[str, Any]]
-    target_data: List[Dict[str, Any]]
-    client_data: List[Dict[str, Any]]
-
-    # Aggregated input data (from data collection)
-    aggregated_performance: Dict[str, Any]
-    aggregated_target: Dict[str, Any]
-    aggregated_client: Dict[str, Any]
-
-    # Analysis parameters
-    analysis_type: str  # "basic", "trend", "comparative", "comprehensive"
-    analysis_params: Dict[str, Any]
-
-    # Analysis results
-    basic_metrics: Dict[str, Any]
-    trend_analysis: Dict[str, Any]
-    comparative_analysis: Dict[str, Any]
-    predictions: Dict[str, Any]
-    insights: List[str]
-
-    # Final report
-    analysis_report: Dict[str, Any]
-
-    # Metadata
-    analysis_status: str
-    errors: Annotated[List[str], add]
-    execution_time: float
-
-
-class AnalysisContext(TypedDict):
-    """Context for analysis (immutable)"""
-    user_id: str
-    session_id: str
-    request_id: str
-    analysis_depth: str  # "shallow", "normal", "deep"
-    include_predictions: bool
-    language: str  # "ko", "en"
-    timeout: int
-    suggested_tools: List[str]  # Tool suggestions from Agent
 
 
 # ============== Node Implementations ==============
 
 class AnalysisSubgraph:
-    """Subgraph for performing data analysis"""
+    """Subgraph for performing data analysis with LLM-based tool selection"""
 
     def __init__(self):
         """Initialize analysis subgraph"""
         self.logger = logger
-        # Initialize tools - subgraph has autonomy to use them based on context
-        self.calculation_tool = get_calculation_tool()
-        self.trend_tool = get_trend_analysis_tool()
-        self.cross_db_tool = get_cross_db_analysis_tool()
-        self.logger.info("AnalysisSubgraph initialized with autonomous tool selection")
+
+        # Initialize tools
+        self.calculation_tool = CalculationTool()
+        self.trend_tool = TrendAnalysisTool()
+        self.cross_db_tool = CrossDbAnalysisTool()
+
+        # Initialize LLM for tool selection
+        self.llm = ChatOpenAI(
+            model="gpt-4o-mini",
+            temperature=0.3,
+            max_tokens=500
+        )
+
+        self.logger.info("AnalysisSubgraph initialized with LLM-based tool selection")
 
     # ============== Node Functions ==============
+
+    async def select_analysis_tools(
+        self,
+        state: AnalysisState,
+        runtime: Runtime[SubgraphContext]
+    ) -> Dict[str, Any]:
+        """
+        Use LLM to select which analysis tools to use
+
+        Args:
+            state: Current state
+            runtime: Runtime with context
+
+        Returns:
+            State update with selected tools
+        """
+        try:
+            # Get context about the data
+            has_performance = bool(state.get("aggregated_performance"))
+            has_target = bool(state.get("aggregated_target"))
+            has_client = bool(state.get("aggregated_client"))
+            analysis_type = state.get("analysis_type", "comprehensive")
+
+            prompt = f"""
+            Based on the available data and analysis requirements, select the appropriate analysis tools.
+
+            Available data:
+            - Performance data: {has_performance}
+            - Target data: {has_target}
+            - Client data: {has_client}
+            - Analysis type requested: {analysis_type}
+
+            Available tools:
+            1. CalculationTool: Basic metrics (sum, average, min/max, achievement rates)
+            2. TrendAnalysisTool: Time series analysis, trends, patterns
+            3. CrossDbAnalysisTool: Cross-database analysis, correlations
+
+            Return a JSON object with:
+            {{
+                "tools": [list of tool names to use],
+                "analysis_depth": "shallow" | "normal" | "deep",
+                "reason": "brief explanation"
+            }}
+            """
+
+            messages = [
+                SystemMessage(content="You are an analysis tool selector. Choose only necessary tools."),
+                HumanMessage(content=prompt)
+            ]
+
+            response = await self.llm.ainvoke(messages)
+            selection = json.loads(response.content)
+
+            self.logger.info(f"Selected analysis tools: {selection['tools']}")
+
+            return {
+                "analysis_params": {
+                    "selected_tools": selection["tools"],
+                    "analysis_depth": selection.get("analysis_depth", "normal")
+                },
+                "analysis_status": "tools_selected"
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error selecting analysis tools: {e}")
+            # Default to basic tools on error
+            return {
+                "analysis_params": {
+                    "selected_tools": ["CalculationTool", "TrendAnalysisTool"],
+                    "analysis_depth": "normal"
+                },
+                "errors": [f"Tool selection error: {str(e)}"]
+            }
 
     async def calculate_basic_metrics(
         self,
         state: AnalysisState,
-        runtime: Runtime[AnalysisContext]
+        runtime: Runtime[SubgraphContext]
     ) -> Dict[str, Any]:
         """
         Calculate basic business metrics
@@ -99,11 +141,12 @@ class AnalysisSubgraph:
             Partial state update with basic metrics
         """
         try:
-            self.logger.info(f"Calculating basic metrics for session {runtime.context['session_id']}")
+            # Check if calculation tool is selected
+            selected_tools = state.get("analysis_params", {}).get("selected_tools", [])
+            if "CalculationTool" not in selected_tools:
+                return {"basic_metrics": {}}
 
-            # Check if calculation tool is suggested
-            suggested_tools = runtime.context.get("suggested_tools", [])
-            use_calculation_tool = "calculation" in suggested_tools or not suggested_tools
+            self.logger.info(f"Calculating basic metrics for session {runtime.context['session_id']}")
 
             metrics = {}
 
@@ -139,9 +182,9 @@ class AnalysisSubgraph:
                 target_data = state["aggregated_target"]
                 perf_data = state["aggregated_performance"]
 
-                # Calculate achievement rates if tool is suggested or no preference
+                # Calculate achievement rates
                 achievement_rates = {}
-                if use_calculation_tool and "monthly_targets" in target_data and "monthly_totals" in perf_data:
+                if "monthly_targets" in target_data and "monthly_totals" in perf_data:
                     for month in target_data["monthly_targets"]:
                         if month in perf_data["monthly_totals"]:
                             rate = self.calculation_tool.calculate_achievement_rate(
@@ -176,13 +219,13 @@ class AnalysisSubgraph:
                 "errors": [f"Basic metrics error: {str(e)}"]
             }
 
-    async def analyze_trends(
+    async def perform_trend_analysis(
         self,
         state: AnalysisState,
-        runtime: Runtime[AnalysisContext]
+        runtime: Runtime[SubgraphContext]
     ) -> Dict[str, Any]:
         """
-        Analyze trends in the data
+        Perform trend analysis on time series data
 
         Args:
             state: Current state
@@ -192,71 +235,48 @@ class AnalysisSubgraph:
             Partial state update with trend analysis
         """
         try:
-            self.logger.info(f"Analyzing trends for session {runtime.context['session_id']}")
+            # Check if trend tool is selected
+            selected_tools = state.get("analysis_params", {}).get("selected_tools", [])
+            if "TrendAnalysisTool" not in selected_tools:
+                return {"trend_analysis": {}}
 
-            # Check if trend tool is suggested
-            suggested_tools = runtime.context.get("suggested_tools", [])
-            use_trend_tool = "trend" in suggested_tools
+            self.logger.info(f"Performing trend analysis for session {runtime.context['session_id']}")
 
-            # Skip if trend tool not suggested and other tools are suggested
-            if suggested_tools and not use_trend_tool:
-                self.logger.info("Trend analysis skipped - not in suggested tools")
-                return {
-                    "trend_analysis": {},
-                    "analysis_status": "trend_skipped"
-                }
+            trends = {}
 
-            trend_results = {}
+            # Performance trends
+            if state.get("aggregated_performance", {}).get("monthly_totals"):
+                monthly_data = state["aggregated_performance"]["monthly_totals"]
 
-            # Analyze performance trends
-            if state.get("aggregated_performance"):
-                perf_data = state["aggregated_performance"]
+                # Analyze monthly trends
+                time_series = sorted(monthly_data.items())
+                values = [v for _, v in time_series]
 
-                if "monthly_totals" in perf_data:
-                    # Historical trend
-                    monthly_values = list(perf_data["monthly_totals"].values())
-                    monthly_labels = list(perf_data["monthly_totals"].keys())
+                if len(values) >= 3:  # Need at least 3 points for trend
+                    trends["performance_trend"] = self.trend_tool.analyze_trend(values)
+                    trends["moving_average"] = self.trend_tool.calculate_moving_average(values, window=3)
+                    trends["growth_rates"] = self.trend_tool.calculate_growth_rates(values)
+                    trends["seasonality"] = self.trend_tool.detect_seasonality(values)
 
-                    trend_results["performance_trend"] = self.trend_tool.analyze_historical_trend(
-                        monthly_values,
-                        monthly_labels
-                    )
+            # Achievement trends
+            if state.get("basic_metrics", {}).get("achievement_rates"):
+                achievement_data = state["basic_metrics"]["achievement_rates"]
+                time_series = sorted(achievement_data.items())
+                values = [v for _, v in time_series]
 
-                    # Moving average
-                    trend_results["moving_average"] = self.trend_tool.calculate_moving_average(
-                        monthly_values,
-                        window=3
-                    )
+                if len(values) >= 3:
+                    trends["achievement_trend"] = self.trend_tool.analyze_trend(values)
+                    trends["achievement_stability"] = self.trend_tool.calculate_volatility(values)
 
-                    # Seasonality detection
-                    trend_results["seasonality"] = self.trend_tool.detect_seasonality(
-                        perf_data["monthly_totals"]
-                    )
-
-                    # Anomaly detection
-                    trend_results["anomalies"] = self.trend_tool.detect_anomalies(
-                        monthly_values
-                    )
-
-            # Growth analysis
-            if state.get("aggregated_performance"):
-                perf_data = state["aggregated_performance"]
-
-                if "monthly_totals" in perf_data:
-                    # MoM growth
-                    trend_results["mom_growth"] = self.calculation_tool.calculate_mom_growth(
-                        perf_data["monthly_totals"]
-                    )
-
-            self.logger.info(f"Completed trend analysis with {len(trend_results)} results")
+            self.logger.info(f"Identified {len(trends)} trend patterns")
 
             return {
-                "trend_analysis": trend_results,
-                "analysis_status": "trend_completed"
+                "trend_analysis": trends,
+                "analysis_status": "trends_analyzed"
             }
 
         except Exception as e:
-            self.logger.error(f"Error analyzing trends: {e}")
+            self.logger.error(f"Error performing trend analysis: {e}")
             return {
                 "trend_analysis": {},
                 "errors": [f"Trend analysis error: {str(e)}"]
@@ -265,10 +285,10 @@ class AnalysisSubgraph:
     async def perform_comparative_analysis(
         self,
         state: AnalysisState,
-        runtime: Runtime[AnalysisContext]
+        runtime: Runtime[SubgraphContext]
     ) -> Dict[str, Any]:
         """
-        Perform comparative analysis
+        Perform comparative analysis across different dimensions
 
         Args:
             state: Current state
@@ -278,205 +298,70 @@ class AnalysisSubgraph:
             Partial state update with comparative analysis
         """
         try:
+            # Check if cross-db tool is selected
+            selected_tools = state.get("analysis_params", {}).get("selected_tools", [])
+            if "CrossDbAnalysisTool" not in selected_tools:
+                return {"comparative_analysis": {}}
+
             self.logger.info(f"Performing comparative analysis for session {runtime.context['session_id']}")
 
-            # Check if cross_db tool is suggested for comparative analysis
-            suggested_tools = runtime.context.get("suggested_tools", [])
-            use_cross_db = "cross_db" in suggested_tools
+            comparisons = {}
 
-            # Perform comparative analysis based on tool suggestions
-            comparative_results = {}
+            # Compare performance across employees
+            if state.get("aggregated_performance", {}).get("employee_totals"):
+                employee_data = state["aggregated_performance"]["employee_totals"]
+                if len(employee_data) > 1:
+                    comparisons["employee_comparison"] = self.cross_db_tool.compare_entities(
+                        employee_data,
+                        entity_type="employee"
+                    )
 
-            # Compare employees
-            if state.get("aggregated_performance"):
-                perf_data = state["aggregated_performance"]
+            # Compare performance across products
+            if state.get("aggregated_performance", {}).get("product_totals"):
+                product_data = state["aggregated_performance"]["product_totals"]
+                if len(product_data) > 1:
+                    comparisons["product_comparison"] = self.cross_db_tool.compare_entities(
+                        product_data,
+                        entity_type="product"
+                    )
 
-                if "employee_totals" in perf_data:
-                    employee_data = perf_data["employee_totals"]
+            # Compare regions
+            if state.get("aggregated_client", {}).get("region_distribution"):
+                region_data = state["aggregated_client"]["region_distribution"]
+                if len(region_data) > 1:
+                    comparisons["region_comparison"] = self.cross_db_tool.compare_entities(
+                        region_data,
+                        entity_type="region"
+                    )
 
-                    if len(employee_data) > 1:
-                        # Calculate market share for each employee
-                        total = sum(employee_data.values())
-                        employee_shares = {}
+            # Performance vs Target comparison
+            if state.get("aggregated_performance") and state.get("aggregated_target"):
+                comparisons["target_gap_analysis"] = self.cross_db_tool.analyze_gap(
+                    state["aggregated_performance"],
+                    state["aggregated_target"]
+                )
 
-                        for emp, value in employee_data.items():
-                            # Use calculation tool if available
-                            if "calculation" in runtime.context.get("suggested_tools", ["calculation"]):
-                                share = self.calculation_tool.calculate_market_share(value, total)
-                            else:
-                                # Simple percentage calculation if tool not suggested
-                                share = (value / total * 100) if total > 0 else 0
-
-                            employee_shares[emp] = {
-                                "value": value,
-                                "share": share,
-                                "rank": 0  # Will be set below
-                            }
-
-                        # Add rankings
-                        sorted_employees = sorted(
-                            employee_shares.items(),
-                            key=lambda x: x[1]["value"],
-                            reverse=True
-                        )
-
-                        for rank, (emp, data) in enumerate(sorted_employees, 1):
-                            employee_shares[emp]["rank"] = rank
-
-                        comparative_results["employee_comparison"] = employee_shares
-
-            # Compare products
-            if state.get("aggregated_performance"):
-                perf_data = state["aggregated_performance"]
-
-                if "product_totals" in perf_data:
-                    product_data = perf_data["product_totals"]
-
-                    if len(product_data) > 1:
-                        # Calculate market share for each product
-                        total = sum(product_data.values())
-                        product_shares = {}
-
-                        for prod, value in product_data.items():
-                            # Use calculation tool if available
-                            if "calculation" in runtime.context.get("suggested_tools", ["calculation"]):
-                                share = self.calculation_tool.calculate_market_share(value, total)
-                            else:
-                                # Simple percentage calculation if tool not suggested
-                                share = (value / total * 100) if total > 0 else 0
-
-                            product_shares[prod] = {
-                                "value": value,
-                                "share": share
-                            }
-
-                        comparative_results["product_comparison"] = product_shares
-
-            # Achievement comparison
-            if state.get("basic_metrics"):
-                basic_metrics = state["basic_metrics"]
-
-                if "achievement_rates" in basic_metrics:
-                    achievement_data = basic_metrics["achievement_rates"]
-
-                    # Find best and worst performing months
-                    if achievement_data:
-                        best_month = max(achievement_data, key=achievement_data.get)
-                        worst_month = min(achievement_data, key=achievement_data.get)
-
-                        comparative_results["achievement_comparison"] = {
-                            "best_month": {
-                                "period": best_month,
-                                "rate": achievement_data[best_month]
-                            },
-                            "worst_month": {
-                                "period": worst_month,
-                                "rate": achievement_data[worst_month]
-                            },
-                            "variance": self.calculation_tool.calculate_variance(
-                                list(achievement_data.values())
-                            )
-                        }
-
-            self.logger.info(f"Completed comparative analysis with {len(comparative_results)} comparisons")
+            self.logger.info(f"Completed {len(comparisons)} comparative analyses")
 
             return {
-                "comparative_analysis": comparative_results,
-                "analysis_status": "comparative_completed"
+                "comparative_analysis": comparisons,
+                "analysis_status": "comparison_completed"
             }
 
         except Exception as e:
-            self.logger.error(f"Error in comparative analysis: {e}")
+            self.logger.error(f"Error performing comparative analysis: {e}")
             return {
                 "comparative_analysis": {},
                 "errors": [f"Comparative analysis error: {str(e)}"]
             }
 
-    async def generate_predictions(
-        self,
-        state: AnalysisState,
-        runtime: Runtime[AnalysisContext]
-    ) -> Dict[str, Any]:
-        """
-        Generate predictions based on historical data
-
-        Args:
-            state: Current state
-            runtime: Runtime with context
-
-        Returns:
-            Partial state update with predictions
-        """
-        try:
-            if not runtime.context.get("include_predictions", True):
-                self.logger.info("Predictions skipped per context settings")
-                return {"predictions": {}, "analysis_status": "predictions_skipped"}
-
-            self.logger.info(f"Generating predictions for session {runtime.context['session_id']}")
-
-            prediction_results = {}
-
-            # Performance predictions
-            if state.get("aggregated_performance"):
-                perf_data = state["aggregated_performance"]
-
-                if "monthly_totals" in perf_data:
-                    monthly_data = perf_data["monthly_totals"]
-
-                    # Simple trend prediction
-                    monthly_values = list(monthly_data.values())
-                    if len(monthly_values) >= 3:
-                        prediction_results["simple_forecast"] = self.trend_tool.predict_future_trend(
-                            monthly_values,
-                            periods_ahead=3
-                        )
-
-                    # Seasonal prediction
-                    if len(monthly_data) >= 12:
-                        prediction_results["seasonal_forecast"] = self.trend_tool.predict_with_seasonality(
-                            monthly_data,
-                            months_ahead=3
-                        )
-
-            # Pattern-based predictions
-            if state.get("trend_analysis"):
-                trend_data = state["trend_analysis"]
-
-                if "performance_trend" in trend_data:
-                    trend_info = trend_data["performance_trend"]
-
-                    # Predict based on trend direction
-                    if trend_info.get("trend_direction") == "increasing":
-                        prediction_results["outlook"] = "positive"
-                        prediction_results["confidence"] = trend_info.get("trend_strength", 0) * 100
-                    elif trend_info.get("trend_direction") == "decreasing":
-                        prediction_results["outlook"] = "negative"
-                        prediction_results["confidence"] = trend_info.get("trend_strength", 0) * 100
-                    else:
-                        prediction_results["outlook"] = "stable"
-                        prediction_results["confidence"] = 50
-
-            self.logger.info(f"Generated {len(prediction_results)} predictions")
-
-            return {
-                "predictions": prediction_results,
-                "analysis_status": "predictions_completed"
-            }
-
-        except Exception as e:
-            self.logger.error(f"Error generating predictions: {e}")
-            return {
-                "predictions": {},
-                "errors": [f"Prediction error: {str(e)}"]
-            }
-
     async def generate_insights(
         self,
         state: AnalysisState,
-        runtime: Runtime[AnalysisContext]
+        runtime: Runtime[SubgraphContext]
     ) -> Dict[str, Any]:
         """
-        Generate actionable insights from analysis
+        Generate insights from all analyses
 
         Args:
             state: Current state
@@ -489,114 +374,53 @@ class AnalysisSubgraph:
             self.logger.info(f"Generating insights for session {runtime.context['session_id']}")
 
             insights = []
-            language = runtime.context.get("language", "ko")
 
             # Basic metrics insights
             if state.get("basic_metrics"):
                 metrics = state["basic_metrics"]
 
-                # Achievement insights
+                # Performance insights
+                if "total_performance" in metrics:
+                    insights.append(f"총 실적: {metrics['total_performance']:,.0f}")
+
                 if "average_achievement" in metrics:
                     avg_achievement = metrics["average_achievement"]
                     if avg_achievement >= 100:
-                        if language == "ko":
-                            insights.append(f"목표 달성률이 {avg_achievement:.1f}%로 우수합니다.")
-                        else:
-                            insights.append(f"Target achievement rate is excellent at {avg_achievement:.1f}%")
+                        insights.append(f"목표 달성률이 {avg_achievement:.1f}%로 우수합니다")
                     elif avg_achievement < 80:
-                        if language == "ko":
-                            insights.append(f"목표 달성률이 {avg_achievement:.1f}%로 개선이 필요합니다.")
-                        else:
-                            insights.append(f"Target achievement rate needs improvement at {avg_achievement:.1f}%")
+                        insights.append(f"목표 달성률이 {avg_achievement:.1f}%로 개선이 필요합니다")
 
-                # Top performer insights
+                # Top performers
                 if "top_employees" in metrics and metrics["top_employees"]:
-                    top_emp = metrics["top_employees"][0]
-                    if language == "ko":
-                        insights.append(f"최고 성과자는 {top_emp[0]}입니다.")
-                    else:
-                        insights.append(f"Top performer is {top_emp[0]}")
-
-                # Product insights
-                if "top_products" in metrics and metrics["top_products"]:
-                    top_prod = metrics["top_products"][0]
-                    if language == "ko":
-                        insights.append(f"주력 제품은 {top_prod[0]}입니다.")
-                    else:
-                        insights.append(f"Main product is {top_prod[0]}")
+                    top_employee = metrics["top_employees"][0]
+                    insights.append(f"최고 실적자: {top_employee[0]} ({top_employee[1]:,.0f})")
 
             # Trend insights
             if state.get("trend_analysis"):
-                trend_data = state["trend_analysis"]
+                trends = state["trend_analysis"]
 
-                # Performance trend insights
-                if "performance_trend" in trend_data:
-                    trend = trend_data["performance_trend"]
-                    if trend.get("trend_direction") == "increasing":
-                        if language == "ko":
-                            insights.append("매출이 상승 추세를 보이고 있습니다.")
-                        else:
-                            insights.append("Sales showing upward trend")
-                    elif trend.get("trend_direction") == "decreasing":
-                        if language == "ko":
-                            insights.append("매출 하락 추세에 주의가 필요합니다.")
-                        else:
-                            insights.append("Sales decline needs attention")
+                if "performance_trend" in trends:
+                    trend_type = trends["performance_trend"].get("trend_type", "")
+                    if trend_type == "increasing":
+                        insights.append("실적이 상승 추세를 보이고 있습니다")
+                    elif trend_type == "decreasing":
+                        insights.append("실적이 하락 추세를 보이고 있어 주의가 필요합니다")
 
-                # Seasonality insights
-                if "seasonality" in trend_data:
-                    seasonality = trend_data["seasonality"]
-                    if seasonality.get("has_seasonality"):
-                        peak = seasonality.get("peak_season")
-                        if language == "ko":
-                            insights.append(f"계절성 패턴 발견: 성수기는 {peak}입니다.")
-                        else:
-                            insights.append(f"Seasonal pattern detected: Peak season is {peak}")
-
-                # Anomaly insights
-                if "anomalies" in trend_data:
-                    anomaly_data = trend_data["anomalies"]
-                    if anomaly_data.get("anomaly_count", 0) > 0:
-                        count = anomaly_data["anomaly_count"]
-                        if language == "ko":
-                            insights.append(f"{count}개의 이상치가 발견되어 검토가 필요합니다.")
-                        else:
-                            insights.append(f"{count} anomalies detected requiring review")
+                if "seasonality" in trends and trends["seasonality"]:
+                    insights.append("계절성 패턴이 감지되었습니다")
 
             # Comparative insights
             if state.get("comparative_analysis"):
-                comp_data = state["comparative_analysis"]
+                comparisons = state["comparative_analysis"]
 
-                if "employee_comparison" in comp_data:
-                    emp_comp = comp_data["employee_comparison"]
-                    # Find largest gap
-                    if len(emp_comp) > 1:
-                        shares = [d["share"] for d in emp_comp.values()]
-                        gap = max(shares) - min(shares)
-                        if gap > 30:
-                            if language == "ko":
-                                insights.append(f"직원간 성과 격차가 {gap:.1f}%로 큽니다.")
-                            else:
-                                insights.append(f"Performance gap between employees is large at {gap:.1f}%")
-
-            # Prediction insights
-            if state.get("predictions"):
-                pred_data = state["predictions"]
-
-                if "outlook" in pred_data:
-                    outlook = pred_data["outlook"]
-                    confidence = pred_data.get("confidence", 0)
-
-                    if outlook == "positive" and confidence > 70:
-                        if language == "ko":
-                            insights.append("향후 전망이 긍정적입니다.")
+                if "target_gap_analysis" in comparisons:
+                    gap_data = comparisons["target_gap_analysis"]
+                    if gap_data.get("overall_gap_percentage"):
+                        gap = gap_data["overall_gap_percentage"]
+                        if gap > 0:
+                            insights.append(f"목표 대비 {gap:.1f}% 초과 달성했습니다")
                         else:
-                            insights.append("Future outlook is positive")
-                    elif outlook == "negative" and confidence > 70:
-                        if language == "ko":
-                            insights.append("매출 감소에 대한 대비가 필요합니다.")
-                        else:
-                            insights.append("Preparation needed for sales decline")
+                            insights.append(f"목표 대비 {abs(gap):.1f}% 미달입니다")
 
             self.logger.info(f"Generated {len(insights)} insights")
 
@@ -609,16 +433,16 @@ class AnalysisSubgraph:
             self.logger.error(f"Error generating insights: {e}")
             return {
                 "insights": [],
-                "errors": [f"Insights generation error: {str(e)}"]
+                "errors": [f"Insight generation error: {str(e)}"]
             }
 
-    async def compile_report(
+    async def create_final_report(
         self,
         state: AnalysisState,
-        runtime: Runtime[AnalysisContext]
+        runtime: Runtime[SubgraphContext]
     ) -> Dict[str, Any]:
         """
-        Compile final analysis report
+        Create final analysis report
 
         Args:
             state: Current state
@@ -628,74 +452,32 @@ class AnalysisSubgraph:
             Partial state update with final report
         """
         try:
-            self.logger.info(f"Compiling final report for session {runtime.context['session_id']}")
+            self.logger.info(f"Creating final report for session {runtime.context['session_id']}")
 
             report = {
-                "report_id": runtime.context["request_id"],
+                "summary": {
+                    "analysis_type": state.get("analysis_type", "comprehensive"),
+                    "data_sources": [],
+                    "tools_used": state.get("analysis_params", {}).get("selected_tools", []),
+                    "analysis_depth": state.get("analysis_params", {}).get("analysis_depth", "normal")
+                },
+                "metrics": state.get("basic_metrics", {}),
+                "trends": state.get("trend_analysis", {}),
+                "comparisons": state.get("comparative_analysis", {}),
+                "insights": state.get("insights", []),
                 "timestamp": datetime.now().isoformat(),
-                "analysis_type": state.get("analysis_type", "comprehensive"),
-                "summary": {},
-                "details": {},
-                "recommendations": []
+                "status": "completed"
             }
 
-            # Summary section
-            if state.get("basic_metrics"):
-                metrics = state["basic_metrics"]
-                report["summary"] = {
-                    "total_performance": metrics.get("total_performance", 0),
-                    "average_achievement": metrics.get("average_achievement", 0),
-                    "total_clients": metrics.get("total_clients", 0)
-                }
+            # Add data source info
+            if state.get("performance_data"):
+                report["summary"]["data_sources"].append("performance")
+            if state.get("target_data"):
+                report["summary"]["data_sources"].append("target")
+            if state.get("client_data"):
+                report["summary"]["data_sources"].append("client")
 
-            # Details section
-            report["details"] = {
-                "basic_metrics": state.get("basic_metrics", {}),
-                "trend_analysis": state.get("trend_analysis", {}),
-                "comparative_analysis": state.get("comparative_analysis", {}),
-                "predictions": state.get("predictions", {})
-            }
-
-            # Insights and recommendations
-            report["insights"] = state.get("insights", [])
-
-            # Generate recommendations based on insights
-            recommendations = []
-
-            # Based on achievement rate
-            if state.get("basic_metrics", {}).get("average_achievement", 0) < 80:
-                recommendations.append({
-                    "priority": "high",
-                    "action": "목표 달성률 개선을 위한 전략 수립 필요",
-                    "details": "현재 달성률이 목표 대비 낮으므로 영업 전략 재검토 필요"
-                })
-
-            # Based on trend
-            if state.get("trend_analysis", {}).get("performance_trend", {}).get("trend_direction") == "decreasing":
-                recommendations.append({
-                    "priority": "high",
-                    "action": "매출 하락 원인 분석 및 대응 방안 마련",
-                    "details": "하락 추세를 반전시킬 수 있는 즉각적인 조치 필요"
-                })
-
-            # Based on seasonality
-            if state.get("trend_analysis", {}).get("seasonality", {}).get("has_seasonality"):
-                recommendations.append({
-                    "priority": "medium",
-                    "action": "계절성을 고려한 영업 계획 수립",
-                    "details": "성수기와 비수기에 맞는 차별화된 전략 필요"
-                })
-
-            report["recommendations"] = recommendations
-
-            # Add execution metadata
-            report["metadata"] = {
-                "analysis_depth": runtime.context.get("analysis_depth", "normal"),
-                "errors": state.get("errors", []),
-                "execution_time": state.get("execution_time", 0)
-            }
-
-            self.logger.info("Analysis report compiled successfully")
+            self.logger.info("Final report created successfully")
 
             return {
                 "analysis_report": report,
@@ -703,11 +485,11 @@ class AnalysisSubgraph:
             }
 
         except Exception as e:
-            self.logger.error(f"Error compiling report: {e}")
+            self.logger.error(f"Error creating final report: {e}")
             return {
                 "analysis_report": {},
-                "analysis_status": "failed",
-                "errors": [f"Report compilation error: {str(e)}"]
+                "errors": [f"Report creation error: {str(e)}"],
+                "analysis_status": "failed"
             }
 
     # ============== Graph Builder ==============
@@ -717,56 +499,32 @@ class AnalysisSubgraph:
         Build the analysis subgraph
 
         Returns:
-            Compiled StateGraph
+            StateGraph configured with Context API
         """
-        # Create graph with context schema
+        # Create graph with context_schema (LangGraph 0.6.x pattern)
         workflow = StateGraph(
-            state_schema=AnalysisState,
-            context_schema=AnalysisContext
+            AnalysisState,
+            context_schema=SubgraphContext
         )
 
         # Add nodes
-        workflow.add_node("calculate_basic", self.calculate_basic_metrics)
-        workflow.add_node("analyze_trends", self.analyze_trends)
-        workflow.add_node("comparative_analysis", self.perform_comparative_analysis)
-        workflow.add_node("generate_predictions", self.generate_predictions)
+        workflow.add_node("select_tools", self.select_analysis_tools)
+        workflow.add_node("basic_metrics", self.calculate_basic_metrics)
+        workflow.add_node("trend_analysis", self.perform_trend_analysis)
+        workflow.add_node("comparative", self.perform_comparative_analysis)
         workflow.add_node("generate_insights", self.generate_insights)
-        workflow.add_node("compile_report", self.compile_report)
+        workflow.add_node("create_report", self.create_final_report)
 
-        # Add conditional routing based on analysis type
-        def route_analysis(state: AnalysisState) -> str:
-            analysis_type = state.get("analysis_type", "comprehensive")
-            if analysis_type == "basic":
-                return "compile_report"
-            elif analysis_type == "trend":
-                return "analyze_trends"
-            else:  # comprehensive or comparative
-                return "analyze_trends"
-
-        # Add edges
-        workflow.add_edge(START, "calculate_basic")
-        workflow.add_conditional_edges(
-            "calculate_basic",
-            route_analysis,
-            {
-                "compile_report": "compile_report",
-                "analyze_trends": "analyze_trends"
-            }
-        )
-
-        # Parallel analysis paths
-        workflow.add_edge("analyze_trends", "comparative_analysis")
-        workflow.add_edge("analyze_trends", "generate_predictions")
-
-        # All paths lead to insights
-        workflow.add_edge("comparative_analysis", "generate_insights")
-        workflow.add_edge("generate_predictions", "generate_insights")
-
-        # Insights lead to final report
-        workflow.add_edge("generate_insights", "compile_report")
-
-        # End
-        workflow.add_edge("compile_report", END)
+        # Add edges - LLM selects tools first, then parallel analysis
+        workflow.add_edge(START, "select_tools")
+        workflow.add_edge("select_tools", "basic_metrics")
+        workflow.add_edge("select_tools", "trend_analysis")
+        workflow.add_edge("select_tools", "comparative")
+        workflow.add_edge("basic_metrics", "generate_insights")
+        workflow.add_edge("trend_analysis", "generate_insights")
+        workflow.add_edge("comparative", "generate_insights")
+        workflow.add_edge("generate_insights", "create_report")
+        workflow.add_edge("create_report", END)
 
         return workflow
 

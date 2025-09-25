@@ -36,6 +36,103 @@ class CrossDBAnalysisTool:
 
         self.logger.info("CrossDBAnalysisTool initialized")
 
+    # ============== Analysis Methods for Subgraphs ==============
+
+    def compare_entities(
+        self,
+        data: Dict[str, Any],
+        entity_type: str = "entity"
+    ) -> Dict[str, Any]:
+        """
+        Compare entities across dimensions
+
+        Args:
+            data: Dictionary with entity names as keys and values
+            entity_type: Type of entity (employee, product, region)
+
+        Returns:
+            Comparison results
+        """
+        if not data or len(data) < 2:
+            return {"comparison": "insufficient_data"}
+
+        # Sort entities by value
+        sorted_entities = sorted(data.items(), key=lambda x: x[1], reverse=True)
+
+        # Calculate statistics
+        values = list(data.values())
+        mean_val = sum(values) / len(values) if values else 0
+        max_val = max(values) if values else 0
+        min_val = min(values) if values else 0
+
+        # Identify top and bottom performers
+        top_performers = sorted_entities[:3]
+        bottom_performers = sorted_entities[-3:] if len(sorted_entities) > 3 else []
+
+        return {
+            "entity_type": entity_type,
+            "total_entities": len(data),
+            "top_performers": top_performers,
+            "bottom_performers": bottom_performers,
+            "average_value": mean_val,
+            "max_value": max_val,
+            "min_value": min_val,
+            "spread": max_val - min_val
+        }
+
+    def analyze_gap(
+        self,
+        actual_data: Dict[str, Any],
+        target_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Analyze gap between actual and target
+
+        Args:
+            actual_data: Actual performance data
+            target_data: Target data
+
+        Returns:
+            Gap analysis results
+        """
+        gap_analysis = {
+            "gaps": {},
+            "overall_gap": 0,
+            "overall_gap_percentage": 0
+        }
+
+        # Compare monthly totals if available
+        if "monthly_totals" in actual_data and "monthly_targets" in target_data:
+            actual_totals = actual_data["monthly_totals"]
+            target_totals = target_data["monthly_targets"]
+
+            total_actual = 0
+            total_target = 0
+
+            for month in target_totals:
+                target = target_totals[month]
+                actual = actual_totals.get(month, 0)
+
+                gap = actual - target
+                gap_pct = (gap / target * 100) if target != 0 else 0
+
+                gap_analysis["gaps"][month] = {
+                    "actual": actual,
+                    "target": target,
+                    "gap": gap,
+                    "gap_percentage": gap_pct
+                }
+
+                total_actual += actual
+                total_target += target
+
+            # Calculate overall gap
+            if total_target > 0:
+                gap_analysis["overall_gap"] = total_actual - total_target
+                gap_analysis["overall_gap_percentage"] = ((total_actual - total_target) / total_target) * 100
+
+        return gap_analysis
+
     # ============== Database Query Methods ==============
 
     def _query_database(

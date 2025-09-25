@@ -5,55 +5,34 @@ LangGraph 0.6.x Context API 준수
 """
 
 import logging
-from typing import TypedDict, Dict, Any, List, Annotated
+from typing import TypedDict, Dict, Any, List, Annotated, Optional
 from datetime import datetime
 import sqlite3
 from pathlib import Path
+import json
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.runtime import Runtime
 from operator import add
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
+
+# Import tools
+from ..tools.sql_executor import SQLExecutor
+from ..tools.sql_generator import SQLGenerator
+from ..core.states import DataCollectionState
+from ..core.context import SubgraphContext
 
 logger = logging.getLogger(__name__)
 
 
-# ============== State Definitions ==============
-
-class DataCollectionState(TypedDict):
-    """State for data collection workflow"""
-    # Input
-    query_params: Dict[str, Any]  # Contains person_name, period, client_id, etc.
-
-    # Collection results
-    performance_data: List[Dict[str, Any]]
-    target_data: List[Dict[str, Any]]
-    client_data: List[Dict[str, Any]]
-
-    # Aggregated data
-    aggregated_performance: Dict[str, Any]
-    aggregated_target: Dict[str, Any]
-    aggregated_client: Dict[str, Any]
-
-    # Metadata
-    collection_status: str
-    errors: Annotated[List[str], add]
-    execution_time: float
-
-
-class DataCollectionContext(TypedDict):
-    """Context for data collection (immutable)"""
-    user_id: str
-    session_id: str
-    request_id: str
-    db_paths: Dict[str, str]
-    timeout: int
-    parallel_execution: bool
+# State and Context are now imported from core modules
 
 
 # ============== Node Implementations ==============
 
 class DataCollectionSubgraph:
-    """Subgraph for collecting data from multiple databases"""
+    """Subgraph for collecting data from multiple databases with LLM-based tool selection"""
 
     def __init__(self):
         """Initialize data collection subgraph"""
@@ -63,14 +42,86 @@ class DataCollectionSubgraph:
             "target": Path("database/storage/sales_performance/sales_target_db.db"),
             "clients": Path("database/storage/sales_performance/clients_db.db")
         }
-        self.logger.info("DataCollectionSubgraph initialized")
+
+        # Initialize tools
+        self.sql_executor = SQLExecutor()
+        self.sql_generator = SQLGenerator()
+
+        # Initialize LLM for tool selection
+        self.llm = ChatOpenAI(
+            model="gpt-4o-mini",
+            temperature=0.3,
+            max_tokens=500
+        )
+
+        self.logger.info("DataCollectionSubgraph initialized with LLM and tools")
 
     # ============== Node Functions ==============
+
+    async def select_databases(
+        self,
+        state: DataCollectionState,
+        runtime: Runtime[SubgraphContext]
+    ) -> Dict[str, Any]:
+        """
+        Use LLM to select which databases to query based on user query
+
+        Args:
+            state: Current state
+            runtime: Runtime with context
+
+        Returns:
+            State update with selected databases
+        """
+        try:
+            query_params = state.get("query_params", {})
+            original_query = query_params.get("original_query", "")
+
+            # Create prompt for database selection
+            prompt = f"""
+            Based on the user query, determine which databases need to be queried.
+
+            Available databases:
+            1. sales_performance_db: Contains sales performance data (담당자, 거래처ID, 품목, monthly sales)
+            2. sales_target_db: Contains sales targets (담당자, monthly targets)
+            3. clients_db: Contains client information (거래처ID, 병원, 지역, 외래 환자, 직원수)
+
+            User query: {original_query}
+
+            Return a JSON object with:
+            {{
+                "databases": [list of database names to query],
+                "reason": "brief explanation"
+            }}
+            """
+
+            messages = [
+                SystemMessage(content="You are a database selection expert. Select only the necessary databases."),
+                HumanMessage(content=prompt)
+            ]
+
+            response = await self.llm.ainvoke(messages)
+            selection = json.loads(response.content)
+
+            self.logger.info(f"Selected databases: {selection['databases']}")
+
+            return {
+                "target_databases": selection["databases"],
+                "collection_status": "databases_selected"
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error selecting databases: {e}")
+            # Default to all databases on error
+            return {
+                "target_databases": ["sales_performance_db", "sales_target_db", "clients_db"],
+                "errors": [f"Database selection error: {str(e)}"]
+            }
 
     async def collect_performance_data(
         self,
         state: DataCollectionState,
-        runtime: Runtime[DataCollectionContext]
+        runtime: Runtime[SubgraphContext]
     ) -> Dict[str, Any]:
         """
         Collect sales performance data
@@ -83,7 +134,12 @@ class DataCollectionSubgraph:
             Partial state update
         """
         try:
-            self.logger.info(f"Collecting performance data for session {runtime.context.session_id}")
+            # Check if performance database is selected
+            target_dbs = state.get("target_databases", [])
+            if "sales_performance_db" not in target_dbs:
+                return {"performance_data": []}
+
+            self.logger.info(f"Collecting performance data for session {runtime.context['session_id']}")
 
             params = state["query_params"]
             person_name = params.get("person_name")
@@ -111,8 +167,12 @@ class DataCollectionSubgraph:
                 """
                 query_params = ()
 
-            # Execute query
-            data = self._query_database("performance", query, query_params)
+            # Use SQLExecutor tool instead of direct query
+            data = self.sql_executor.execute(
+                query=query,
+                params=query_params,
+                database="sales_performance"
+            )
 
             # Filter by period if specified
             if period and data:
@@ -153,7 +213,12 @@ class DataCollectionSubgraph:
             Partial state update
         """
         try:
-            self.logger.info(f"Collecting target data for session {runtime.context.session_id}")
+            # Check if target database is selected
+            target_dbs = state.get("target_databases", [])
+            if "sales_target_db" not in target_dbs:
+                return {"target_data": []}
+
+            self.logger.info(f"Collecting target data for session {runtime.context['session_id']}")
 
             params = state["query_params"]
             person_name = params.get("person_name")
@@ -170,7 +235,12 @@ class DataCollectionSubgraph:
                 """
                 query_params = ()
 
-            data = self._query_database("target", query, query_params)
+            # Use SQLExecutor tool
+            data = self.sql_executor.execute(
+                query=query,
+                params=query_params,
+                database="sales_target"
+            )
 
             self.logger.info(f"Collected {len(data)} target records")
 
@@ -203,7 +273,12 @@ class DataCollectionSubgraph:
             Partial state update
         """
         try:
-            self.logger.info(f"Collecting client data for session {runtime.context.session_id}")
+            # Check if clients database is selected
+            target_dbs = state.get("target_databases", [])
+            if "clients_db" not in target_dbs:
+                return {"client_data": []}
+
+            self.logger.info(f"Collecting client data for session {runtime.context['session_id']}")
 
             params = state["query_params"]
             client_id = params.get("client_id")
@@ -241,7 +316,12 @@ class DataCollectionSubgraph:
                 else:
                     return {"client_data": []}
 
-            data = self._query_database("clients", query, query_params)
+            # Use SQLExecutor tool
+            data = self.sql_executor.execute(
+                query=query,
+                params=query_params,
+                database="clients"
+            )
 
             self.logger.info(f"Collected {len(data)} client records")
 
@@ -446,18 +526,20 @@ class DataCollectionSubgraph:
         # Create graph with context_schema (LangGraph 0.6.x pattern)
         workflow = StateGraph(
             DataCollectionState,
-            context_schema=DataCollectionContext
+            context_schema=SubgraphContext
         )
 
         # Add nodes
+        workflow.add_node("select_databases", self.select_databases)
         workflow.add_node("collect_performance", self.collect_performance_data)
         workflow.add_node("collect_target", self.collect_target_data)
         workflow.add_node("collect_client", self.collect_client_data)
         workflow.add_node("aggregate", self.aggregate_data)
 
-        # Add edges for parallel collection
-        workflow.add_edge(START, "collect_performance")
-        workflow.add_edge(START, "collect_target")
+        # Add edges - LLM selects databases first
+        workflow.add_edge(START, "select_databases")
+        workflow.add_edge("select_databases", "collect_performance")
+        workflow.add_edge("select_databases", "collect_target")
         workflow.add_edge("collect_performance", "collect_client")  # Client depends on performance
         workflow.add_edge("collect_performance", "aggregate")
         workflow.add_edge("collect_target", "aggregate")

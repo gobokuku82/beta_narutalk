@@ -5,6 +5,8 @@ Core module for the agent system
 from .states import (
     BaseState,
     SalesState,
+    DataCollectionState,
+    AnalysisState,
     create_sales_initial_state,
     merge_state_updates,
     get_state_summary
@@ -25,6 +27,8 @@ __all__ = [
     # States
     "BaseState",
     "SalesState",
+    "DataCollectionState",
+    "AnalysisState",
     "create_sales_initial_state",
     "merge_state_updates",
     "get_state_summary",

@@ -50,6 +50,54 @@ class BaseState(TypedDict):
     end_time: Optional[str]
 
 
+# ============ Subgraph States ============
+
+class DataCollectionState(TypedDict):
+    """State for data collection subgraph"""
+    # Input
+    query_params: Dict[str, Any]  # Parameters for data collection
+    target_databases: List[str]  # Which databases to query
+
+    # Collection results
+    performance_data: Annotated[List[Dict[str, Any]], add]
+    target_data: Annotated[List[Dict[str, Any]], add]
+    client_data: Annotated[List[Dict[str, Any]], add]
+
+    # Aggregated data
+    aggregated_performance: Annotated[Dict[str, Any], merge_dicts]
+    aggregated_target: Annotated[Dict[str, Any], merge_dicts]
+    aggregated_client: Annotated[Dict[str, Any], merge_dicts]
+
+    # Status
+    collection_status: str
+    errors: Annotated[List[str], add]
+
+
+class AnalysisState(TypedDict):
+    """State for analysis subgraph"""
+    # Input data (from data collection)
+    performance_data: List[Dict[str, Any]]
+    target_data: List[Dict[str, Any]]
+    client_data: List[Dict[str, Any]]
+
+    # Analysis parameters
+    analysis_type: str  # basic, trend, comparative, comprehensive
+    analysis_params: Dict[str, Any]
+
+    # Analysis results
+    basic_metrics: Annotated[Dict[str, Any], merge_dicts]
+    trend_analysis: Annotated[Dict[str, Any], merge_dicts]
+    comparative_analysis: Annotated[Dict[str, Any], merge_dicts]
+    insights: Annotated[List[str], append_unique]
+
+    # Final report
+    analysis_report: Optional[Dict[str, Any]]
+
+    # Status
+    analysis_status: str
+    errors: Annotated[List[str], add]
+
+
 # ============ Sales State (Active) ============
 
 class SalesState(BaseState):
@@ -74,6 +122,10 @@ class SalesState(BaseState):
     # === Data Collection (accumulate) ===
     sql_result: Annotated[List[Dict[str, Any]], add]  # Query results
 
+    # === Subgraph Results (merge) ===
+    data_collection_result: Optional[Dict[str, Any]]  # From DataCollectionSubgraph
+    analysis_result: Optional[Dict[str, Any]]  # From AnalysisSubgraph
+
     # === Aggregation (merge) ===
     collected_data: Annotated[Dict[str, Any], merge_dicts]  # From subgraphs
     execution_results: Annotated[Dict[str, Any], merge_dicts]  # Execution outcomes
@@ -82,6 +134,7 @@ class SalesState(BaseState):
 
     # === Analysis (unique accumulate) ===
     insights: Annotated[List[str], append_unique]  # Unique insights
+    recommendations: Annotated[List[str], append_unique]  # Action recommendations
 
     # === Output (overwrite) ===
     formatted_result: Optional[str]  # Human-readable result
@@ -123,6 +176,10 @@ def create_sales_initial_state(**kwargs) -> Dict[str, Any]:
         # Data Collection
         "sql_result": [],
 
+        # Subgraph Results
+        "data_collection_result": None,
+        "analysis_result": None,
+
         # Aggregation
         "collected_data": {},
         "execution_results": {},
@@ -131,6 +188,7 @@ def create_sales_initial_state(**kwargs) -> Dict[str, Any]:
 
         # Analysis
         "insights": [],
+        "recommendations": [],
 
         # Output
         "formatted_result": None,
