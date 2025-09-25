@@ -5,7 +5,7 @@ LangGraph 0.6.x Context API 준수
 """
 
 import logging
-from typing import TypedDict, Dict, Any, List, Optional, Annotated
+from typing import TypedDict, Dict, Any, List, Optional, Annotated, Union
 from datetime import datetime
 import json
 
@@ -64,6 +64,7 @@ class AnalysisContext(TypedDict):
     include_predictions: bool
     language: str  # "ko", "en"
     timeout: int
+    suggested_tools: List[str]  # Tool suggestions from Agent
 
 
 # ============== Node Implementations ==============
@@ -74,10 +75,11 @@ class AnalysisSubgraph:
     def __init__(self):
         """Initialize analysis subgraph"""
         self.logger = logger
+        # Initialize tools - subgraph has autonomy to use them based on context
         self.calculation_tool = get_calculation_tool()
         self.trend_tool = get_trend_analysis_tool()
         self.cross_db_tool = get_cross_db_analysis_tool()
-        self.logger.info("AnalysisSubgraph initialized")
+        self.logger.info("AnalysisSubgraph initialized with autonomous tool selection")
 
     # ============== Node Functions ==============
 
@@ -98,6 +100,10 @@ class AnalysisSubgraph:
         """
         try:
             self.logger.info(f"Calculating basic metrics for session {runtime.context['session_id']}")
+
+            # Check if calculation tool is suggested
+            suggested_tools = runtime.context.get("suggested_tools", [])
+            use_calculation_tool = "calculation" in suggested_tools or not suggested_tools
 
             metrics = {}
 
@@ -133,9 +139,9 @@ class AnalysisSubgraph:
                 target_data = state["aggregated_target"]
                 perf_data = state["aggregated_performance"]
 
-                # Calculate achievement rates
+                # Calculate achievement rates if tool is suggested or no preference
                 achievement_rates = {}
-                if "monthly_targets" in target_data and "monthly_totals" in perf_data:
+                if use_calculation_tool and "monthly_targets" in target_data and "monthly_totals" in perf_data:
                     for month in target_data["monthly_targets"]:
                         if month in perf_data["monthly_totals"]:
                             rate = self.calculation_tool.calculate_achievement_rate(
@@ -144,10 +150,10 @@ class AnalysisSubgraph:
                             )
                             achievement_rates[month] = rate
 
-                metrics["achievement_rates"] = achievement_rates
-                metrics["average_achievement"] = self.calculation_tool.calculate_average(
-                    list(achievement_rates.values())
-                ) if achievement_rates else 0
+                    metrics["achievement_rates"] = achievement_rates
+                    metrics["average_achievement"] = self.calculation_tool.calculate_average(
+                        list(achievement_rates.values())
+                    ) if achievement_rates else 0
 
             # Client metrics
             if state.get("aggregated_client"):
@@ -187,6 +193,18 @@ class AnalysisSubgraph:
         """
         try:
             self.logger.info(f"Analyzing trends for session {runtime.context['session_id']}")
+
+            # Check if trend tool is suggested
+            suggested_tools = runtime.context.get("suggested_tools", [])
+            use_trend_tool = "trend" in suggested_tools
+
+            # Skip if trend tool not suggested and other tools are suggested
+            if suggested_tools and not use_trend_tool:
+                self.logger.info("Trend analysis skipped - not in suggested tools")
+                return {
+                    "trend_analysis": {},
+                    "analysis_status": "trend_skipped"
+                }
 
             trend_results = {}
 
@@ -262,6 +280,11 @@ class AnalysisSubgraph:
         try:
             self.logger.info(f"Performing comparative analysis for session {runtime.context['session_id']}")
 
+            # Check if cross_db tool is suggested for comparative analysis
+            suggested_tools = runtime.context.get("suggested_tools", [])
+            use_cross_db = "cross_db" in suggested_tools
+
+            # Perform comparative analysis based on tool suggestions
             comparative_results = {}
 
             # Compare employees
@@ -277,7 +300,13 @@ class AnalysisSubgraph:
                         employee_shares = {}
 
                         for emp, value in employee_data.items():
-                            share = self.calculation_tool.calculate_market_share(value, total)
+                            # Use calculation tool if available
+                            if "calculation" in runtime.context.get("suggested_tools", ["calculation"]):
+                                share = self.calculation_tool.calculate_market_share(value, total)
+                            else:
+                                # Simple percentage calculation if tool not suggested
+                                share = (value / total * 100) if total > 0 else 0
+
                             employee_shares[emp] = {
                                 "value": value,
                                 "share": share,
@@ -309,7 +338,13 @@ class AnalysisSubgraph:
                         product_shares = {}
 
                         for prod, value in product_data.items():
-                            share = self.calculation_tool.calculate_market_share(value, total)
+                            # Use calculation tool if available
+                            if "calculation" in runtime.context.get("suggested_tools", ["calculation"]):
+                                share = self.calculation_tool.calculate_market_share(value, total)
+                            else:
+                                # Simple percentage calculation if tool not suggested
+                                share = (value / total * 100) if total > 0 else 0
+
                             product_shares[prod] = {
                                 "value": value,
                                 "share": share

@@ -1,6 +1,7 @@
 """
 Sales Analytics Agent - Sales performance analysis
 Fully compliant with LangGraph 0.6.x Context API
+Refactored for clean architecture with proper separation of concerns
 """
 
 from typing import Dict, Any, List, Type
@@ -22,14 +23,18 @@ from ..core.context import AgentContext
 from ..core.config import Config
 from ..tools import SQLGenerator, SQLExecutor
 from ..subgraphs import DataCollectionSubgraph, AnalysisSubgraph
-# Tools are now used by subgraphs, not directly by the agent
-
 
 logger = logging.getLogger(__name__)
 
 
 class SalesAnalyticsAgent(BaseAgent):
-    """Agent for analyzing sales performance with Runtime support"""
+    """
+    Agent for analyzing sales performance
+    Architecture:
+    - Agent: Orchestration only (no direct tool usage)
+    - DataCollectionSubgraph: Pure data collection (no tools)
+    - AnalysisSubgraph: Autonomous tool usage based on hints
+    """
 
     def __init__(self):
         # Set LLM planning flag BEFORE calling super().__init__
@@ -52,12 +57,9 @@ class SalesAnalyticsAgent(BaseAgent):
         self.sql_generator = SQLGenerator()
         self.sql_executor = SQLExecutor()
 
-        # Initialize Subgraphs
+        # Initialize Subgraphs (Tools are managed by subgraphs)
         self.data_collection_subgraph = DataCollectionSubgraph()
         self.analysis_subgraph = AnalysisSubgraph()
-
-        # Tools are now managed by subgraphs, not the agent
-        # Agent only orchestrates subgraph execution
 
         # Execution logger for learning
         self.execution_logs = []
@@ -68,7 +70,7 @@ class SalesAnalyticsAgent(BaseAgent):
 
     def _build_graph(self):
         """Build the sales analytics workflow with LLM planning"""
-        # StateGraph with context_schema following LangGraph 0.6.x pattern
+        # StateGraph with context_schema following LangGraph 0.6.x Context API
         self.workflow = StateGraph(SalesState, context_schema=AgentContext)
 
         # Add nodes - LLM planning workflow
@@ -98,14 +100,11 @@ class SalesAnalyticsAgent(BaseAgent):
 
     async def _validate_input(self, input_data: Dict[str, Any]) -> bool:
         """Validate input data"""
-        # With LLM planning, we accept either a query or employee_name
         if self.use_llm_planning:
-            # LLM planning mode - query is required
             if "query" not in input_data:
                 self.logger.error("Missing required field: query")
                 return False
         else:
-            # Legacy mode - employee_name is required
             required_fields = ["employee_name"]
             for field in required_fields:
                 if field not in input_data:
@@ -113,45 +112,50 @@ class SalesAnalyticsAgent(BaseAgent):
                     return False
         return True
 
-    def _create_initial_state(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _create_initial_state(self, input_data: Dict[str, Any]) -> SalesState:
         """
         Create initial SalesState from input data
         Only workflow data, no context fields
         """
-        return {
+        return SalesState(
             # Workflow status fields
-            "status": "pending",
-            "execution_step": "starting",
+            status="pending",
+            execution_step="starting",
 
-            # Query field for LLM planning
-            "query": input_data.get("query", ""),
+            # Query and planning
+            query=input_data.get("query", ""),
+            execution_plan={},
+            execution_results={},
 
             # SalesState specific fields
-            "employee_name": input_data.get("employee_name", ""),
-            "period": input_data.get("period", "monthly"),
-            "metrics_type": input_data.get("metrics_type", "performance"),
+            employee_name=input_data.get("employee_name", ""),
+            period=input_data.get("period", "monthly"),
+            metrics_type=input_data.get("metrics_type", "performance"),
 
             # SQL/Text2SQL fields
-            "parsed_query": {},
-            "generated_sql": "",
-            "sql_result": [],
-            "formatted_result": "",
+            parsed_query={},
+            generated_sql="",
+            sql_result=[],
+            formatted_result="",
+
+            # Data from subgraphs
+            collected_data={},
 
             # Legacy fields (kept for compatibility)
-            "raw_data": [],
-            "statistics": {},
-            "aggregated_data": {},
-            "charts_data": [],
-            "insights": [],
-            "final_report": {}
-        }
+            raw_data=[],
+            statistics={},
+            aggregated_data={},
+            charts_data=[],
+            insights=[],
+            final_report={}
+        )
 
     # ==================== Text2SQL Node Functions ====================
     # All nodes now receive Runtime[AgentContext] and return partial updates
 
     async def parse_query(
         self,
-        state: Dict[str, Any],
+        state: SalesState,
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
         """
@@ -165,17 +169,16 @@ class SalesAnalyticsAgent(BaseAgent):
             Partial state update with parsed query
         """
         try:
-            # Access original query from context
-            original_query = getattr(runtime.context, "original_query", "")
-            user_id = getattr(runtime.context, "user_id", "unknown")
+            # Access original query from context using Runtime (safe access)
+            original_query = getattr(runtime.context, 'original_query', state.get("query", ""))
+            user_id = runtime.context.user_id
             self.logger.info(f"Parsing query for user {user_id}: {original_query}")
 
             # Use the SQL generator to parse the query
             parsed = self.sql_generator.parse_query(original_query)
-
             self.logger.info(f"Parsed query components: {parsed}")
 
-            # Return parsed information
+            # Return partial update (LangGraph 0.6.x pattern)
             return {
                 "status": "processing",
                 "execution_step": "query_parsed",
@@ -184,10 +187,6 @@ class SalesAnalyticsAgent(BaseAgent):
 
         except Exception as e:
             self.logger.error(f"Error parsing query: {e}")
-
-            if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"Query parsing failed: {str(e)}")
-
             return {
                 "status": "failed",
                 "execution_step": "parsing_failed",
@@ -196,7 +195,7 @@ class SalesAnalyticsAgent(BaseAgent):
 
     async def generate_sql(
         self,
-        state: Dict[str, Any],
+        state: SalesState,
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
         """
@@ -210,8 +209,8 @@ class SalesAnalyticsAgent(BaseAgent):
             Partial state update with generated SQL
         """
         try:
-            session_id = getattr(runtime.context, "session_id", "unknown")
-            original_query = getattr(runtime.context, "original_query", "")
+            session_id = runtime.context.session_id
+            original_query = getattr(runtime.context, 'original_query', state.get("query", ""))
             self.logger.info(f"Generating SQL for session: {session_id}")
 
             parsed_query = state.get("parsed_query", {})
@@ -232,10 +231,8 @@ class SalesAnalyticsAgent(BaseAgent):
                     self.logger.info("Using LLM-generated SQL")
                 except Exception as llm_error:
                     self.logger.warning(f"LLM SQL generation failed, falling back to rule-based: {llm_error}")
-                    # Fall back to rule-based
                     sql, explanation = self.sql_generator.generate_sql(parsed_query)
             else:
-                # Use rule-based SQL generation
                 sql, explanation = self.sql_generator.generate_sql(parsed_query)
 
             # Validate SQL for safety
@@ -249,6 +246,7 @@ class SalesAnalyticsAgent(BaseAgent):
             self.logger.info(f"Generated SQL: {sql}")
             self.logger.info(f"Explanation: {explanation}")
 
+            # Return partial update
             return {
                 "execution_step": "sql_generated",
                 "generated_sql": sql
@@ -256,10 +254,6 @@ class SalesAnalyticsAgent(BaseAgent):
 
         except Exception as e:
             self.logger.error(f"Error generating SQL: {e}")
-
-            if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"SQL generation failed: {str(e)}")
-
             return {
                 "execution_step": "sql_generation_failed",
                 "generated_sql": ""
@@ -267,7 +261,7 @@ class SalesAnalyticsAgent(BaseAgent):
 
     async def execute_sql(
         self,
-        state: Dict[str, Any],
+        state: SalesState,
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
         """
@@ -281,7 +275,7 @@ class SalesAnalyticsAgent(BaseAgent):
             Partial state update with query results
         """
         try:
-            user_id = getattr(runtime.context, "user_id", "unknown")
+            user_id = runtime.context.user_id
             self.logger.info(f"Executing SQL for user: {user_id}")
 
             generated_sql = state.get("generated_sql", "")
@@ -307,6 +301,7 @@ class SalesAnalyticsAgent(BaseAgent):
 
             self.logger.info(f"SQL executed successfully, got {len(results)} rows")
 
+            # Return partial update
             return {
                 "execution_step": "sql_executed",
                 "sql_result": results
@@ -314,10 +309,6 @@ class SalesAnalyticsAgent(BaseAgent):
 
         except Exception as e:
             self.logger.error(f"Error executing SQL: {e}")
-
-            if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"SQL execution failed: {str(e)}")
-
             return {
                 "status": "failed",
                 "execution_step": "sql_execution_error",
@@ -326,7 +317,7 @@ class SalesAnalyticsAgent(BaseAgent):
 
     async def format_result(
         self,
-        state: Dict[str, Any],
+        state: SalesState,
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
         """
@@ -340,33 +331,38 @@ class SalesAnalyticsAgent(BaseAgent):
             Partial state update with formatted result
         """
         try:
-            session_id = getattr(runtime.context, "session_id", "unknown")
-            original_query = getattr(runtime.context, "original_query", "")
+            session_id = runtime.context.session_id
+            original_query = getattr(runtime.context, 'original_query', state.get("query", ""))
             self.logger.info(f"Formatting results for session: {session_id}")
 
             sql_result = state.get("sql_result", [])
             parsed_query = state.get("parsed_query", {})
+            execution_results = state.get("execution_results", {})
 
-            # Use the executor's format method
-            formatted = self.sql_executor.format_results(sql_result)
+            # Format based on what was executed
+            if execution_results:
+                formatted = self.format_execution_results(execution_results)
+            else:
+                # Legacy SQL formatting
+                formatted = self.sql_executor.format_results(sql_result)
+                if parsed_query.get("name"):
+                    name = parsed_query["name"]
+                    formatted = f"{name}님의 조회 결과:\n\n{formatted}"
 
-            # Add context from the original query
-            if parsed_query.get("name"):
-                name = parsed_query["name"]
-                formatted = f"{name}님의 조회 결과:\n\n{formatted}"
-
-            # Create final report structure for compatibility
+            # Create final report structure
             final_report = {
                 "status": "success",
                 "query": original_query,
                 "parsed": parsed_query,
                 "results_count": len(sql_result),
                 "formatted_output": formatted,
-                "raw_results": sql_result[:5] if sql_result else []  # First 5 for preview
+                "execution_plan": state.get("execution_plan", {}),
+                "raw_results": sql_result[:5] if sql_result else []
             }
 
             self.logger.info("Results formatted successfully")
 
+            # Return partial update
             return {
                 "status": "completed",
                 "execution_step": "result_formatted",
@@ -376,10 +372,6 @@ class SalesAnalyticsAgent(BaseAgent):
 
         except Exception as e:
             self.logger.error(f"Error formatting result: {e}")
-
-            if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"Result formatting failed: {str(e)}")
-
             return {
                 "status": "failed",
                 "execution_step": "formatting_failed",
@@ -391,11 +383,12 @@ class SalesAnalyticsAgent(BaseAgent):
 
     async def llm_planning(
         self,
-        state: Dict[str, Any],
+        state: SalesState,
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
         """
         LLM-based execution planning for the agent
+        Agent only decides orchestration, not tool usage
 
         Args:
             state: Current workflow state
@@ -405,7 +398,7 @@ class SalesAnalyticsAgent(BaseAgent):
             Partial state update with execution plan
         """
         try:
-            query = getattr(runtime.context, "original_query", "")
+            query = getattr(runtime.context, 'original_query', state.get("query", ""))
             self.logger.info(f"LLM planning for query: {query}")
 
             # Build prompt for LLM
@@ -415,9 +408,9 @@ Query: {query}
 Available components:
 1. Subgraphs:
    - data_collection: Collect data from multiple databases (performance_db, target_db, clients_db)
-   - analysis: Analyze collected data (metrics, trends, predictions)
+   - analysis: Analyze collected data (the subgraph will autonomously use tools)
 
-2. Tools:
+2. Tools that analysis subgraph can use (provide as hints only):
    - calculation: Calculate achievement rate, growth rate, market share
    - trend: Analyze trends, make predictions, detect seasonality
    - cross_db: Cross-database analysis for comprehensive insights
@@ -425,35 +418,34 @@ Available components:
 3. Direct SQL: For simple queries that need single table access
 
 Decision needed:
-- Which subgraphs should be used? (can be multiple or none)
-- Which tools should be used? (can be multiple or none)
+- Which subgraphs should be used?
+- What tool hints should be given to analysis subgraph?
 - Is simple SQL sufficient?
-- What's the execution order?
+- What analysis depth is needed?
 
 Consider:
-- Use data_collection subgraph when multiple DBs are needed
-- Use analysis subgraph for complex analytics
-- Use tools for specific calculations
+- Use data_collection when multiple data sources are needed
+- Use analysis for complex analytics (it will choose tools autonomously)
+- Suggest tools that might be helpful, but the subgraph decides
 - Use SQL for simple direct queries
 
 Return JSON format:
 {{
     "use_subgraphs": ["data_collection", "analysis"],
-    "use_tools": ["calculation", "trend"],
+    "use_tools": ["calculation", "trend"],  // Hints for analysis subgraph
     "use_sql": false,
-    "execution_order": ["subgraph_collection", "tool_calculation", "subgraph_analysis", "format"],
+    "analysis_depth": "normal",  // shallow, normal, or deep
     "reasoning": "Brief explanation of why this plan was chosen"
 }}"""
 
             # Get LLM response
             response = await self.planner_llm.ainvoke([
-                SystemMessage(content="You are an intelligent execution planner for sales analytics. Analyze the query and create an efficient execution plan."),
+                SystemMessage(content="You are an intelligent execution planner for sales analytics. Create an efficient execution plan."),
                 HumanMessage(content=prompt)
             ])
 
             # Parse response
             try:
-                # Extract JSON from response
                 content = response.content.strip()
                 if "```json" in content:
                     content = content.split("```json")[1].split("```")[0].strip()
@@ -466,6 +458,7 @@ Return JSON format:
                 # Log execution for learning
                 self.log_execution(query, plan)
 
+                # Return partial update
                 return {
                     "execution_plan": plan,
                     "execution_step": "plan_created"
@@ -473,7 +466,6 @@ Return JSON format:
 
             except json.JSONDecodeError as e:
                 self.logger.error(f"Failed to parse LLM response: {e}")
-                # Fallback to simple SQL
                 return {
                     "execution_plan": {
                         "use_sql": True,
@@ -486,7 +478,6 @@ Return JSON format:
 
         except Exception as e:
             self.logger.error(f"Error in LLM planning: {e}")
-            # Fallback plan
             return {
                 "execution_plan": {
                     "use_sql": True,
@@ -499,11 +490,12 @@ Return JSON format:
 
     async def execute_plan(
         self,
-        state: Dict[str, Any],
+        state: SalesState,
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
         """
         Execute the plan created by LLM
+        Agent orchestrates subgraphs without directly using tools
 
         Args:
             state: Current workflow state with execution plan
@@ -514,7 +506,7 @@ Return JSON format:
         """
         try:
             plan = state.get("execution_plan", {})
-            query = getattr(runtime.context, "original_query", "")
+            query = getattr(runtime.context, 'original_query', state.get("query", ""))
             self.logger.info(f"Executing plan for query: {query}")
 
             results = {}
@@ -527,16 +519,18 @@ Return JSON format:
 
             # 2. Execute Analysis Subgraph if needed (with tool hints)
             if "analysis" in plan.get("use_subgraphs", []):
-                self.logger.info("Executing analysis subgraph")
-                # Pass collected data if available
+                self.logger.info("Executing analysis subgraph with tool hints")
+
+                # Prepare collected data for analysis
                 if "collected_data" in results:
                     state["collected_data"] = results["collected_data"]
 
-                # Pass tool hints to the subgraph
+                # Pass tool hints and depth to the subgraph
                 analysis_params = {
                     "suggested_tools": plan.get("use_tools", []),
                     "analysis_depth": plan.get("analysis_depth", "normal")
                 }
+
                 analysis_result = await self.invoke_analysis_subgraph_with_params(
                     state, runtime, analysis_params
                 )
@@ -545,45 +539,40 @@ Return JSON format:
             # 3. Execute SQL if needed (for simple direct queries)
             if plan.get("use_sql", False):
                 self.logger.info("Executing SQL query")
-                # Parse query first
                 parsed = self.sql_generator.parse_query(query)
                 state["parsed_query"] = parsed
 
-                # Generate SQL
                 sql, explanation = self.sql_generator.generate_sql(parsed)
                 state["generated_sql"] = sql
 
-                # Execute SQL
                 sql_results, error = self.sql_executor.execute_query(sql)
                 if not error:
                     results["sql_result"] = sql_results
                 else:
                     results["sql_error"] = error
 
-            # Combine all results
+            # Return partial update with results
             return {
                 "execution_results": results,
                 "execution_step": "execution_completed",
-                "sql_result": results.get("sql_result", []),
-                "formatted_result": self.format_execution_results(results)
+                "sql_result": results.get("sql_result", [])
             }
 
         except Exception as e:
             self.logger.error(f"Error executing plan: {e}")
             return {
                 "execution_results": {},
-                "execution_step": "execution_error",
-                "formatted_result": f"실행 중 오류 발생: {str(e)}"
+                "execution_step": "execution_error"
             }
 
     # ==================== Subgraph Integration Methods ====================
 
     async def invoke_data_collection_subgraph(
         self,
-        state: Dict[str, Any],
+        state: SalesState,
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
-        """Invoke data collection subgraph"""
+        """Invoke data collection subgraph (pure data collection, no tools)"""
         try:
             # Build subgraph
             collection_graph = self.data_collection_subgraph.build_graph()
@@ -608,14 +597,14 @@ Return JSON format:
                 "execution_time": 0
             }
 
-            # Compile and invoke subgraph
+            # Compile subgraph
             compiled_graph = collection_graph.compile()
 
-            # Create runtime context for subgraph
+            # Create context for subgraph from runtime context
             subgraph_context = {
-                "user_id": getattr(runtime.context, "user_id", "unknown"),
-                "session_id": getattr(runtime.context, "session_id", "unknown"),
-                "request_id": getattr(runtime.context, "request_id", "unknown"),
+                "user_id": runtime.context.user_id,
+                "session_id": runtime.context.session_id,
+                "request_id": getattr(runtime.context, 'request_id', "unknown"),
                 "db_paths": {
                     "performance": "database/storage/sales_performance/sales_performance_db.db",
                     "target": "database/storage/sales_performance/sales_target_db.db",
@@ -625,10 +614,10 @@ Return JSON format:
                 "parallel_execution": True
             }
 
-            # Execute subgraph
+            # Execute subgraph with context
             result = await compiled_graph.ainvoke(
                 collection_state,
-                config={"context": subgraph_context}
+                context=subgraph_context
             )
 
             self.logger.info(f"Data collection completed with status: {result.get('collection_status')}")
@@ -640,7 +629,7 @@ Return JSON format:
 
     async def invoke_analysis_subgraph(
         self,
-        state: Dict[str, Any],
+        state: SalesState,
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
         """Invoke analysis subgraph (legacy method for backward compatibility)"""
@@ -648,11 +637,11 @@ Return JSON format:
 
     async def invoke_analysis_subgraph_with_params(
         self,
-        state: Dict[str, Any],
+        state: SalesState,
         runtime: Runtime[AgentContext],
         analysis_params: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Invoke analysis subgraph with parameters"""
+        """Invoke analysis subgraph with parameters (autonomous tool usage)"""
         try:
             # Build subgraph
             analysis_graph = self.analysis_subgraph.build_graph()
@@ -684,14 +673,14 @@ Return JSON format:
                 "execution_time": 0
             }
 
-            # Compile and invoke subgraph
+            # Compile subgraph
             compiled_graph = analysis_graph.compile()
 
-            # Create runtime context for subgraph
+            # Create context for subgraph with tool suggestions
             subgraph_context = {
-                "user_id": getattr(runtime.context, "user_id", "unknown"),
-                "session_id": getattr(runtime.context, "session_id", "unknown"),
-                "request_id": getattr(runtime.context, "request_id", "unknown"),
+                "user_id": runtime.context.user_id,
+                "session_id": runtime.context.session_id,
+                "request_id": getattr(runtime.context, 'request_id', "unknown"),
                 "analysis_depth": analysis_params.get("analysis_depth", "normal"),
                 "include_predictions": True,
                 "language": "ko",
@@ -699,10 +688,10 @@ Return JSON format:
                 "suggested_tools": analysis_params.get("suggested_tools", [])
             }
 
-            # Execute subgraph
+            # Execute subgraph with context
             result = await compiled_graph.ainvoke(
                 analysis_state,
-                config={"context": subgraph_context}
+                context=subgraph_context
             )
 
             self.logger.info(f"Analysis completed with status: {result.get('analysis_status')}")
@@ -711,9 +700,6 @@ Return JSON format:
         except Exception as e:
             self.logger.error(f"Error invoking analysis subgraph: {e}")
             return {"error": str(e)}
-
-    # ==================== Tool Integration Methods ====================
-    # Tools are now handled by subgraphs, these methods are deprecated
 
     # ==================== Helper Methods ====================
 
@@ -735,27 +721,20 @@ Return JSON format:
                 if "monthly_totals" in perf:
                     formatted.append(f"  월별 실적: {perf['monthly_totals']}")
 
-        # Format tool results if present
-        if "tool_results" in results:
-            tools = results["tool_results"]
-
-            if "calculation" in tools:
-                calc = tools["calculation"]
-                if "average_achievement" in calc:
-                    formatted.append(f"\n평균 달성률: {calc['average_achievement']:.1f}%")
-                if "growth_analysis" in calc:
-                    growth = calc["growth_analysis"]
-                    formatted.append(f"성장 추세: {growth.get('trend', 'N/A')}")
-
-            if "trend" in tools:
-                trend = tools["trend"]
-                if "trend_analysis" in trend:
-                    analysis = trend["trend_analysis"]
-                    formatted.append(f"\n트렌드: {analysis.get('summary', 'N/A')}")
-
         # Format analysis results if present
         if "analysis_result" in results:
             analysis = results["analysis_result"]
+
+            if analysis.get("basic_metrics"):
+                metrics = analysis["basic_metrics"]
+                if "average_achievement" in metrics:
+                    formatted.append(f"\n평균 달성률: {metrics['average_achievement']:.1f}%")
+
+            if analysis.get("trend_analysis"):
+                trend = analysis["trend_analysis"]
+                if "performance_trend" in trend:
+                    formatted.append(f"\n트렌드 분석 완료")
+
             if analysis.get("insights"):
                 formatted.append("\n인사이트:")
                 for insight in analysis["insights"][:3]:
@@ -772,7 +751,7 @@ Return JSON format:
         }
         self.execution_logs.append(log_entry)
 
-        # Also save to file for persistence
+        # Save to file for persistence
         try:
             with open("agent_execution_logs.jsonl", "a") as f:
                 f.write(json.dumps(log_entry) + "\n")
@@ -783,5 +762,4 @@ Return JSON format:
 
     def _generate_mock_sales_data(self, employee_name: str, period: str) -> List[Dict[str, Any]]:
         """Generate mock sales data for testing - DEPRECATED"""
-        # This method is kept for backward compatibility but will be removed
         return []

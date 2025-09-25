@@ -83,7 +83,7 @@ class DataCollectionSubgraph:
             Partial state update
         """
         try:
-            self.logger.info(f"Collecting performance data for session {runtime.context['session_id']}")
+            self.logger.info(f"Collecting performance data for session {runtime.context.session_id}")
 
             params = state["query_params"]
             person_name = params.get("person_name")
@@ -124,6 +124,7 @@ class DataCollectionSubgraph:
 
             self.logger.info(f"Collected {len(data)} performance records")
 
+            # Return partial update (LangGraph 0.6.x pattern)
             return {
                 "performance_data": data,
                 "collection_status": "performance_collected"
@@ -152,7 +153,7 @@ class DataCollectionSubgraph:
             Partial state update
         """
         try:
-            self.logger.info(f"Collecting target data for session {runtime.context['session_id']}")
+            self.logger.info(f"Collecting target data for session {runtime.context.session_id}")
 
             params = state["query_params"]
             person_name = params.get("person_name")
@@ -173,6 +174,7 @@ class DataCollectionSubgraph:
 
             self.logger.info(f"Collected {len(data)} target records")
 
+            # Return partial update
             return {
                 "target_data": data,
                 "collection_status": "target_collected"
@@ -201,7 +203,7 @@ class DataCollectionSubgraph:
             Partial state update
         """
         try:
-            self.logger.info(f"Collecting client data for session {runtime.context['session_id']}")
+            self.logger.info(f"Collecting client data for session {runtime.context.session_id}")
 
             params = state["query_params"]
             client_id = params.get("client_id")
@@ -243,6 +245,7 @@ class DataCollectionSubgraph:
 
             self.logger.info(f"Collected {len(data)} client records")
 
+            # Return partial update
             return {
                 "client_data": data,
                 "collection_status": "client_collected"
@@ -282,6 +285,7 @@ class DataCollectionSubgraph:
             # Aggregate client data
             aggregated_client = self._aggregate_client(state.get("client_data", []))
 
+            # Return partial update
             return {
                 "aggregated_performance": aggregated_perf,
                 "aggregated_target": aggregated_target,
@@ -437,11 +441,11 @@ class DataCollectionSubgraph:
         Build the data collection subgraph
 
         Returns:
-            Compiled StateGraph
+            StateGraph configured with Context API
         """
-        # Create graph with context schema
+        # Create graph with context_schema (LangGraph 0.6.x pattern)
         workflow = StateGraph(
-            state_schema=DataCollectionState,
+            DataCollectionState,
             context_schema=DataCollectionContext
         )
 

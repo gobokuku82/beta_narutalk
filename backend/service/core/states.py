@@ -47,6 +47,12 @@ class SalesState(TypedDict):
     """Sales analytics workflow state"""
     status: str
     execution_step: str
+
+    # Query and planning
+    query: str  # User's original query
+    execution_plan: Dict[str, Any]  # LLM planning result
+    execution_results: Dict[str, Any]  # Results from plan execution
+
     # Sales-specific workflow data
     employee_name: str
     period: str  # daily, weekly, monthly, yearly
@@ -57,6 +63,9 @@ class SalesState(TypedDict):
     generated_sql: str  # Generated SQL query
     sql_result: List[Dict[str, Any]]  # SQL execution results
     formatted_result: str  # Formatted result for user
+
+    # Data from subgraphs
+    collected_data: Dict[str, Any]  # Data from collection subgraph
 
     # Legacy fields (will be phased out gradually)
     raw_data: List[Dict[str, Any]]
