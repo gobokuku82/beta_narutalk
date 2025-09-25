@@ -15,6 +15,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, START, StateGraph
+from langgraph.runtime import Runtime
 
 # Import from clean architecture
 from ..core.config import Config
@@ -127,27 +128,24 @@ class SalesAnalyticsAgent:
         logger.info("Workflow graph built")
     
     # ================ Node Functions ================
-    # All nodes: (state: SalesState, config: Dict[str, Any]) -> Dict
+    # All nodes: (state: SalesState, runtime: Runtime[AgentContext]) -> Dict
 
     async def plan_execution(
         self,
         state: SalesState,
-        config: Dict[str, Any]
+        runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
         """Plan execution using LLM"""
         try:
             # Get query from state
             query = state.get("query", "")
-            
-            # Access context from config
-            context = config.get("configurable", {}).get("context", {})
 
-            # Required fields
-            user_id = context.get("user_id", "default_user")
+            # Access context - required fields with []
+            user_id = runtime.context["user_id"]
 
-            # Optional fields
-            api_key = context.get("api_keys", {}).get("openai_api_key")
-            language = context.get("language", "ko")
+            # Optional fields with .get()
+            api_key = runtime.context.get("api_keys", {}).get("openai_api_key")
+            language = runtime.context.get("language", "ko")
             
             logger.info(f"Planning for user {user_id}: {query}")
             
@@ -159,7 +157,7 @@ class SalesAnalyticsAgent:
             prompt = self._build_planning_prompt(query, language)
             
             # Get LLM response with timeout from config
-            timeout = context.get("timeout_overrides", {}).get(
+            timeout = runtime.context.get("timeout_overrides", {}).get(
                 "llm",
                 self.config.TIMEOUTS["llm"]
             )
@@ -199,13 +197,12 @@ class SalesAnalyticsAgent:
     async def execute_plan(
         self,
         state: SalesState,
-        config: Dict[str, Any]
+        runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
         """Execute the plan"""
         try:
             plan = state.get("execution_plan", {})
-            context = config.get("configurable", {}).get("context", {})
-            session_id = context.get("session_id", "default_session")
+            session_id = runtime.context["session_id"]
             
             logger.info(f"Executing plan for session {session_id}")
             
@@ -213,18 +210,18 @@ class SalesAnalyticsAgent:
             
             # Execute based on plan
             if plan.get("use_sql"):
-                sql_result = await self._execute_sql(state, config)
+                sql_result = await self._execute_sql(state, runtime)
                 results["sql"] = sql_result
 
             if "data_collection" in plan.get("use_subgraphs", []):
                 collection_result = await self._invoke_subgraph(
-                    "data_collection", state, config
+                    "data_collection", state, runtime
                 )
                 results["collection"] = collection_result
 
             if "analysis" in plan.get("use_subgraphs", []):
                 analysis_result = await self._invoke_subgraph(
-                    "analysis", state, config, plan
+                    "analysis", state, runtime, plan
                 )
                 results["analysis"] = analysis_result
             
@@ -246,7 +243,7 @@ class SalesAnalyticsAgent:
     async def analyze_query(
         self,
         state: SalesState,
-        config: Dict[str, Any]
+        runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
         """Analyze query (rule-based)"""
         try:
