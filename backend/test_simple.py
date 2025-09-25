@@ -75,11 +75,11 @@ async def test_subgraphs():
     }
 
     result = await analysis_app.ainvoke(state, context=context)
-    print(f"✓ Analysis completed: {result.get('analysis_status')}")
+    print(f"[OK] Analysis completed: {result.get('analysis_status')}")
     print(f"  Selected tools: {result.get('analysis_params', {}).get('selected_tools')}")
     print(f"  Insights: {len(result.get('insights', []))}")
 
-    print("\n✅ All subgraph tests passed!")
+    print("\n[SUCCESS] All subgraph tests passed!")
 
 if __name__ == "__main__":
     asyncio.run(test_subgraphs())
