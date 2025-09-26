@@ -199,12 +199,39 @@ class InteractiveDataCollector:
         state: Dict[str, Any],
         runtime: Runtime[AgentContext]
     ) -> Dict[str, Any]:
-        """Wait for user response (placeholder - actual implementation would handle async user input)"""
-        # In real implementation, this would pause and wait for user input
-        # For now, we'll return the state with a flag indicating we're waiting
+        """Wait for user response - simulated for testing"""
+        # In production, this would integrate with a UI or API
+        # For testing, simulate user response based on field type
+        current_field = state.get("current_field")
+
+        if not current_field:
+            return {"collection_status": "no_field_to_collect"}
+
+        # Simulate user response based on field
+        field_name = current_field.get("name")
+        simulated_responses = {
+            "date": "2024년 12월 25일 오후 2시",
+            "location": "서울 강남구 테헤란로 123 회의실",
+            "product_name": "신약 ABC",
+            "expected_attendees": "약 25명 정도",
+            "actual_attendees": "23명 참석했습니다",
+            "purpose": "신제품 효능과 사용법을 설명하려고 합니다",
+            "result": "매우 성공적이었고 참석자들이 만족했습니다",
+            "main_content": "제품 소개, 임상 데이터, 질의응답",
+            "payment_details": "강의료 60만원, 식사비 30만원",
+            "budget_usage": "총 100만원 예산 중 90만원 사용"
+        }
+
+        user_response = simulated_responses.get(
+            field_name,
+            f"테스트 응답: {current_field.get('label', field_name)}"
+        )
+
+        logger.info(f"Simulated user response for {field_name}: {user_response}")
+
         return {
-            "collection_status": "waiting_for_user",
-            "current_prompt": state.get("current_prompt")
+            "collection_status": "response_received",
+            "user_response": user_response
         }
 
     async def process_response(
