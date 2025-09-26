@@ -25,6 +25,7 @@ from langgraph.runtime import Runtime
 # Import tools and subgraphs
 from ..tools.sql_executor import SQLExecutor
 from ..tools.sql_generator import SQLGenerator
+from ..tools.text2sql_tool import get_text2sql_tool
 
 # Import from clean architecture
 from ..core.config import Config
@@ -62,16 +63,19 @@ class SalesAnalyticsAgent:
         """
         self.agent_name = "sales_analytics_agent"
         self.config = config or Config()
-        
+
         # Initialize LLM based on config
         self._init_llm()
-        
+
+        # Initialize Text2SQL Tool
+        self.text2sql_tool = get_text2sql_tool()
+
         # Build workflow
         self._build_graph()
-        
+
         # Lazy load subgraphs
         self.subgraphs = {}
-        
+
         logger.info(f"Initialized {self.agent_name}")
     
     def _init_llm(self):
@@ -179,12 +183,34 @@ class SalesAnalyticsAgent:
             
             # Parse plan
             plan = self._parse_llm_response(response.content)
-            
-            # Return partial state update
-            return {
+
+            # Generate SQL if needed
+            state_updates = {
                 "execution_plan": plan,
                 "execution_step": "planned"
             }
+
+            if plan.get("use_sql"):
+                # Use Text2SQL Tool to generate SQL
+                logger.info("Plan requires SQL, generating with Text2SQL Tool...")
+                sql_result = await self.text2sql_tool.generate_sql(
+                    query=query,
+                    context={
+                        "user_id": user_id,
+                        "session_id": runtime.context.get("session_id"),
+                        "language": language
+                    }
+                )
+
+                if sql_result.get("sql"):
+                    state_updates["generated_sql"] = sql_result["sql"]
+                    state_updates["target_database"] = sql_result.get("database", "sales_performance")
+                    logger.info(f"SQL generated successfully using {sql_result.get('method')} method")
+                else:
+                    logger.warning("Failed to generate SQL")
+
+            # Return partial state update
+            return state_updates
             
         except asyncio.TimeoutError:
             logger.error("Planning timeout")
@@ -415,14 +441,17 @@ class SalesAnalyticsAgent:
             statistics = state.get("statistics", {})
             insights = state.get("insights", [])
             
+            # Get SQL results if available
+            sql_results = state.get("sql_result", [])
+
             # Format output
             if language == "ko":
                 formatted = self._format_korean(
-                    execution_results, statistics, insights
+                    execution_results, statistics, insights, sql_results
                 )
             else:
                 formatted = self._format_english(
-                    execution_results, statistics, insights
+                    execution_results, statistics, insights, sql_results
                 )
             
             # Create final report
@@ -504,7 +533,8 @@ Return JSON:
         self,
         execution_results: Dict,
         statistics: Dict,
-        insights: List[str]
+        insights: List[str],
+        sql_results: List[Dict] = None
     ) -> str:
         """Format results in Korean"""
         lines = ["=== 판매 분석 결과 ===\n"]
@@ -564,12 +594,8 @@ Return JSON:
             # Initialize SQL executor
             sql_executor = SQLExecutor()
 
-            # Determine database based on query content
-            db_name = "sales_performance"  # Default
-            if "영업목표" in sql:
-                db_name = "sales_target"
-            elif "거래처" in sql:
-                db_name = "clients"
+            # Use database from state or determine from query
+            db_name = state.get("target_database", "sales_performance")
 
             # Execute query
             results, error = sql_executor.execute_query(

@@ -175,6 +175,10 @@ class DataCollectionSubgraph:
                     self.logger.info(f"Generated SQL with LLM: {sql[:200]}...")
                     self.logger.info(f"Explanation: {explanation}")
 
+                    # Store generated SQL in state for visibility
+                    state["generated_sql"] = sql
+                    state["sql_explanation"] = explanation
+
                     # Execute the generated SQL
                     data, error = self.sql_executor.execute_query(
                         sql=sql,
@@ -194,6 +198,7 @@ class DataCollectionSubgraph:
                 data = self._fallback_data_collection(state)
 
             # Filter by period if specified
+            period = state.get("query_params", {}).get("period")
             if period and data:
                 filtered_data = []
                 for row in data:
@@ -504,6 +509,50 @@ class DataCollectionSubgraph:
             "employee_targets": employee_targets,
             "total_records": len(data)
         }
+
+    def _fallback_data_collection(self, state: DataCollectionState) -> List[Dict[str, Any]]:
+        """
+        Fallback to rule-based data collection when LLM fails
+
+        Args:
+            state: Current state
+
+        Returns:
+            List of data records
+        """
+        params = state.get("query_params", {})
+        person_name = params.get("person_name")
+        client_id = params.get("client_id")
+
+        # Build query based on parameters
+        if person_name:
+            query = """
+            SELECT * FROM sales_performance
+            WHERE 담당자 = ?
+            """
+            query_params = (person_name,)
+        elif client_id:
+            query = """
+            SELECT * FROM sales_performance
+            WHERE 거래처ID = ?
+            """
+            query_params = (client_id,)
+        else:
+            # Get all data (limited for performance)
+            query = """
+            SELECT * FROM sales_performance
+            LIMIT 100
+            """
+            query_params = ()
+
+        # Use SQLExecutor tool
+        data = self.sql_executor.execute(
+            query=query,
+            params=query_params,
+            database="sales_performance"
+        )
+
+        return data if data else []
 
     def _aggregate_client(self, data: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Aggregate client data"""
