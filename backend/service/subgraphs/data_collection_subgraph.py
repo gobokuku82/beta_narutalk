@@ -140,7 +140,7 @@ class DataCollectionSubgraph:
         runtime: Runtime[SubgraphContext]
     ) -> Dict[str, Any]:
         """
-        Collect sales performance data
+        Collect sales performance data using SQL Generator with LLM
 
         Args:
             state: Current state
@@ -157,38 +157,41 @@ class DataCollectionSubgraph:
 
             self.logger.info(f"Collecting performance data for session {runtime.context['session_id']}")
 
-            params = state["query_params"]
-            person_name = params.get("person_name")
-            period = params.get("period")
-            client_id = params.get("client_id")
+            # Get original query from state
+            original_query = state.get("query_params", {}).get("original_query", "")
 
-            # Build query based on parameters
-            if person_name:
-                query = """
-                SELECT * FROM sales_performance
-                WHERE 담당자 = ?
-                """
-                query_params = (person_name,)
-            elif client_id:
-                query = """
-                SELECT * FROM sales_performance
-                WHERE 거래처ID = ?
-                """
-                query_params = (client_id,)
+            # Use SQLGenerator to generate SQL with LLM
+            if original_query and self.sql_generator.use_llm:
+                try:
+                    # Parse query first
+                    parsed = self.sql_generator.parse_query(original_query)
+
+                    # Generate SQL using LLM
+                    sql, explanation = await self.sql_generator.generate_sql_with_llm(
+                        query=original_query,
+                        parsed=parsed
+                    )
+
+                    self.logger.info(f"Generated SQL with LLM: {sql[:200]}...")
+                    self.logger.info(f"Explanation: {explanation}")
+
+                    # Execute the generated SQL
+                    data, error = self.sql_executor.execute_query(
+                        sql=sql,
+                        db_name="sales_performance"
+                    )
+
+                    if error:
+                        self.logger.error(f"SQL execution error: {error}")
+                        # Fall back to rule-based approach
+                        data = self._fallback_data_collection(state)
+
+                except Exception as e:
+                    self.logger.warning(f"LLM SQL generation failed: {e}, falling back to rule-based")
+                    data = self._fallback_data_collection(state)
             else:
-                # Get all data (limited for performance)
-                query = """
-                SELECT * FROM sales_performance
-                LIMIT 100
-                """
-                query_params = ()
-
-            # Use SQLExecutor tool instead of direct query
-            data = self.sql_executor.execute(
-                query=query,
-                params=query_params,
-                database="sales_performance"
-            )
+                # Use rule-based approach if no query or LLM not available
+                data = self._fallback_data_collection(state)
 
             # Filter by period if specified
             if period and data:
