@@ -1,0 +1,98 @@
+{
+  "text2sql": [
+    {
+      "test": "윤수아 3월 실적",
+      "status": "PARTIAL",
+      "sql_generated": true
+    },
+    {
+      "test": "윤수아 작년 실적",
+      "status": "PARTIAL",
+      "sql_generated": true
+    },
+    {
+      "test": "윤수아 최근 실적",
+      "status": "PARTIAL",
+      "sql_generated": true
+    },
+    {
+      "test": "윤하은 3월 실적",
+      "status": "PARTIAL",
+      "sql_generated": true
+    },
+    {
+      "test": "윤하은 작년 실적",
+      "status": "PARTIAL",
+      "sql_generated": true
+    },
+    {
+      "test": "윤하은 최근 실적",
+      "status": "PARTIAL",
+      "sql_generated": true
+    },
+    {
+      "test": "정예준 3월 실적",
+      "status": "PARTIAL",
+      "sql_generated": true
+    },
+    {
+      "test": "정예준 작년 실적",
+      "status": "PARTIAL",
+      "sql_generated": true
+    },
+    {
+      "test": "정예준 최근 실적",
+      "status": "PARTIAL",
+      "sql_generated": true
+    },
+    {
+      "test": "전체 직원 평균 실적",
+      "status": "PARTIAL",
+      "sql_generated": true
+    }
+  ],
+  "data_collection": [
+    {
+      "test": "윤수아_데이터수집",
+      "status": "PASS"
+    },
+    {
+      "test": "윤하은_데이터수집",
+      "status": "PASS"
+    },
+    {
+      "test": "다중DB_조회",
+      "status": "PASS"
+    },
+    {
+      "test": "기간범위_수집",
+      "status": "PASS"
+    }
+  ],
+  "analysis": [
+    {
+      "test": "기본메트릭_계산",
+      "status": "PASS"
+    },
+    {
+      "test": "달성률_분석",
+      "status": "PASS"
+    },
+    {
+      "test": "추세_분석",
+      "status": "PASS"
+    }
+  ],
+  "e2e": [
+    {
+      "test": "일일보고_시나리오",
+      "status": "PASS",
+      "success_rate": 100.0
+    },
+    {
+      "test": "개인평가_시나리오",
+      "status": "PASS",
+      "success_rate": 100.0
+    }
+  ]
+}

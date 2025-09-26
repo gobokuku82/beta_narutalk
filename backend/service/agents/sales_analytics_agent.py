@@ -538,27 +538,59 @@ Return JSON:
     ) -> str:
         """Format results in Korean"""
         lines = ["=== 판매 분석 결과 ===\n"]
-        
+
+        # SQL 결과가 있으면 우선 표시
+        if sql_results and len(sql_results) > 0:
+            lines.append("[조회 결과]")
+            # 첫 5개 결과만 표시
+            for i, row in enumerate(sql_results[:5]):
+                if '담당자' in row:
+                    lines.append(f"\n• {row.get('담당자')}:")
+                    for key, value in row.items():
+                        if key != '담당자' and value is not None:
+                            if isinstance(value, (int, float)) and value > 1000:
+                                lines.append(f"  - {key}: {value:,.0f}")
+                            elif isinstance(value, float):
+                                lines.append(f"  - {key}: {value:.2f}")
+                            else:
+                                lines.append(f"  - {key}: {value}")
+                else:
+                    # 담당자가 없는 경우
+                    lines.append(f"\n• 결과 {i+1}:")
+                    for key, value in list(row.items())[:5]:  # 처음 5개 필드만
+                        if value is not None:
+                            lines.append(f"  - {key}: {value}")
+
+            if len(sql_results) > 5:
+                lines.append(f"\n... 총 {len(sql_results)}개 결과")
+
         if statistics:
-            lines.append("[통계]")
+            lines.append("\n[통계]")
             for key, value in statistics.items():
                 if key == "achievement_rate":
                     lines.append(f"• 달성률: {value:.1f}%")
                 elif key == "gap":
                     lines.append(f"• 목표 차이: {value:,.0f}원")
-        
+                else:
+                    lines.append(f"• {key}: {value}")
+
         if insights:
             lines.append("\n[인사이트]")
             for insight in insights:
                 lines.append(f"• {insight}")
-        
+
+        # 아무 결과도 없으면
+        if not sql_results and not statistics and not insights:
+            lines.append("\n결과가 없습니다.")
+
         return "\n".join(lines)
     
     def _format_english(
         self,
         execution_results: Dict,
         statistics: Dict,
-        insights: List[str]
+        insights: List[str],
+        sql_results: List[Dict] = None
     ) -> str:
         """Format results in English"""
         lines = ["=== Sales Analysis Results ===\n"]
