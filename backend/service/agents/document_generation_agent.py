@@ -1,6 +1,6 @@
 """
-Document Generation Agent - Simplified version
-Streamlined workflow with 3 nodes for document generation
+Document Generation Agent - Improved version without hardcoding
+Dynamic default value generation with configurable defaults
 """
 
 from typing import Dict, Any, List, Type, Optional
@@ -18,6 +18,7 @@ from ..core.context import AgentContext
 from ..tools.word_generator import WordGenerator
 from ..tools.template_analyzer import TemplateAnalyzer
 from ..tools.document_query_analyzer import DocumentQueryAnalyzer
+from ..tools.default_value_generator import DefaultValueGenerator
 from ..subgraphs.interactive_data_collector import InteractiveDataCollector
 
 
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class DocumentGenerationAgent(BaseAgent):
-    """Simplified agent for document generation with 3-node workflow"""
+    """Agent for document generation with dynamic default values"""
 
     def __init__(self):
         """Initialize the document generation agent"""
@@ -35,11 +36,14 @@ class DocumentGenerationAgent(BaseAgent):
         self.word_generator = WordGenerator()
         self.template_analyzer = TemplateAnalyzer()
         self.query_analyzer = DocumentQueryAnalyzer()
+        self.default_generator = DefaultValueGenerator()  # New: Dynamic defaults
         self.data_collector = InteractiveDataCollector()
 
         # Output directory
         self.output_dir = Path("./generated_documents")
         self.output_dir.mkdir(exist_ok=True)
+
+        logger.info("DocumentGenerationAgent initialized with dynamic defaults")
 
     def _get_state_schema(self) -> Type:
         """Get the state schema for this agent"""
@@ -102,6 +106,9 @@ class DocumentGenerationAgent(BaseAgent):
             # Workflow control
             "needs_user_input": False,
             "interaction_mode": input_data.get("interaction_mode", "auto"),
+
+            # Context for default generation
+            "generation_context": input_data.get("context", {}),
 
             # Results
             "final_document": {},
@@ -211,11 +218,11 @@ class DocumentGenerationAgent(BaseAgent):
         missing_fields = state.get("missing_fields", [])
         interaction_mode = state.get("interaction_mode", "auto")
 
-        # In auto mode, proceed even with missing fields (will use defaults)
-        if interaction_mode == "auto" and len(missing_fields) < 5:
-            return "complete"
+        # In auto mode, proceed even with missing fields (will use dynamic defaults)
+        if interaction_mode == "auto":
+            return "incomplete"  # Always go through default generation
 
-        # If too many fields missing or interactive mode, collect data
+        # If interactive mode and missing fields, collect data
         if missing_fields:
             return "incomplete"
 
@@ -230,80 +237,79 @@ class DocumentGenerationAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """
         Node 2: Collect missing data if needed
-        Uses defaults in auto mode or interactive collection
+        Uses dynamic defaults in auto mode or interactive collection
         """
         try:
-            self.logger.info("Collecting missing data")
+            self.logger.info("Collecting missing data with dynamic defaults")
 
             missing_fields = state.get("missing_fields", [])
             collected_data = state.get("collected_data", {})
             interaction_mode = state.get("interaction_mode", "auto")
+            generation_context = state.get("generation_context", {})
 
             if not missing_fields:
-                return {"execution_step": "no_collection_needed"}
+                # Even with no missing fields, ensure lists are populated
+                if "staff_list" not in collected_data:
+                    collected_data["staff_list"] = self.default_generator.get_staff_list()
+                if "hcp_list" not in collected_data:
+                    collected_data["hcp_list"] = self.default_generator.get_hcp_list()
 
-            # Auto mode: Fill with intelligent defaults
+                return {
+                    "execution_step": "defaults_applied",
+                    "collected_data": collected_data
+                }
+
+            # Auto mode: Fill with dynamic defaults
             if interaction_mode == "auto":
+                self.logger.info(f"Generating dynamic defaults for {len(missing_fields)} fields")
+
                 for field in missing_fields:
                     field_name = field.get("name")
-                    field_type = field.get("type")
+                    field_type = field.get("type", "text")
 
-                    # Generate contextual defaults
-                    if field_name == "date":
-                        collected_data[field_name] = "2024-12-20 14:00"
-                    elif field_name == "location":
-                        collected_data[field_name] = "서울 강남구 회의실"
-                    elif field_name == "product_name":
-                        collected_data[field_name] = "신제품 A"
-                    elif field_name == "expected_attendees":
-                        collected_data[field_name] = "20명"
-                    elif field_name == "actual_attendees":
-                        collected_data[field_name] = "18명"
-                    elif field_name == "purpose":
-                        collected_data[field_name] = "신제품 소개 및 효능 설명"
-                    elif field_name == "result":
-                        collected_data[field_name] = "성공적으로 진행됨. 참석자 만족도 높음."
-                    elif field_name == "main_content":
-                        collected_data[field_name] = "1. 제품 소개\n2. 임상 데이터 발표\n3. Q&A 세션"
-                    elif field_name == "payment_details":
-                        collected_data[field_name] = "강의료: 500,000원\n다과비: 200,000원"
-                    elif field_name == "budget_usage":
-                        collected_data[field_name] = "총 예산: 1,000,000원\n사용액: 700,000원\n잔액: 300,000원"
-                    elif field_name == "seminar_type":
-                        collected_data[field_name] = "단일"
-                    elif field_name == "pm_attendance":
-                        collected_data[field_name] = "참석"
-                    elif field_type == "select":
-                        options = field.get("options", [])
-                        collected_data[field_name] = options[0] if options else "기본값"
-                    else:
-                        collected_data[field_name] = f"{field.get('label', field_name)} 정보"
+                    # Generate contextual defaults using DefaultValueGenerator
+                    generated_value = self.default_generator.generate_field_value(
+                        field_name=field_name,
+                        field_type=field_type,
+                        context=generation_context
+                    )
 
-                self.logger.info(f"Auto-filled {len(missing_fields)} fields")
+                    collected_data[field_name] = generated_value
+                    self.logger.debug(f"Generated {field_name}: {generated_value}")
+
+                # Ensure lists are properly generated if not present
+                if "staff_list" not in collected_data or not collected_data.get("staff_list"):
+                    collected_data["staff_list"] = self.default_generator.get_staff_list()
+
+                if "hcp_list" not in collected_data or not collected_data.get("hcp_list"):
+                    collected_data["hcp_list"] = self.default_generator.get_hcp_list()
+
+                self.logger.info(f"Auto-generated {len(missing_fields)} fields with dynamic values")
 
             else:
                 # Interactive mode: Would use subgraph for real user interaction
-                # For now, using same defaults but could trigger interactive flow
-                self.logger.info("Interactive mode - using defaults for demonstration")
-                # In production, would call: self.data_collector.execute(...)
-                for field in missing_fields:
-                    field_name = field.get("name")
-                    collected_data[field_name] = f"Interactive: {field.get('label', field_name)}"
+                self.logger.info("Interactive mode - collecting from user")
 
-            # Add default lists if needed
-            if "staff_list" not in collected_data:
-                collected_data["staff_list"] = [
-                    {"no": "1", "team": "영업1팀", "name": "김영희", "signature": ""},
-                    {"no": "2", "team": "영업2팀", "name": "이철수", "signature": ""},
-                    {"no": "3", "team": "마케팅팀", "name": "박민수", "signature": ""}
-                ]
+                # For demonstration, use the subgraph
+                subgraph_result = await self.data_collector.execute({
+                    "template_name": state.get("doc_type"),
+                    "initial_data": collected_data,
+                    "missing_fields": missing_fields
+                })
 
-            if "hcp_list" not in collected_data:
-                collected_data["hcp_list"] = [
-                    {"no": "1", "hospital": "서울대병원", "name": "정의사", "signature": ""},
-                    {"no": "2", "hospital": "삼성병원", "name": "김약사", "signature": ""},
-                    {"no": "3", "hospital": "아산병원", "name": "이간호", "signature": ""}
-                ]
+                if subgraph_result.get("status") == "success":
+                    collected_data = subgraph_result.get("data", {}).get("collected_data", collected_data)
+                else:
+                    # Fallback to dynamic defaults if subgraph fails
+                    self.logger.warning("Interactive collection failed, using dynamic defaults")
+                    for field in missing_fields:
+                        field_name = field.get("name")
+                        field_type = field.get("type", "text")
+                        collected_data[field_name] = self.default_generator.generate_field_value(
+                            field_name=field_name,
+                            field_type=field_type,
+                            context=generation_context
+                        )
 
             return {
                 "execution_step": "data_collected",
@@ -341,9 +347,12 @@ class DocumentGenerationAgent(BaseAgent):
             if not doc_type:
                 raise ValueError("Document type not specified")
 
+            # Log data being used
+            self.logger.info(f"Using {len(collected_data)} data fields for document generation")
+
             # Generate appropriate document
             if doc_format == "word":
-                # Generate Word document using the correct data
+                # Generate Word document using the collected data
                 doc_path = await self._generate_word_document(doc_type, collected_data)
 
                 # Get file info
@@ -363,7 +372,8 @@ class DocumentGenerationAgent(BaseAgent):
                     "content": doc_path,  # For compatibility
                     "generated_at": datetime.now().isoformat(),
                     "data_used": len(collected_data),
-                    "title": self._get_document_title(doc_type)
+                    "title": self._get_document_title(doc_type),
+                    "generation_method": "dynamic_defaults"  # Indicate dynamic generation
                 }
             else:
                 # Other formats (markdown, html, etc.) - not implemented yet
@@ -371,6 +381,9 @@ class DocumentGenerationAgent(BaseAgent):
                     "status": "error",
                     "error": f"Format {doc_format} not implemented"
                 }
+
+            # Reset cache for next generation to ensure variety
+            self.default_generator.reset_cache()
 
             return {
                 "status": "completed",
@@ -397,7 +410,11 @@ class DocumentGenerationAgent(BaseAgent):
         """Generate Word document based on type and data"""
         try:
             self.logger.info(f"Generating Word document for type: {doc_type}")
-            self.logger.debug(f"Using data: {list(data.keys())}")
+            self.logger.debug(f"Using data fields: {list(data.keys())}")
+
+            # Validate required data is present
+            if not data:
+                raise ValueError("No data provided for document generation")
 
             # Call appropriate Word generator method
             if doc_type == "product_seminar_application":
