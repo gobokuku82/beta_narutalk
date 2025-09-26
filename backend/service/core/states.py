@@ -141,6 +141,23 @@ class SalesState(BaseState):
     final_report: Optional[Dict[str, Any]]  # Complete report
 
 
+class DocumentState(BaseState):
+    """
+    State for document generation workflows
+    """
+    # Document specific fields
+    doc_type: str  # Type of document (e.g., 'sales_report', 'product_seminar_application')
+    doc_format: str  # Output format (markdown, html, text, word)
+    title: str  # Document title
+    input_data: Dict[str, Any]  # Input data for document generation
+    template_id: str  # Template identifier
+    sections: List[Dict[str, Any]]  # Document sections
+    content: str  # Raw content
+    formatted_content: str  # Formatted content
+    document_metadata: Dict[str, Any]  # Document metadata
+    final_document: Dict[str, Any]  # Final document with all details
+
+
 # ============ State Factory Functions ============
 
 def create_sales_initial_state(**kwargs) -> Dict[str, Any]:

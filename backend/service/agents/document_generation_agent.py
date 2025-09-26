@@ -16,6 +16,7 @@ from ..core.base_agent import BaseAgent
 from ..core.states import DocumentState
 from ..core.context import AgentContext
 from ..core.config import Config
+from ..tools.word_generator import WordGenerator
 
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ class DocumentGenerationAgent(BaseAgent):
     def __init__(self):
         super().__init__("document_generation_agent")
         self.template_path = Path("./templates")
+        self.word_generator = WordGenerator()
 
     def _get_state_schema(self) -> Type:
         """Get the state schema for this agent"""
@@ -332,6 +334,9 @@ class DocumentGenerationAgent(BaseAgent):
             elif doc_format == "text":
                 # Remove markdown formatting
                 formatted_content = self._markdown_to_text(content)
+            elif doc_format == "word":
+                # Generate Word document
+                formatted_content = await self._generate_word_document(state, runtime)
             # else keep markdown format
 
             self.logger.info(f"Document formatted as {doc_format}")
@@ -474,3 +479,32 @@ class DocumentGenerationAgent(BaseAgent):
         text = text.replace("# ", "")
         text = text.replace("- ", "* ")
         return text
+
+    async def _generate_word_document(self, state: Dict[str, Any], runtime: Runtime[AgentContext]) -> str:
+        """Generate Word document based on document type and data"""
+        try:
+            doc_type = state.get("doc_type", "")
+            input_data = state.get("input_data", {})
+
+            # Map document type to template
+            if doc_type == "product_seminar_application":
+                # 제품설명회 신청서
+                doc_path = self.word_generator.create_product_seminar_application(input_data)
+                self.logger.info(f"Created product seminar application: {doc_path}")
+                return doc_path
+
+            elif doc_type == "product_seminar_report":
+                # 제품설명회 결과보고서
+                doc_path = self.word_generator.create_product_seminar_report(input_data)
+                self.logger.info(f"Created product seminar report: {doc_path}")
+                return doc_path
+
+            else:
+                # Default Word document generation
+                self.logger.warning(f"Unknown Word document type: {doc_type}")
+                # Return path information instead of content for Word documents
+                return f"Word document type '{doc_type}' not implemented"
+
+        except Exception as e:
+            self.logger.error(f"Error generating Word document: {e}")
+            return f"Error: {str(e)}"

@@ -1,7 +1,6 @@
 """
-SQL Generator Tool - FIXED VERSION
+SQL Generator Tool
 Enhanced with LLM-based SQL generation for complex queries
-주요 수정: parse_query 메서드에서 시간 표현을 먼저 처리하여 "지난달"을 이름으로 인식하는 문제 해결
 """
 
 import re
@@ -55,9 +54,6 @@ class SQLGenerator:
             "오월": "05", "유월": "06", "칠월": "07", "팔월": "08",
             "구월": "09", "시월": "10", "십일월": "11", "십이월": "12"
         }
-        
-        # Time-related words to skip during name extraction
-        self.time_words = ["지난달", "이번달", "작년", "올해", "내년", "전월", "당월", "지난", "이번", "다음"]
 
     async def extract_entities_with_llm(self, query: str) -> Dict[str, Any]:
         """
@@ -114,8 +110,7 @@ class SQLGenerator:
 
     def parse_query(self, query: str) -> Dict[str, Any]:
         """
-        Parse Korean query into structured components (FIXED VERSION)
-        시간 표현을 먼저 처리하여 "지난달"을 이름으로 오인식하는 문제 해결
+        Parse Korean query into structured components (rule-based fallback)
 
         Args:
             query: Natural language query in Korean
@@ -131,30 +126,79 @@ class SQLGenerator:
             "team": None,
             "action": None,
             "period_type": None,
-            "person_name": None,  # Clean name without particles
-            "comparison_type": None
+            "person_name": None  # Clean name without particles
         }
-        
-        current_date = datetime.now()
 
-        # STEP 1: Check for relative time expressions FIRST (before name extraction)
-        if "이번달" in query or "이번 달" in query:
-            parsed["month"] = f"{self.current_month:02d}"
-            parsed["year"] = self.current_year
-        elif "지난달" in query or "지난 달" in query or "전월" in query:
-            last_month = current_date - timedelta(days=30)
-            parsed["month"] = f"{last_month.month:02d}"
-            parsed["year"] = last_month.year
-        elif "작년" in query:
-            parsed["year"] = self.current_year - 1
-            
-        # STEP 2: Extract specific month references
+        # Extract names (handle multiple names separated by 와, 과, 및, 그리고)
+        # Pattern to extract Korean names (2-4 characters) with optional titles/particles
+        name_pattern = r'([가-힣]{2,4})(?:의|씨|님|대리|과장|부장|차장|팀장)?'
+
+        # First, find names connected by conjunctions
+        # Look for patterns like "윤수아와 최수아", "김영희과 이철수", "박지민, 김민수"
+        conjunction_patterns = [
+            r'([가-힣]{2,4})와\s*([가-힣]{2,4})',  # 와 conjunction
+            r'([가-힣]{2,4})과\s*([가-힣]{2,4})',  # 과 conjunction
+            r'([가-힣]{2,4}),\s*([가-힣]{2,4})',   # Comma separated
+        ]
+
+        names = []
+        for pattern in conjunction_patterns:
+            matches = re.findall(pattern, query)
+            if matches:
+                # Flatten the tuple results and add to names
+                for match_tuple in matches:
+                    for name in match_tuple:
+                        # Clean name - remove particles
+                        clean_name = name.rstrip('의').rstrip('과').rstrip('와').rstrip('씨').rstrip('님')
+                        if clean_name not in self.month_map and "월" not in clean_name and clean_name not in names:
+                            names.append(clean_name)
+
+        # Also check for "그리고" pattern
+        if "그리고" in query:
+            parts = query.split("그리고")
+            for part in parts:
+                name_match = re.search(r'([가-힣]{2,4})', part.strip())
+                if name_match:
+                    potential_name = name_match.group(1)
+                    # Clean name - remove particles
+                    clean_name = potential_name.rstrip('의').rstrip('과').rstrip('와').rstrip('씨').rstrip('님')
+                    if clean_name not in self.month_map and "월" not in clean_name and clean_name not in names:
+                        names.append(clean_name)
+
+        if len(names) > 1:
+            parsed["names"] = names  # Multiple names
+            parsed["name"] = names[0]  # Keep first for backward compatibility
+            parsed["person_name"] = names[0]
+        else:
+            # Single name extraction (original logic)
+            name_match = re.search(name_pattern, query)
+            if name_match:
+                potential_name = name_match.group(1)
+                # Check if it's not a month name or other keyword
+                if potential_name not in self.month_map and "월" not in potential_name:
+                    # Clean name - remove particles
+                    clean_name = potential_name.rstrip('의').rstrip('씨').rstrip('님')
+                    parsed["name"] = potential_name  # Keep original for backward compatibility
+                    parsed["person_name"] = clean_name  # Clean version for queries
+
+        # Extract month
         for month_kr, month_num in self.month_map.items():
             if month_kr in query:
                 parsed["month"] = month_num
                 break
 
-        # STEP 3: Extract year if mentioned
+        # Check for relative time expressions
+        if "이번달" in query or "이번 달" in query:
+            parsed["month"] = f"{self.current_month:02d}"
+            parsed["year"] = self.current_year
+        elif "지난달" in query or "지난 달" in query or "전월" in query:
+            last_month = datetime.now() - timedelta(days=30)
+            parsed["month"] = f"{last_month.month:02d}"
+            parsed["year"] = last_month.year
+        elif "작년" in query:
+            parsed["year"] = self.current_year - 1
+
+        # Extract year if mentioned
         year_pattern = r'(\d{4})년'
         year_match = re.search(year_pattern, query)
         if year_match:
@@ -163,76 +207,27 @@ class SQLGenerator:
             # Default to current year if month is specified but year is not
             parsed["year"] = self.current_year
 
-        # STEP 4: Handle comparisons (대비)
-        if "대비" in query:
-            parsed["action"] = "compare"
-            if "지난달" in query and ("이번달" in query or "이번 달" in query):
-                parsed["comparison_type"] = "mom"  # Month-over-Month
-            elif "작년" in query:
-                parsed["comparison_type"] = "yoy"  # Year-over-Year
-
-        # STEP 5: Extract names (AFTER handling time expressions)
-        # Pattern for Korean names (2-4 characters) with optional titles/particles
-        name_pattern = r'([가-힣]{2,4})(?:의|씨|님|대리|과장|부장|차장|팀장)?'
-
-        # Check for multiple names (와, 과, 및, 그리고, comma)
-        if any(separator in query for separator in ["와", "과", ",", "및", "그리고"]):
-            names = []
-            # Split by various separators
-            parts = query
-            for sep in ["와", "과", ",", "및", "그리고"]:
-                parts = parts.replace(sep, "|")
-            
-            for part in parts.split("|"):
-                part = part.strip()
-                # Find potential names in each part
-                matches = re.findall(name_pattern, part)
-                for match in matches:
-                    # Skip time-related words and month names
-                    if match not in self.time_words and match not in self.month_map and "달" not in match:
-                        clean_name = match.rstrip('의').rstrip('씨').rstrip('님')
-                        if clean_name and clean_name not in names:
-                            names.append(clean_name)
-            
-            if len(names) > 1:
-                parsed["names"] = names
-                parsed["name"] = names[0]
-                parsed["person_name"] = names[0]
-        else:
-            # Single name extraction
-            matches = re.findall(name_pattern, query)
-            for match in matches:
-                # Skip time-related words and month names
-                if match not in self.time_words and match not in self.month_map and "달" not in match:
-                    clean_name = match.rstrip('의').rstrip('씨').rstrip('님')
-                    parsed["name"] = match  # Keep original for backward compatibility
-                    parsed["person_name"] = clean_name  # Clean version
-                    break
-
-        # STEP 6: Extract team
+        # Extract team
         team_pattern = r'([가-힣]+팀|[가-힣]+부서|[가-힣]+부)'
         team_match = re.search(team_pattern, query)
         if team_match:
             parsed["team"] = team_match.group(1)
 
-        # STEP 7: Determine action type (if not already set)
-        if not parsed["action"]:
-            if "실적" in query or "매출" in query or "판매" in query:
-                parsed["action"] = "sales"
-            elif "목표" in query:
-                parsed["action"] = "target"
-            elif "달성률" in query or "달성율" in query:
-                parsed["action"] = "achievement_rate"
-            elif "평균" in query:
-                parsed["action"] = "average"
-            elif "합계" in query or "총" in query:
-                parsed["action"] = "sum"
-            elif "순위" in query or "TOP" in query.upper() or "랭킹" in query:
-                parsed["action"] = "ranking"
-            elif "추이" in query or "트렌드" in query:
-                parsed["action"] = "trend"
-            else:
-                parsed["action"] = "sales"  # Default
+        # Determine action type
+        if "실적" in query or "매출" in query or "판매" in query:
+            parsed["action"] = "sales"
+        elif "목표" in query:
+            parsed["action"] = "target"
+        elif "달성률" in query or "달성율" in query:
+            parsed["action"] = "achievement_rate"
+        elif "평균" in query:
+            parsed["action"] = "average"
+        elif "합계" in query or "총" in query:
+            parsed["action"] = "sum"
+        elif "비교" in query:
+            parsed["action"] = "compare"
+        else:
+            parsed["action"] = "sales"  # Default
 
         logger.info(f"Parsed query: {parsed}")
         return parsed
@@ -363,7 +358,6 @@ class SQLGenerator:
     def generate_sql(self, parsed: Dict[str, Any]) -> Tuple[str, str]:
         """
         Generate SQL from parsed query components (rule-based fallback)
-        FIXED: Better handling of None values in month/year
 
         Args:
             parsed: Parsed query components
@@ -378,31 +372,22 @@ class SQLGenerator:
         team = parsed.get("team")
         action = parsed.get("action", "sales")
 
-        # Construct column name for month with better None handling
-        if month and year:
+        # Construct column name for month
+        if month:
             column_name = f"{year}{month}"
-        elif month and not year:
-            column_name = f"{self.current_year}{month}"
-        elif not month and year:
-            # Use last available month for that year
-            if year == 2024:
-                column_name = "202411"  # November 2024 is the last available
-            elif year == 2023:
-                column_name = "202312"
-            else:
-                column_name = f"{year}12"
         else:
-            # Default to last available month (202411)
-            column_name = "202411"
+            # Default to current month
+            column_name = f"{self.current_year}{self.current_month:02d}"
 
         # Validate column exists in database
         if column_name not in self.available_columns:
             # Fall back to the most recent available month
             if self.available_columns:
                 column_name = self.available_columns[-1]  # Use last available month (202411)
-                logger.warning(f"Requested column {column_name} not available, using {self.available_columns[-1]}")
+                logger.warning(f"Requested column {year}{month} not available, using {column_name}")
 
         # Build SQL based on action and filters
+        # Note: Using column names directly since month columns work fine
         if action == "sales":
             if names:
                 # Multiple individuals - compare their sales
@@ -417,7 +402,7 @@ class SQLGenerator:
                 """
                 explanation = f"{', '.join(names)}의 {year}년 {int(month) if month else ''}월 실적 비교"
             elif name:
-                # Individual sales
+                # Individual sales - show all columns including the specific month
                 sql = f"""
                 SELECT *, `{column_name}` as target_month
                 FROM sales_performance
@@ -427,8 +412,9 @@ class SQLGenerator:
                 LIMIT 100
                 """
                 explanation = f"{name}의 {year}년 {int(month) if month else ''}월 실적 조회"
+
             elif team:
-                # Team sales
+                # Team sales - aggregate by team
                 sql = f"""
                 SELECT SUM(`{column_name}`) as total_sales,
                        AVG(`{column_name}`) as avg_sales,
@@ -437,10 +423,11 @@ class SQLGenerator:
                 WHERE `{column_name}` IS NOT NULL AND `{column_name}` > 0
                 """
                 explanation = f"{team}의 {year}년 {int(month) if month else ''}월 실적 조회"
+
             else:
                 # All sales for the month - top performers
                 sql = f"""
-                SELECT `담당자`, `{column_name}` as sales_amount
+                SELECT *, `{column_name}` as sales_amount
                 FROM sales_performance
                 WHERE `{column_name}` IS NOT NULL AND `{column_name}` > 0
                 ORDER BY `{column_name}` DESC
@@ -448,54 +435,46 @@ class SQLGenerator:
                 """
                 explanation = f"{year}년 {int(month) if month else ''}월 상위 10명 실적 조회"
 
-        elif action == "compare":
-            # Month-over-month or year-over-year comparison
-            if parsed.get("comparison_type") == "mom":
-                # Get previous month
-                if column_name in self.available_columns:
-                    idx = self.available_columns.index(column_name)
-                    if idx > 0:
-                        prev_column = self.available_columns[idx - 1]
-                        sql = f"""
-                        SELECT `담당자`,
-                               `{prev_column}` as last_month,
-                               `{column_name}` as this_month,
-                               (`{column_name}` - `{prev_column}`) as difference,
-                               ROUND(((`{column_name}` - `{prev_column}`) * 100.0 / `{prev_column}`), 2) as growth_rate
-                        FROM sales_performance
-                        WHERE `{prev_column}` IS NOT NULL AND `{column_name}` IS NOT NULL
-                        ORDER BY growth_rate DESC
-                        LIMIT 20
-                        """
-                        explanation = "지난달 대비 이번달 실적 비교"
-                    else:
-                        sql = f"SELECT * FROM sales_performance WHERE `{column_name}` IS NOT NULL LIMIT 10"
-                        explanation = "비교할 이전 데이터가 없습니다"
-                else:
-                    sql = f"SELECT * FROM sales_performance LIMIT 10"
-                    explanation = "기본 조회"
+        elif action == "average":
+            if team:
+                sql = f"""
+                SELECT `팀명칭`, AVG(`{column_name}`) as 평균매출액
+                FROM sales_performance
+                WHERE `팀명칭` = '{team}'
+                GROUP BY `팀명칭`
+                """
+                explanation = f"{team}의 {year}년 {int(month)}월 평균 실적"
             else:
-                sql = f"SELECT * FROM sales_performance WHERE `{column_name}` IS NOT NULL LIMIT 10"
-                explanation = f"{year}년 {int(month) if month else ''}월 실적 조회"
+                sql = f"""
+                SELECT AVG(`{column_name}`) as 전체평균매출액
+                FROM sales_performance
+                WHERE `{column_name}` IS NOT NULL AND `{column_name}` > 0
+                """
+                explanation = f"{year}년 {int(month)}월 전체 평균 실적"
 
-        elif action == "ranking":
-            # Top N ranking
-            sql = f"""
-            SELECT 
-                ROW_NUMBER() OVER (ORDER BY `{column_name}` DESC) as ranking,
-                `담당자`,
-                `{column_name}` as sales_amount
-            FROM sales_performance
-            WHERE `{column_name}` IS NOT NULL AND `{column_name}` > 0
-            ORDER BY ranking
-            LIMIT 10
-            """
-            explanation = f"{year}년 {int(month) if month else ''}월 TOP 10 순위"
+        elif action == "sum":
+            if team:
+                sql = f"""
+                SELECT `팀명칭`, SUM(`{column_name}`) as 총매출액
+                FROM sales_performance
+                WHERE `팀명칭` = '{team}'
+                GROUP BY `팀명칭`
+                """
+                explanation = f"{team}의 {year}년 {int(month)}월 총 매출"
+            else:
+                sql = f"""
+                SELECT SUM(`{column_name}`) as 전체매출액
+                FROM sales_performance
+                WHERE `{column_name}` IS NOT NULL AND `{column_name}` > 0
+                """
+                explanation = f"{year}년 {int(month)}월 전체 매출"
 
         else:
             # Default: simple query
-            sql = f"SELECT * FROM sales_performance WHERE `{column_name}` IS NOT NULL LIMIT 5"
-            explanation = "기본 조회"
+            sql = f"""
+            SELECT * FROM sales_performance LIMIT 5
+            """
+            explanation = "기본 조회 (상위 5건)"
 
         # Clean up SQL
         sql = " ".join(sql.split())
@@ -519,8 +498,8 @@ class SQLGenerator:
 
         sql_upper = sql.upper().strip()
 
-        # Must be SELECT query
-        if not sql_upper.startswith("SELECT"):
+        # Must be SELECT query (handle whitespace and newlines)
+        if not sql_upper.strip().startswith("SELECT"):
             logger.warning("Only SELECT queries are allowed")
             return False
 
@@ -551,6 +530,12 @@ class SQLGenerator:
                 logger.warning(f"Potential SQL injection pattern detected: {pattern}")
                 return False
 
+        # Additional safety checks
+        # Limit number of statements (should be single SELECT)
+        if sql.count(';') > 1:
+            logger.warning("Multiple SQL statements not allowed")
+            return False
+
         # Check for system tables access
         system_tables = ["SQLITE_MASTER", "SQLITE_SEQUENCE", "SQLITE_STAT"]
         for table in system_tables:
@@ -561,4 +546,190 @@ class SQLGenerator:
         logger.debug("SQL validation passed")
         return True
 
-    # ... (나머지 advanced SQL generation 메서드들은 그대로 유지)
+    async def generate_advanced_sql(
+        self,
+        query: str,
+        query_type: str,
+        entities: Dict[str, Any]
+    ) -> Tuple[str, str]:
+        """
+        Generate advanced SQL queries with complex features
+
+        Args:
+            query: Original user query
+            query_type: Type of query (trend, comparison, ranking, etc.)
+            entities: Extracted entities from query
+
+        Returns:
+            Tuple of (SQL query, explanation)
+        """
+        sql = ""
+        explanation = ""
+
+        if query_type == "trend":
+            # Time series trend analysis
+            sql = self._generate_trend_sql(entities)
+            explanation = "시계열 추이 분석"
+
+        elif query_type == "comparison":
+            # YoY or MoM comparison
+            sql = self._generate_comparison_sql(entities)
+            explanation = "기간 비교 분석"
+
+        elif query_type == "ranking":
+            # Top N ranking with window functions
+            sql = self._generate_ranking_sql(entities)
+            explanation = "순위 분석"
+
+        elif query_type == "aggregation":
+            # Multi-level aggregation
+            sql = self._generate_aggregation_sql(entities)
+            explanation = "다차원 집계 분석"
+
+        else:
+            # Default to LLM generation for complex queries
+            return await self.generate_sql_with_llm(query, entities)
+
+        return sql, explanation
+
+    def _generate_trend_sql(self, entities: Dict[str, Any]) -> str:
+        """Generate SQL for trend analysis"""
+        name = entities.get("name", "")
+        start_month = entities.get("start_month", "202401")
+        end_month = entities.get("end_month", "202411")
+
+        # Get months in range
+        months_in_range = [m for m in self.available_columns if start_month <= m <= end_month]
+
+        if name:
+            # Individual trend
+            columns = ", ".join([f"`{m}`" for m in months_in_range])
+            sql = f"""
+            SELECT `담당자`, {columns}
+            FROM sales_performance
+            WHERE `담당자` = '{name}'
+            """
+        else:
+            # Overall trend
+            sums = ", ".join([f"SUM(`{m}`) as `{m}`" for m in months_in_range])
+            sql = f"""
+            SELECT 'Total' as category, {sums}
+            FROM sales_performance
+            WHERE {" OR ".join([f"`{m}` IS NOT NULL" for m in months_in_range])}
+            """
+
+        return sql.strip()
+
+    def _generate_comparison_sql(self, entities: Dict[str, Any]) -> str:
+        """Generate SQL for period comparison (YoY, MoM)"""
+        comparison_type = entities.get("comparison_type", "yoy")
+        current_period = entities.get("current_period", "202403")
+
+        if comparison_type == "yoy":
+            # Year-over-year comparison
+            current_year = int(current_period[:4])
+            month = current_period[4:]
+            previous_period = f"{current_year - 1}{month}"
+
+            sql = f"""
+            SELECT
+                `담당자`,
+                `{previous_period}` as last_year,
+                `{current_period}` as this_year,
+                `{current_period}` - `{previous_period}` as difference,
+                ROUND(((`{current_period}` - `{previous_period}`) * 100.0 / `{previous_period}`), 2) as growth_rate
+            FROM sales_performance
+            WHERE `{previous_period}` IS NOT NULL AND `{current_period}` IS NOT NULL
+            ORDER BY growth_rate DESC
+            LIMIT 20
+            """
+        else:
+            # Month-over-month comparison
+            # Find previous month column
+            current_idx = self.available_columns.index(current_period)
+            if current_idx > 0:
+                previous_period = self.available_columns[current_idx - 1]
+                sql = f"""
+                SELECT
+                    `담당자`,
+                    `{previous_period}` as last_month,
+                    `{current_period}` as this_month,
+                    `{current_period}` - `{previous_period}` as difference,
+                    ROUND(((`{current_period}` - `{previous_period}`) * 100.0 / `{previous_period}`), 2) as growth_rate
+                FROM sales_performance
+                WHERE `{previous_period}` IS NOT NULL AND `{current_period}` IS NOT NULL
+                ORDER BY growth_rate DESC
+                LIMIT 20
+                """
+            else:
+                sql = f"SELECT * FROM sales_performance WHERE `{current_period}` IS NOT NULL LIMIT 10"
+
+        return sql.strip()
+
+    def _generate_ranking_sql(self, entities: Dict[str, Any]) -> str:
+        """Generate SQL for ranking queries"""
+        month = entities.get("month", "202411")
+        category = entities.get("category", "individual")  # individual, team, product
+
+        if category == "team":
+            # Team ranking
+            sql = f"""
+            WITH team_sales AS (
+                SELECT
+                    `팀명칭`,
+                    SUM(`{month}`) as total_sales,
+                    COUNT(*) as member_count,
+                    AVG(`{month}`) as avg_sales
+                FROM sales_performance
+                WHERE `{month}` IS NOT NULL
+                GROUP BY `팀명칭`
+            )
+            SELECT
+                ROW_NUMBER() OVER (ORDER BY total_sales DESC) as ranking,
+                `팀명칭`,
+                total_sales,
+                member_count,
+                ROUND(avg_sales, 0) as avg_sales
+            FROM team_sales
+            ORDER BY ranking
+            """
+        else:
+            # Individual ranking
+            sql = f"""
+            SELECT
+                ROW_NUMBER() OVER (ORDER BY `{month}` DESC) as ranking,
+                `담당자`,
+                `{month}` as sales_amount
+            FROM sales_performance
+            WHERE `{month}` IS NOT NULL AND `{month}` > 0
+            ORDER BY ranking
+            LIMIT 30
+            """
+
+        return sql.strip()
+
+    def _generate_aggregation_sql(self, entities: Dict[str, Any]) -> str:
+        """Generate SQL for multi-level aggregation"""
+        month = entities.get("month", "202411")
+        group_by = entities.get("group_by", ["팀명칭"])
+
+        if isinstance(group_by, str):
+            group_by = [group_by]
+
+        group_columns = ", ".join([f"`{col}`" for col in group_by])
+
+        sql = f"""
+        SELECT
+            {group_columns},
+            COUNT(*) as count,
+            SUM(`{month}`) as total_sales,
+            AVG(`{month}`) as avg_sales,
+            MAX(`{month}`) as max_sales,
+            MIN(`{month}`) as min_sales
+        FROM sales_performance
+        WHERE `{month}` IS NOT NULL
+        GROUP BY {group_columns}
+        ORDER BY total_sales DESC
+        """
+
+        return sql.strip()

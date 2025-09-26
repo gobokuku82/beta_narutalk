@@ -1,237 +1,43 @@
 {
-  "relationships": [
+  "joins": [
     {
-      "name": "직원-판매실적",
-      "type": "one-to-many",
-      "description": "직원 한 명이 여러 판매 실적을 가짐",
-      "primary": {
-        "database": "hr_data",
-        "table": "인사자료",
-        "column": "사번"
-      },
-      "foreign": {
-        "database": "sales_performance_db",
-        "table": "sales_performance",
-        "column": "사번"
-      },
-      "join_condition": "인사자료.사번 = sales_performance.사번",
-      "use_cases": [
-        "직원별 판매 실적 조회",
-        "부서별 실적 집계",
-        "직급별 성과 분석"
-      ]
+      "table1": "sales_performance",
+      "table2": "인사자료",
+      "on": "sales_performance.사번 = 인사자료.사번",
+      "type": "INNER",
+      "description": "직원 정보와 판매 실적 연결"
     },
     {
-      "name": "직원-거래처자료",
-      "type": "one-to-many",
-      "description": "직원 한 명이 여러 거래처를 담당",
-      "primary": {
-        "database": "hr_data",
-        "table": "인사자료",
-        "column": "성명"
-      },
-      "foreign": {
-        "database": "clients_db",
-        "table": "거래처자료",
-        "column": "담당자"
-      },
-      "join_condition": "인사자료.성명 = 거래처자료.담당자",
-      "use_cases": [
-        "담당자별 거래처 현황",
-        "직원별 거래처 실적",
-        "담당자 변경 이력"
-      ]
+      "table1": "sales_performance",
+      "table2": "거래처자료",
+      "on": "sales_performance.거래처ID = 거래처자료.거래처ID",
+      "type": "LEFT",
+      "description": "거래처 정보와 판매 실적 연결"
     },
     {
-      "name": "거래처정보-거래처자료",
-      "type": "one-to-many",
-      "description": "거래처 기본정보와 월별 실적 데이터 연결",
-      "primary": {
-        "database": "clients_info",
-        "table": "거래처정보",
-        "column": "ID"
-      },
-      "foreign": {
-        "database": "clients_db",
-        "table": "거래처자료",
-        "column": "거래처ID"
-      },
-      "join_condition": "거래처정보.ID = 거래처자료.거래처ID",
-      "use_cases": [
-        "거래처별 상세 실적 조회",
-        "지역별 매출 분석",
-        "거래처 연락처와 실적 매칭"
-      ]
-    },
-    {
-      "name": "거래처정보-판매실적",
-      "type": "one-to-many",
-      "description": "거래처와 판매 실적 연결",
-      "primary": {
-        "database": "clients_info",
-        "table": "거래처정보",
-        "column": "ID"
-      },
-      "foreign": {
-        "database": "sales_performance_db",
-        "table": "sales_performance",
-        "column": "거래처ID"
-      },
-      "join_condition": "거래처정보.ID = sales_performance.거래처ID",
-      "use_cases": [
-        "거래처별 제품 판매 현황",
-        "지역별 제품 선호도 분석",
-        "거래처 규모별 판매 전략"
-      ]
-    },
-    {
-      "name": "지점-직원",
-      "type": "one-to-many",
-      "description": "지점에 여러 직원이 소속",
-      "primary": {
-        "database": "hr_data",
-        "table": "지점연락처",
-        "column": "지점"
-      },
-      "foreign": {
-        "database": "hr_data",
-        "table": "인사자료",
-        "column": "지점"
-      },
-      "join_condition": "지점연락처.지점 = 인사자료.지점",
-      "use_cases": [
-        "지점별 인원 현황",
-        "지점 연락처 조회",
-        "지점별 실적 집계"
-      ]
-    },
-    {
-      "name": "지점-판매목표",
-      "type": "one-to-one",
-      "description": "지점별 판매 목표 설정",
-      "primary": {
-        "database": "hr_data",
-        "table": "인사자료",
-        "column": "지점"
-      },
-      "foreign": {
-        "database": "sales_target_db",
-        "table": "지점별목표",
-        "column": "지점"
-      },
-      "join_condition": "인사자료.지점 = 지점별목표.지점",
-      "use_cases": [
-        "지점별 목표 대비 실적",
-        "목표 달성률 계산",
-        "지점 성과 평가"
-      ]
-    },
-    {
-      "name": "담당자-판매목표",
-      "type": "many-to-one",
-      "description": "여러 직원의 실적이 지점 목표에 기여",
-      "primary": {
-        "database": "sales_performance_db",
-        "table": "sales_performance",
-        "column": "담당자"
-      },
-      "foreign": {
-        "database": "sales_target_db",
-        "table": "지점별목표",
-        "column": "담당자"
-      },
-      "join_condition": "sales_performance.담당자 = 지점별목표.담당자",
-      "use_cases": [
-        "개인별 목표 기여도",
-        "팀 목표 달성 현황",
-        "성과 평가"
-      ]
+      "table1": "인사자료",
+      "table2": "지점별목표",
+      "on": "인사자료.지점 = 지점별목표.지점",
+      "type": "LEFT",
+      "description": "지점별 목표와 직원 정보 연결"
     }
   ],
-  "complex_joins": [
+  "foreign_keys": [
     {
-      "name": "직원-거래처-실적 통합 조회",
-      "description": "직원 정보, 담당 거래처, 판매 실적을 한번에 조회",
-      "tables": [
-        "인사자료",
-        "거래처정보",
-        "거래처자료",
-        "sales_performance"
-      ],
-      "join_sequence": [
-        "인사자료.사번 = sales_performance.사번",
-        "sales_performance.거래처ID = 거래처정보.ID",
-        "거래처정보.ID = 거래처자료.거래처ID"
-      ],
-      "example_query": "특정 직원의 모든 거래처 실적을 지역별로 분석"
-    },
-    {
-      "name": "지점별 종합 실적 분석",
-      "description": "지점 소속 직원들의 전체 실적과 목표 대비 현황",
-      "tables": [
-        "지점연락처",
-        "인사자료",
-        "sales_performance",
-        "지점별목표"
-      ],
-      "join_sequence": [
-        "지점연락처.지점 = 인사자료.지점",
-        "인사자료.사번 = sales_performance.사번",
-        "인사자료.지점 = 지점별목표.지점"
-      ],
-      "example_query": "지점별 월간 실적 합계와 목표 달성률 계산"
-    },
-    {
-      "name": "거래처 담당자 변경 이력",
-      "description": "거래처의 담당자 변경과 그에 따른 실적 변화 추적",
-      "tables": [
-        "거래처정보",
-        "거래처자료",
-        "인사자료"
-      ],
-      "join_sequence": [
-        "거래처정보.ID = 거래처자료.거래처ID",
-        "거래처자료.담당자 = 인사자료.성명"
-      ],
-      "example_query": "특정 거래처의 월별 담당자와 매출 추이"
-    }
-  ],
-  "join_optimization_tips": {
-    "index_recommendations": [
-      {
-        "table": "sales_performance",
-        "columns": ["사번", "거래처ID"],
-        "reason": "자주 사용되는 조인 키"
-      },
-      {
-        "table": "거래처자료",
-        "columns": ["거래처ID", "담당자"],
-        "reason": "거래처 조회 및 담당자 매칭"
-      },
-      {
+      "table": "sales_performance",
+      "column": "사번",
+      "references": {
         "table": "인사자료",
-        "columns": ["사번", "성명", "지점"],
-        "reason": "직원 검색 및 조직별 집계"
+        "column": "사번"
       }
-    ],
-    "performance_considerations": [
-      "월별 컬럼(202212~202411)은 가능한 WHERE 절에서 필터링",
-      "대량 조인 시 서브쿼리나 WITH 절 활용",
-      "집계 함수 사용 시 GROUP BY 최적화"
-    ]
-  },
-  "data_integrity_rules": [
-    {
-      "rule": "참조 무결성",
-      "description": "sales_performance.사번은 반드시 인사자료.사번에 존재해야 함"
     },
     {
-      "rule": "거래처 ID 일관성",
-      "description": "거래처ID는 모든 관련 테이블에서 동일한 형식 사용"
-    },
-    {
-      "rule": "담당자명 일치",
-      "description": "담당자 이름은 인사자료의 성명과 정확히 일치해야 함"
+      "table": "sales_performance",
+      "column": "거래처ID",
+      "references": {
+        "table": "거래처정보",
+        "column": "ID"
+      }
     }
   ]
 }

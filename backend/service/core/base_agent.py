@@ -13,7 +13,7 @@ import asyncio
 from pathlib import Path
 from datetime import datetime
 
-from .context import AgentContext, create_context
+from .context import AgentContext, create_agent_context
 
 
 logger = logging.getLogger(__name__)
@@ -113,7 +113,7 @@ class BaseAgent(ABC):
         Returns:
             AgentContext instance
         """
-        return create_context(
+        return create_agent_context(
             user_id=input_data.get("user_id", "default"),
             session_id=input_data.get("session_id", "default"),
             context_type="agent",
