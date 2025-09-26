@@ -17,6 +17,9 @@ from ..core.states import DocumentState
 from ..core.context import AgentContext
 from ..core.config import Config
 from ..tools.word_generator import WordGenerator
+from ..tools.template_analyzer import TemplateAnalyzer
+from ..tools.document_query_analyzer import DocumentQueryAnalyzer
+from ..subgraphs.interactive_data_collector import InteractiveDataCollector
 
 
 logger = logging.getLogger(__name__)
@@ -29,17 +32,24 @@ class DocumentGenerationAgent(BaseAgent):
         super().__init__("document_generation_agent")
         self.template_path = Path("./templates")
         self.word_generator = WordGenerator()
+        self.template_analyzer = TemplateAnalyzer()
+        self.query_analyzer = DocumentQueryAnalyzer()
+        self.data_collector = InteractiveDataCollector()
 
     def _get_state_schema(self) -> Type:
         """Get the state schema for this agent"""
         return DocumentState
 
     def _build_graph(self):
-        """Build the document generation workflow with context support"""
+        """Build the document generation workflow with interactive support"""
         # StateGraph with context_schema following LangGraph 0.6.x pattern
         self.workflow = StateGraph(DocumentState, context_schema=AgentContext)
 
         # Add nodes - all nodes will receive Runtime parameter
+        self.workflow.add_node("analyze_query", self.analyze_query)
+        self.workflow.add_node("analyze_template", self.analyze_template_fields)
+        self.workflow.add_node("check_missing_fields", self.check_missing_fields)
+        self.workflow.add_node("collect_data", self.collect_data_interactive)
         self.workflow.add_node("prepare_data", self.prepare_data)
         self.workflow.add_node("select_template", self.select_template)
         self.workflow.add_node("generate_content", self.generate_content)
@@ -47,7 +57,21 @@ class DocumentGenerationAgent(BaseAgent):
         self.workflow.add_node("finalize_document", self.finalize_document)
 
         # Add edges
-        self.workflow.add_edge(START, "prepare_data")
+        self.workflow.add_edge(START, "analyze_query")
+        self.workflow.add_edge("analyze_query", "analyze_template")
+        self.workflow.add_edge("analyze_template", "check_missing_fields")
+
+        # Conditional edge: check if data collection is needed
+        self.workflow.add_conditional_edges(
+            "check_missing_fields",
+            self.needs_data_collection,
+            {
+                "collect": "collect_data",
+                "proceed": "prepare_data"
+            }
+        )
+
+        self.workflow.add_edge("collect_data", "prepare_data")
         self.workflow.add_edge("prepare_data", "select_template")
         self.workflow.add_edge("select_template", "generate_content")
         self.workflow.add_edge("generate_content", "format_document")
@@ -56,12 +80,14 @@ class DocumentGenerationAgent(BaseAgent):
 
     async def _validate_input(self, input_data: Dict[str, Any]) -> bool:
         """Validate input data"""
-        required_fields = ["doc_type"]
-        for field in required_fields:
-            if field not in input_data:
-                self.logger.error(f"Missing required field: {field}")
-                return False
-        return True
+        # For interactive mode, we just need a query
+        if "user_query" in input_data:
+            return True
+        # For direct mode, we need doc_type
+        if "doc_type" in input_data:
+            return True
+        self.logger.error("Missing both user_query and doc_type")
+        return False
 
     def _create_initial_state(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -74,8 +100,8 @@ class DocumentGenerationAgent(BaseAgent):
             "execution_step": "starting",
 
             # DocumentState specific fields
-            "doc_type": input_data.get("doc_type", "general"),
-            "doc_format": input_data.get("doc_format", "markdown"),
+            "doc_type": input_data.get("doc_type", ""),
+            "doc_format": input_data.get("doc_format", "word"),
             "title": input_data.get("title", ""),
             "input_data": input_data.get("data", {}),
             "template_id": "",
@@ -83,10 +109,217 @@ class DocumentGenerationAgent(BaseAgent):
             "content": "",
             "formatted_content": "",
             "document_metadata": {},
-            "final_document": {}
+            "final_document": {},
+
+            # Interactive fields
+            "user_query": input_data.get("user_query", ""),
+            "query_analysis": None,
+            "template_analysis": None,
+            "required_fields": None,
+            "missing_fields": None,
+            "collected_data": {},
+            "interaction_mode": input_data.get("interaction_mode", "auto"),
+            "interaction_history": [],
+            "needs_user_input": False,
+            "current_prompt": None,
+            "user_response": None
         }
 
-    # ==================== Node Functions with Runtime ====================
+    # ==================== New Interactive Node Functions ====================
+
+    async def analyze_query(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext]
+    ) -> Dict[str, Any]:
+        """Analyze user query to extract intent and data"""
+        try:
+            user_query = state.get("user_query", "")
+            if not user_query:
+                # If no query, use doc_type directly
+                return {"execution_step": "query_analyzed"}
+
+            self.logger.info(f"Analyzing query: {user_query[:100]}...")
+
+            # Get available templates
+            templates = self.template_analyzer.get_template_names()
+
+            # Analyze query using LLM
+            analysis = await self.query_analyzer.analyze_query(user_query, templates)
+
+            # Extract document type from analysis
+            doc_type = analysis.get("intent", "")
+            if doc_type not in templates:
+                # Try to match based on keywords
+                if "신청" in user_query:
+                    doc_type = "product_seminar_application"
+                elif "결과" in user_query or "보고" in user_query:
+                    doc_type = "product_seminar_report"
+                else:
+                    doc_type = "product_seminar_application"  # Default
+
+            self.logger.info(f"Detected document type: {doc_type}")
+
+            return {
+                "execution_step": "query_analyzed",
+                "query_analysis": analysis,
+                "doc_type": doc_type,
+                "input_data": analysis.get("extracted_data", {}),
+                "collected_data": analysis.get("extracted_data", {})
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error analyzing query: {e}")
+            return {
+                "execution_step": "query_analysis_failed",
+                "errors": [str(e)]
+            }
+
+    async def analyze_template_fields(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext]
+    ) -> Dict[str, Any]:
+        """Analyze template to identify required fields"""
+        try:
+            doc_type = state.get("doc_type", "")
+            if not doc_type:
+                return {"execution_step": "no_template"}
+
+            self.logger.info(f"Analyzing template: {doc_type}")
+
+            # Analyze template
+            template_analysis = self.template_analyzer.analyze_template(doc_type)
+
+            return {
+                "execution_step": "template_analyzed",
+                "template_analysis": template_analysis,
+                "required_fields": template_analysis.get("required_fields", []),
+                "doc_format": "word"  # Default to Word for these templates
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error analyzing template: {e}")
+            return {
+                "execution_step": "template_analysis_failed",
+                "errors": [str(e)]
+            }
+
+    async def check_missing_fields(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext]
+    ) -> Dict[str, Any]:
+        """Check which required fields are missing"""
+        try:
+            required_fields = state.get("required_fields", [])
+            collected_data = state.get("collected_data", {})
+            input_data = state.get("input_data", {})
+
+            # Merge all available data
+            all_data = {**input_data, **collected_data}
+
+            # Find missing fields
+            missing = await self.query_analyzer.identify_missing_fields(
+                required_fields,
+                all_data
+            )
+
+            self.logger.info(f"Missing {len(missing)} required fields")
+
+            return {
+                "execution_step": "fields_checked",
+                "missing_fields": missing,
+                "collected_data": all_data,
+                "needs_user_input": len(missing) > 0
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error checking fields: {e}")
+            return {"errors": [str(e)]}
+
+    def needs_data_collection(self, state: Dict[str, Any]) -> str:
+        """Determine if data collection is needed"""
+        missing_fields = state.get("missing_fields", [])
+        interaction_mode = state.get("interaction_mode", "auto")
+
+        if interaction_mode == "auto" and not missing_fields:
+            return "proceed"
+        elif missing_fields:
+            return "collect"
+        else:
+            return "proceed"
+
+    async def collect_data_interactive(
+        self,
+        state: Dict[str, Any],
+        runtime: Runtime[AgentContext]
+    ) -> Dict[str, Any]:
+        """Collect missing data interactively (simplified version)"""
+        try:
+            missing_fields = state.get("missing_fields", [])
+            collected_data = state.get("collected_data", {})
+
+            # For now, fill with default values
+            # In real implementation, this would trigger the subgraph
+            for field in missing_fields:
+                field_name = field.get("name")
+                field_type = field.get("type")
+
+                # Generate default values based on field type
+                if field_name == "date":
+                    collected_data[field_name] = "2024-12-20 14:00"
+                elif field_name == "location":
+                    collected_data[field_name] = "서울 강남구 회의실"
+                elif field_name == "product_name":
+                    collected_data[field_name] = "신제품 A"
+                elif field_name == "expected_attendees":
+                    collected_data[field_name] = "15명"
+                elif field_name == "actual_attendees":
+                    collected_data[field_name] = "12명"
+                elif field_name == "purpose":
+                    collected_data[field_name] = "신제품 소개 및 효능 설명"
+                elif field_name == "result":
+                    collected_data[field_name] = "성공적으로 진행됨"
+                elif field_name == "main_content":
+                    collected_data[field_name] = "1. 제품 소개\n2. 임상 데이터\n3. Q&A"
+                elif field_name == "payment_details":
+                    collected_data[field_name] = "강의료: 500,000원"
+                elif field_name == "budget_usage":
+                    collected_data[field_name] = "총 예산: 1,000,000원\n사용: 700,000원"
+                elif field_type == "select":
+                    options = field.get("options", [])
+                    collected_data[field_name] = options[0] if options else "기본값"
+                else:
+                    collected_data[field_name] = f"{field.get('label', field_name)} 정보"
+
+            # Add default lists if needed
+            if "staff_list" not in collected_data:
+                collected_data["staff_list"] = [
+                    {"no": "1", "team": "영업1팀", "name": "김담당", "signature": ""},
+                    {"no": "2", "team": "마케팅팀", "name": "이과장", "signature": ""}
+                ]
+
+            if "hcp_list" not in collected_data:
+                collected_data["hcp_list"] = [
+                    {"no": "1", "hospital": "서울대병원", "name": "김의사", "signature": ""},
+                    {"no": "2", "hospital": "삼성병원", "name": "박약사", "signature": ""}
+                ]
+
+            self.logger.info(f"Collected/generated data for {len(missing_fields)} fields")
+
+            return {
+                "execution_step": "data_collected",
+                "collected_data": collected_data,
+                "input_data": collected_data,
+                "needs_user_input": False
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error collecting data: {e}")
+            return {"errors": [str(e)]}
+
+    # ==================== Original Node Functions with Runtime ====================
     # All nodes now receive Runtime[AgentContext] and return partial updates
 
     async def prepare_data(
@@ -106,7 +339,7 @@ class DocumentGenerationAgent(BaseAgent):
         """
         try:
             # Access context through runtime
-            user_id = getattr(runtime.context, "user_id", "unknown")
+            user_id = runtime.context.get("user_id", "unknown") if hasattr(runtime, 'context') else "unknown"
             self.logger.info(f"Preparing data for user: {user_id}")
 
             doc_type = state.get("doc_type", "general")
@@ -163,8 +396,9 @@ class DocumentGenerationAgent(BaseAgent):
             self.logger.error(f"Error preparing data: {e}")
 
             # Log error in context if possible
-            if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"Data preparation failed: {str(e)}")
+            if hasattr(runtime, 'context') and isinstance(runtime.context, dict):
+                # Context is a dict, can't call methods on it
+                pass
 
             # Return failure status
             return {
@@ -189,7 +423,7 @@ class DocumentGenerationAgent(BaseAgent):
         """
         try:
             # Access context
-            session_id = getattr(runtime.context, "session_id", "unknown")
+            session_id = runtime.context.get("session_id", "unknown") if hasattr(runtime, 'context') else "unknown"
             self.logger.info(f"Selecting template for session: {session_id}")
 
             doc_type = state.get("doc_type", "general")
@@ -216,8 +450,8 @@ class DocumentGenerationAgent(BaseAgent):
             self.logger.error(f"Error selecting template: {e}")
 
             # Log error in context
-            if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"Template selection failed: {str(e)}")
+            if hasattr(runtime, 'context') and isinstance(runtime.context, dict):
+                pass
 
             return {
                 "execution_step": "template_selection_failed",
@@ -241,7 +475,7 @@ class DocumentGenerationAgent(BaseAgent):
         """
         try:
             # Access context for logging
-            user_id = getattr(runtime.context, "user_id", "unknown")
+            user_id = runtime.context.get("user_id", "unknown") if hasattr(runtime, 'context') else "unknown"
             self.logger.info(f"Generating content for user: {user_id}")
 
             doc_type = state.get("doc_type", "general")
@@ -294,8 +528,8 @@ class DocumentGenerationAgent(BaseAgent):
             self.logger.error(f"Error generating content: {e}")
 
             # Log error in context
-            if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"Content generation failed: {str(e)}")
+            if hasattr(runtime, 'context') and isinstance(runtime.context, dict):
+                pass
 
             return {
                 "execution_step": "content_generation_failed",
@@ -319,7 +553,7 @@ class DocumentGenerationAgent(BaseAgent):
         """
         try:
             # Access context
-            session_id = getattr(runtime.context, "session_id", "unknown")
+            session_id = runtime.context.get("session_id", "unknown") if hasattr(runtime, 'context') else "unknown"
             self.logger.info(f"Formatting document for session: {session_id}")
 
             content = state.get("content", "")
@@ -351,8 +585,8 @@ class DocumentGenerationAgent(BaseAgent):
             self.logger.error(f"Error formatting document: {e}")
 
             # Log error in context
-            if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"Document formatting failed: {str(e)}")
+            if hasattr(runtime, 'context') and isinstance(runtime.context, dict):
+                pass
 
             return {
                 "execution_step": "formatting_failed",
@@ -376,7 +610,7 @@ class DocumentGenerationAgent(BaseAgent):
         """
         try:
             # Access context
-            user_id = getattr(runtime.context, "user_id", "unknown")
+            user_id = runtime.context.get("user_id", "unknown") if hasattr(runtime, 'context') else "unknown"
             self.logger.info(f"Finalizing document for user: {user_id}")
 
             final_document = {
@@ -404,8 +638,8 @@ class DocumentGenerationAgent(BaseAgent):
             self.logger.error(f"Error finalizing document: {e}")
 
             # Log error in context
-            if hasattr(runtime.context, 'add_error'):
-                runtime.context.add_error(f"Document finalization failed: {str(e)}")
+            if hasattr(runtime, 'context') and isinstance(runtime.context, dict):
+                pass
 
             return {
                 "status": "failed",

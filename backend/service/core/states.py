@@ -157,6 +157,19 @@ class DocumentState(BaseState):
     document_metadata: Dict[str, Any]  # Document metadata
     final_document: Dict[str, Any]  # Final document with all details
 
+    # Interactive processing fields
+    user_query: Optional[str]  # Original user query
+    query_analysis: Optional[Dict[str, Any]]  # Analysis result from LLM
+    template_analysis: Optional[Dict[str, Any]]  # Template field analysis
+    required_fields: Optional[List[Dict[str, Any]]]  # Required field definitions
+    missing_fields: Optional[List[Dict[str, Any]]]  # Missing fields to collect
+    collected_data: Annotated[Dict[str, Any], merge_dicts]  # Interactively collected data
+    interaction_mode: Optional[str]  # interactive, batch, auto
+    interaction_history: Annotated[List[Dict[str, Any]], add]  # History of interactions
+    needs_user_input: bool  # Flag indicating if user input is needed
+    current_prompt: Optional[str]  # Current prompt for user
+    user_response: Optional[str]  # Latest user response
+
 
 # ============ State Factory Functions ============
 

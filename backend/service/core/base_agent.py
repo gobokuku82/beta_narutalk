@@ -191,8 +191,8 @@ class BaseAgent(ABC):
             config.setdefault("recursion_limit", 25)
             config.setdefault("configurable", {})
 
-            # Use context's session_id for thread_id
-            config["configurable"]["thread_id"] = context.session_id
+            # Use context's session_id for thread_id (context is a dict)
+            config["configurable"]["thread_id"] = context.get("session_id", "default")
 
             # Compile workflow with checkpointer
             if self.workflow is None:
@@ -216,7 +216,7 @@ class BaseAgent(ABC):
                         app.ainvoke(
                             initial_state,
                             config=config,
-                            context=context.model_dump() if hasattr(context, 'model_dump') else context.__dict__
+                            context=context  # context is already a dict
                         ),
                         timeout=timeout
                     )
@@ -224,17 +224,17 @@ class BaseAgent(ABC):
                     self.logger.info(f"{self.agent_name} execution completed successfully")
 
                     # Check if there were any errors logged in context
-                    if hasattr(context, 'error_logs') and context.error_logs:
-                        self.logger.warning(f"Execution completed with errors: {context.error_logs}")
+                    if isinstance(context, dict) and "error_logs" in context:
+                        self.logger.warning(f"Execution completed with errors: {context['error_logs']}")
 
                     return {
                         "status": "success",
                         "data": result,
                         "agent": self.agent_name,
                         "context": {
-                            "user_id": context.user_id,
-                            "session_id": context.session_id,
-                            "request_id": context.request_id
+                            "user_id": context.get("user_id", "unknown"),
+                            "session_id": context.get("session_id", "unknown"),
+                            "request_id": context.get("request_id", "unknown")
                         }
                     }
 
@@ -242,8 +242,8 @@ class BaseAgent(ABC):
                     self.logger.error(f"{self.agent_name} execution timed out after {timeout}s")
 
                     # Log timeout in context if possible
-                    if hasattr(context, 'add_error'):
-                        context.add_error(f"Execution timed out after {timeout} seconds")
+                    if isinstance(context, dict) and "add_error" in context:
+                        context["add_error"](f"Execution timed out after {timeout} seconds")
 
                     return {
                         "status": "error",
