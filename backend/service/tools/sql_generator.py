@@ -129,17 +129,57 @@ class SQLGenerator:
             "person_name": None  # Clean name without particles
         }
 
-        # Extract name (assuming Korean names are 2-4 characters)
-        name_pattern = r'([가-힣]{2,4})(?:의|씨|님|대리|과장|부장|차장|팀장)?(?:\s|$)'
-        name_match = re.search(name_pattern, query)
-        if name_match:
-            potential_name = name_match.group(1)
-            # Check if it's not a month name or other keyword
-            if potential_name not in self.month_map and "월" not in potential_name:
-                # Clean name - remove particles
-                clean_name = potential_name.rstrip('의').rstrip('씨').rstrip('님')
-                parsed["name"] = potential_name  # Keep original for backward compatibility
-                parsed["person_name"] = clean_name  # Clean version for queries
+        # Extract names (handle multiple names separated by 와, 과, 및, 그리고)
+        # Pattern to extract Korean names (2-4 characters) with optional titles/particles
+        name_pattern = r'([가-힣]{2,4})(?:의|씨|님|대리|과장|부장|차장|팀장)?'
+
+        # First, find names connected by conjunctions
+        # Look for patterns like "윤수아와 최수아", "김영희과 이철수", "박지민, 김민수"
+        conjunction_patterns = [
+            r'([가-힣]{2,4})와\s*([가-힣]{2,4})',  # 와 conjunction
+            r'([가-힣]{2,4})과\s*([가-힣]{2,4})',  # 과 conjunction
+            r'([가-힣]{2,4}),\s*([가-힣]{2,4})',   # Comma separated
+        ]
+
+        names = []
+        for pattern in conjunction_patterns:
+            matches = re.findall(pattern, query)
+            if matches:
+                # Flatten the tuple results and add to names
+                for match_tuple in matches:
+                    for name in match_tuple:
+                        # Clean name - remove particles
+                        clean_name = name.rstrip('의').rstrip('과').rstrip('와').rstrip('씨').rstrip('님')
+                        if clean_name not in self.month_map and "월" not in clean_name and clean_name not in names:
+                            names.append(clean_name)
+
+        # Also check for "그리고" pattern
+        if "그리고" in query:
+            parts = query.split("그리고")
+            for part in parts:
+                name_match = re.search(r'([가-힣]{2,4})', part.strip())
+                if name_match:
+                    potential_name = name_match.group(1)
+                    # Clean name - remove particles
+                    clean_name = potential_name.rstrip('의').rstrip('과').rstrip('와').rstrip('씨').rstrip('님')
+                    if clean_name not in self.month_map and "월" not in clean_name and clean_name not in names:
+                        names.append(clean_name)
+
+        if len(names) > 1:
+            parsed["names"] = names  # Multiple names
+            parsed["name"] = names[0]  # Keep first for backward compatibility
+            parsed["person_name"] = names[0]
+        else:
+            # Single name extraction (original logic)
+            name_match = re.search(name_pattern, query)
+            if name_match:
+                potential_name = name_match.group(1)
+                # Check if it's not a month name or other keyword
+                if potential_name not in self.month_map and "월" not in potential_name:
+                    # Clean name - remove particles
+                    clean_name = potential_name.rstrip('의').rstrip('씨').rstrip('님')
+                    parsed["name"] = potential_name  # Keep original for backward compatibility
+                    parsed["person_name"] = clean_name  # Clean version for queries
 
         # Extract month
         for month_kr, month_num in self.month_map.items():
@@ -214,7 +254,11 @@ class SQLGenerator:
             prompt = self.schema_context.format_for_prompt(query, intent)
 
             # Add specific requirements based on parsed components
-            if parsed.get("name"):
+            if parsed.get("names"):
+                # Multiple names to query
+                names_str = ", ".join(f"'{name}'" for name in parsed["names"])
+                prompt += f"\n특정 직원 조회: {', '.join(parsed['names'])} (WHERE 담당자 IN ({names_str}))"
+            elif parsed.get("name"):
                 prompt += f"\n특정 직원 조회: {parsed['name']}"
             if parsed.get("month") and parsed.get("year"):
                 month_col = f"{parsed['year']}{parsed['month']}"
@@ -321,7 +365,8 @@ class SQLGenerator:
         Returns:
             Tuple of (SQL query, explanation)
         """
-        name = parsed.get("name")
+        names = parsed.get("names")  # Multiple names
+        name = parsed.get("name") if not names else None  # Single name
         month = parsed.get("month")
         year = parsed.get("year", self.current_year)
         team = parsed.get("team")
@@ -344,12 +389,26 @@ class SQLGenerator:
         # Build SQL based on action and filters
         # Note: Using column names directly since month columns work fine
         if action == "sales":
-            if name:
+            if names:
+                # Multiple individuals - compare their sales
+                names_str = ", ".join(f"'{n}'" for n in names)
+                sql = f"""
+                SELECT `담당자`, `{column_name}` as sales_amount
+                FROM sales_performance
+                WHERE `담당자` IN ({names_str})
+                  AND `{column_name}` IS NOT NULL
+                  AND `{column_name}` > 0
+                ORDER BY `{column_name}` DESC
+                """
+                explanation = f"{', '.join(names)}의 {year}년 {int(month) if month else ''}월 실적 비교"
+            elif name:
                 # Individual sales - show all columns including the specific month
                 sql = f"""
                 SELECT *, `{column_name}` as target_month
                 FROM sales_performance
-                WHERE `{column_name}` IS NOT NULL AND `{column_name}` > 0
+                WHERE `담당자` = '{name}'
+                  AND `{column_name}` IS NOT NULL
+                  AND `{column_name}` > 0
                 LIMIT 100
                 """
                 explanation = f"{name}의 {year}년 {int(month) if month else ''}월 실적 조회"
@@ -439,8 +498,8 @@ class SQLGenerator:
 
         sql_upper = sql.upper().strip()
 
-        # Must be SELECT query
-        if not sql_upper.startswith("SELECT"):
+        # Must be SELECT query (handle whitespace and newlines)
+        if not sql_upper.strip().startswith("SELECT"):
             logger.warning("Only SELECT queries are allowed")
             return False
 
