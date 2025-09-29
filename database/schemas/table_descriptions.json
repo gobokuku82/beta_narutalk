@@ -1,6 +1,7 @@
 {
   "sales_performance": {
     "description": "월별 판매 실적 데이터",
+    "database": "sales_performance_db.db",
     "columns": {
       "사번": "직원 사번",
       "담당자": "담당자 이름",
@@ -11,6 +12,7 @@
   },
   "지점별목표": {
     "description": "지점별 담당자별 월별 판매 목표",
+    "database": "sales_target_db.db",
     "columns": {
       "지점": "소속 지점/팀",
       "담당자": "담당자 이름",
@@ -19,6 +21,7 @@
   },
   "거래처자료": {
     "description": "거래처별 월간 영업 활동 및 성과",
+    "database": "clients_db.db",
     "columns": {
       "거래처ID": "거래처 식별자",
       "월": "년월 (YYYYMM)",
@@ -31,6 +34,7 @@
   },
   "거래처정보": {
     "description": "거래처(병원/의원) 기본 정보",
+    "database": "clients_db.db",
     "columns": {
       "ID": "거래처 고유 식별자",
       "원장명": "병원 원장 이름",
@@ -40,6 +44,7 @@
   },
   "인사자료": {
     "description": "직원 정보",
+    "database": "hr_data.db",
     "columns": {
       "사번": "직원 사번",
       "성명": "직원 이름",
@@ -50,6 +55,14 @@
       "연락처": "연락처",
       "기본급(₩)": "기본급",
       "성과급(₩)": "성과급"
+    }
+  },
+  "지점연락처": {
+    "description": "지점 연락처 정보",
+    "database": "hr_data.db",
+    "columns": {
+      "지점": "지점명",
+      "연락처": "지점 전화번호"
     }
   }
 }
