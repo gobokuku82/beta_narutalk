@@ -1,0 +1,46 @@
+2025-09-29 14:10:45,127 - backend.service.agents.sales_analytics_agent - INFO - LLM planning enabled with model: gpt-4o
+2025-09-29 14:10:45,127 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:10:45,127 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:10:45,127 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:10:45,127 - backend.service.tools.text2sql_tool - INFO - Text2SQL Tool initialized with LLM support
+2025-09-29 14:10:45,140 - backend.service.agents.sales_analytics_agent - INFO - Workflow graph built
+2025-09-29 14:10:45,140 - backend.service.agents.sales_analytics_agent - INFO - Initialized sales_analytics_agent
+2025-09-29 14:10:45,140 - backend.service.agents.sales_analytics_agent - INFO - LLM planning enabled with model: gpt-4o
+2025-09-29 14:10:45,140 - backend.service.agents.sales_analytics_agent - INFO - Workflow graph built
+2025-09-29 14:10:45,140 - backend.service.agents.sales_analytics_agent - INFO - Initialized sales_analytics_agent
+2025-09-29 14:10:45,156 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 테스트 쿼리
+2025-09-29 14:10:47,435 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:10:47,443 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:10:47,443 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 테스트 쿼리...
+2025-09-29 14:10:47,444 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '테스트 쿼리', 'name': '테스트', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '테스트', 'comparison_type': None}
+2025-09-29 14:10:50,948 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:10:50,948 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202403` as sales 
+FROM sales_performance 
+WHERE `사번` = '특정사번' AND `202403` IS NOT NULL;
+2025-09-29 14:10:50,948 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:10:50,948 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:10:50,948 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session test_session
+2025-09-29 14:10:50,969 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:10:50,970 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 0 rows
+2025-09-29 14:10:50,971 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:10:50,971 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:10:50,971 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:10:52,548 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:10:52,549 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: []
+2025-09-29 14:10:52,549 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:10:52,556 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:10:52,573 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:10:52,573 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:10:52,573 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:10:52,573 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:10:52,573 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:10:52,573 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:10:54,628 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:10:54,634 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:10:54,634 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session test_session
+2025-09-29 14:10:54,634 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:10:54,634 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session test_session
+2025-09-29 14:10:54,634 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:10:54,634 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session test_session
+2025-09-29 14:10:54,634 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:10:54,657 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:10:45.140273', 'end_time': '2025-09-29T14:10:54.655468'}

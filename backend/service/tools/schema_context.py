@@ -17,7 +17,10 @@ class SchemaContext:
 
     def __init__(self):
         """Initialize schema context with database metadata"""
-        self.base_path = Path("database")
+        # Get absolute path to database directory
+        # From backend/service/tools to project root is 3 levels up
+        project_root = Path(__file__).parent.parent.parent.parent
+        self.base_path = project_root / "database"
         self.schemas_path = self.base_path / "schemas"
 
         # Load schema information

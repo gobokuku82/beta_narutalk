@@ -1,0 +1,2029 @@
+2025-09-29 14:28:18,546 - backend.service.agents.sales_analytics_agent - INFO - LLM planning enabled with model: gpt-4o
+2025-09-29 14:28:18,547 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:28:18,548 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:28:18,548 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:28:18,549 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:28:18,559 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:28:18,559 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:28:18,560 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:28:18,560 - backend.service.tools.text2sql_tool - INFO - Text2SQL Tool initialized with LLM support
+2025-09-29 14:28:18,562 - backend.service.agents.sales_analytics_agent - INFO - Workflow graph built
+2025-09-29 14:28:18,562 - backend.service.agents.sales_analytics_agent - INFO - Initialized sales_analytics_agent
+2025-09-29 14:28:18,580 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 이번달 전체 매출 현황
+2025-09-29 14:28:20,916 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:28:20,925 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:28:20,925 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 이번달 전체 매출 현황...
+2025-09-29 14:28:20,927 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '이번달 전체 매출 현황', 'name': '전체', 'month': '09', 'year': 2025, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '전체', 'comparison_type': None}
+2025-09-29 14:28:24,133 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:28:24,140 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, SUM(`202509`) as total_sales 
+FROM sales_performance 
+WHERE `202509` IS NOT NULL 
+GROUP BY `담당자` 
+ORDER BY total_sales DESC;
+2025-09-29 14:28:24,140 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:28:24,140 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:28:24,141 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:28:24,145 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such column: 202509
+2025-09-29 14:28:24,145 - backend.service.agents.sales_analytics_agent - ERROR - SQL execution error: 실행 오류: no such column: 202509
+2025-09-29 14:28:24,787 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:28:24,787 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:28:24,787 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:28:24,787 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:28:24,788 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:28:26,208 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:28:26,219 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:28:26,220 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:28:26,220 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '이번달 전체 매출 현황', 'name': '전체', 'month': '09', 'year': 2025, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '전체', 'comparison_type': None}
+2025-09-29 14:28:30,600 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:28:30,602 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, SUM(`202509`) as total_sales 
+FROM sales_performance 
+WHERE `202509` IS NOT NULL 
+GROUP BY `담당자` 
+ORDER BY total_sales DESC;
+2025-09-29 14:28:30,603 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, SUM(`202509`) as total_sales 
+FROM sales_performance 
+WHERE `202509` IS NOT NULL 
+GROUP BY `담당자` 
+ORDER BY total_sales DESC;...
+2025-09-29 14:28:30,603 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 전체님의 2025년 9월 합계 집계 (내림차순 정렬) 조회
+2025-09-29 14:28:30,606 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such column: 202509
+2025-09-29 14:28:30,607 - backend.service.subgraphs.data_collection_subgraph - ERROR - SQL execution error: 실행 오류: no such column: 202509
+2025-09-29 14:28:30,610 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 100 rows
+2025-09-29 14:28:30,611 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:28:30,612 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:28:30,612 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:28:30,630 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:28:30,630 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:28:30,630 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:28:30,630 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:28:30,630 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:28:30,631 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:28:32,169 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:28:32,173 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:28:32,174 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:28:32,174 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:28:32,175 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:28:32,175 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:28:32,175 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:28:32,175 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:28:32,185 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:28:18.568584', 'end_time': '2025-09-29T14:28:32.181553'}
+2025-09-29 14:28:32,195 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 오늘 판매 실적
+2025-09-29 14:28:34,481 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:28:34,483 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:28:34,483 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 오늘 판매 실적...
+2025-09-29 14:28:34,484 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '오늘 판매 실적', 'name': '오늘', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '오늘', 'comparison_type': None}
+2025-09-29 14:28:38,108 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:28:38,112 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202310` as sales 
+FROM sales_performance 
+WHERE `202310` IS NOT NULL 
+ORDER BY `202310` DESC 
+LIMIT 10;
+2025-09-29 14:28:38,112 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:28:38,112 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:28:38,113 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:28:38,115 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 10 rows
+2025-09-29 14:28:38,116 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 10 rows
+2025-09-29 14:28:38,116 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:28:38,116 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:28:38,116 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:28:38,116 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:28:38,117 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:28:39,144 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:28:39,147 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:28:39,147 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:28:39,148 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '오늘 판매 실적', 'name': '오늘', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '오늘', 'comparison_type': None}
+2025-09-29 14:28:43,977 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:28:43,988 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202311` as sales 
+FROM sales_performance 
+WHERE `202311` IS NOT NULL 
+ORDER BY `202311` DESC 
+LIMIT 10;
+2025-09-29 14:28:43,988 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, `202311` as sales 
+FROM sales_performance 
+WHERE `202311` IS NOT NULL 
+ORDER BY `202311` DESC 
+LIMIT 10;...
+2025-09-29 14:28:43,988 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 오늘님의 실적 (내림차순 정렬) 조회
+2025-09-29 14:28:43,991 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 10 rows
+2025-09-29 14:28:43,992 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:28:43,992 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:28:43,993 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:28:44,007 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:28:44,007 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:28:44,007 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:28:44,007 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:28:44,007 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:28:44,008 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:28:45,417 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:28:45,425 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:28:45,426 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:28:45,427 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:28:45,427 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:28:45,428 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:28:45,428 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:28:45,428 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:28:45,449 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:28:32.186910', 'end_time': '2025-09-29T14:28:45.447537'}
+2025-09-29 14:28:45,461 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 이번주 판매 현황
+2025-09-29 14:28:47,174 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:28:47,176 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:28:47,177 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 이번주 판매 현황...
+2025-09-29 14:28:47,177 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '이번주 판매 현황', 'name': '이번주', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '이번주', 'comparison_type': None}
+2025-09-29 14:28:53,312 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:28:53,327 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, SUM(`202311`) as total_sales
+FROM sales_performance
+WHERE `202311` IS NOT NULL
+GROUP BY `담당자`
+ORDER BY total_sales DESC;
+2025-09-29 14:28:53,327 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:28:53,329 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:28:53,329 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:28:53,333 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:28:53,334 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 6 rows
+2025-09-29 14:28:53,335 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:28:53,335 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:28:53,335 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:28:53,335 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:28:53,336 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:28:54,376 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:28:54,377 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:28:54,378 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:28:54,378 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '이번주 판매 현황', 'name': '이번주', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '이번주', 'comparison_type': None}
+2025-09-29 14:29:00,191 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:00,193 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, SUM(`202311`) as total_sales
+FROM sales_performance
+WHERE `202311` IS NOT NULL
+GROUP BY `담당자`
+ORDER BY total_sales DESC;
+2025-09-29 14:29:00,193 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, SUM(`202311`) as total_sales
+FROM sales_performance
+WHERE `202311` IS NOT NULL
+GROUP BY `담당자`
+ORDER BY total_sales DESC;...
+2025-09-29 14:29:00,193 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 이번주님의 합계 집계 (내림차순 정렬) 조회
+2025-09-29 14:29:00,197 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:29:00,198 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:29:00,199 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:29:00,200 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:29:00,203 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:29:00,204 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:29:00,204 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:29:00,204 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:29:00,204 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:29:00,204 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:29:01,573 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:01,582 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:29:01,583 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:29:01,583 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:29:01,583 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:29:01,583 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:29:01,584 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:29:01,584 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:29:01,595 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:28:45.452701', 'end_time': '2025-09-29T14:29:01.592755'}
+2025-09-29 14:29:01,606 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 지난달 매출액
+2025-09-29 14:29:03,193 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:03,196 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:29:03,196 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 지난달 매출액...
+2025-09-29 14:29:03,196 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '지난달 매출액', 'name': '매출액', 'month': '08', 'year': 2025, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '매출액', 'comparison_type': None}
+2025-09-29 14:29:07,742 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:07,753 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202508` as sales 
+FROM sales_performance 
+WHERE `202508` IS NOT NULL 
+ORDER BY `202508` DESC 
+LIMIT 10;
+2025-09-29 14:29:07,754 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:29:07,754 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:29:07,755 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:29:07,759 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such column: 202508
+2025-09-29 14:29:07,759 - backend.service.agents.sales_analytics_agent - ERROR - SQL execution error: 실행 오류: no such column: 202508
+2025-09-29 14:29:07,759 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:29:07,759 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:29:07,759 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:29:07,759 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:29:07,760 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:29:09,044 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:09,053 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:29:09,054 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:29:09,054 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '지난달 매출액', 'name': '매출액', 'month': '08', 'year': 2025, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '매출액', 'comparison_type': None}
+2025-09-29 14:29:12,266 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:12,269 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202508` as sales 
+FROM sales_performance 
+WHERE `202508` IS NOT NULL 
+ORDER BY `202508` DESC 
+LIMIT 10;
+2025-09-29 14:29:12,269 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, `202508` as sales 
+FROM sales_performance 
+WHERE `202508` IS NOT NULL 
+ORDER BY `202508` DESC 
+LIMIT 10;...
+2025-09-29 14:29:12,269 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 매출액님의 2025년 8월 실적 (내림차순 정렬) 조회
+2025-09-29 14:29:12,271 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such column: 202508
+2025-09-29 14:29:12,271 - backend.service.subgraphs.data_collection_subgraph - ERROR - SQL execution error: 실행 오류: no such column: 202508
+2025-09-29 14:29:12,274 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 100 rows
+2025-09-29 14:29:12,276 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:29:12,276 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:29:12,277 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:29:12,286 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:29:01.599092', 'end_time': '2025-09-29T14:29:12.284167'}
+2025-09-29 14:29:12,294 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 올해 총 매출
+2025-09-29 14:29:15,574 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:15,577 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:29:15,577 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 올해 총 매출...
+2025-09-29 14:29:15,577 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '올해 총 매출', 'name': '매출', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '매출', 'comparison_type': None}
+2025-09-29 14:29:22,084 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:22,091 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202301` + `202302` + `202303` + `202304` + `202305` + `202306` + `202307` + `202308` + `202309` + `202310` + `202311` + `202312`) AS total_sales 
+FROM sales_performance 
+WHERE `202301` IS NOT NULL 
+   OR `202302` IS NOT NULL 
+   OR `202303` IS NOT NULL 
+   OR `202304` IS NOT NULL 
+   OR `202305` IS NOT NULL 
+   OR `202306` IS NOT NULL 
+   OR `202307` IS NOT NULL 
+   OR `202308` IS NOT NULL 
+   OR `202309` IS NOT NULL 
+   OR `202310` IS NOT NULL 
+   OR `202311` IS NOT NULL 
+   OR `202312` IS NOT NULL 
+GROUP BY `담당자`;
+2025-09-29 14:29:22,091 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:29:22,091 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:29:22,092 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:29:22,098 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:29:22,099 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 6 rows
+2025-09-29 14:29:22,101 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:29:22,101 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:29:22,101 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:29:22,102 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:29:22,102 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:29:23,376 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:23,377 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:29:23,378 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:29:23,378 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '올해 총 매출', 'name': '매출', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '매출', 'comparison_type': None}
+2025-09-29 14:29:29,468 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:29,470 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202301` + `202302` + `202303` + `202304` + `202305` + `202306` + `202307` + `202308` + `202309` + `202310` + `202311` + `202312`) AS total_sales 
+FROM sales_performance 
+WHERE `202301` IS NOT NULL 
+   OR `202302` IS NOT NULL 
+   OR `202303` IS NOT NULL 
+   OR `202304` IS NOT NULL 
+   OR `202305` IS NOT NULL 
+   OR `202306` IS NOT NULL 
+   OR `202307` IS NOT NULL 
+   OR `202308` IS NOT NULL 
+   OR `202309` IS NOT NULL 
+   OR `202310` IS NOT NULL 
+   OR `202311` IS NOT NULL 
+   OR `202312` IS NOT NULL 
+GROUP BY `담당자`;
+2025-09-29 14:29:29,470 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, 
+       SUM(`202301` + `202302` + `202303` + `202304` + `202305` + `202306` + `202307` + `202308` + `202309` + `202310` + `202311` + `202312`) AS total_sales 
+FROM sales_performance 
+WHE...
+2025-09-29 14:29:29,470 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 매출님의 합계 집계 조회
+2025-09-29 14:29:29,476 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:29:29,477 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:29:29,478 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:29:29,479 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:29:29,489 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:29:12.288811', 'end_time': '2025-09-29T14:29:29.485666'}
+2025-09-29 14:29:29,501 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 이번 분기 실적
+2025-09-29 14:29:31,150 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:31,165 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:29:31,166 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 이번 분기 실적...
+2025-09-29 14:29:31,166 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '이번 분기 실적', 'name': '분기', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '분기', 'comparison_type': None}
+2025-09-29 14:29:37,634 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:37,642 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202301`) + SUM(`202302`) + SUM(`202303`) as total_sales 
+FROM sales_performance 
+WHERE `202301` IS NOT NULL OR `202302` IS NOT NULL OR `202303` IS NOT NULL 
+GROUP BY `담당자`
+ORDER BY total_sales DESC;
+2025-09-29 14:29:37,642 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:29:37,642 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:29:37,643 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:29:37,647 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:29:37,649 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 6 rows
+2025-09-29 14:29:37,649 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:29:37,650 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:29:37,650 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:29:37,650 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:29:37,651 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:29:38,701 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:38,707 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:29:38,708 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:29:38,708 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '이번 분기 실적', 'name': '분기', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '분기', 'comparison_type': None}
+2025-09-29 14:29:43,384 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:43,393 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202301`) + SUM(`202302`) + SUM(`202303`) as total_sales 
+FROM sales_performance 
+WHERE `202301` IS NOT NULL OR `202302` IS NOT NULL OR `202303` IS NOT NULL 
+GROUP BY `담당자`
+ORDER BY total_sales DESC;
+2025-09-29 14:29:43,394 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, 
+       SUM(`202301`) + SUM(`202302`) + SUM(`202303`) as total_sales 
+FROM sales_performance 
+WHERE `202301` IS NOT NULL OR `202302` IS NOT NULL OR `202303` IS NOT NULL 
+GROUP BY `담당자`
+O...
+2025-09-29 14:29:43,394 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 분기님의 합계 집계 (내림차순 정렬) 조회
+2025-09-29 14:29:43,400 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:29:43,402 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:29:43,403 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:29:43,403 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:29:43,411 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:29:43,411 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:29:43,411 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:29:43,412 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:29:43,412 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:29:43,412 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:29:44,850 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:44,854 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:29:44,855 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:29:44,855 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:29:44,856 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:29:44,856 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:29:44,856 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:29:44,858 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:29:44,873 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:29:29.493668', 'end_time': '2025-09-29T14:29:44.867687'}
+2025-09-29 14:29:44,884 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 어제 판매량
+2025-09-29 14:29:46,911 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:46,917 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:29:46,917 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 어제 판매량...
+2025-09-29 14:29:46,917 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '어제 판매량', 'name': '어제', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '어제', 'comparison_type': None}
+2025-09-29 14:29:51,810 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:51,814 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202309` as sales 
+FROM sales_performance 
+WHERE `202309` IS NOT NULL 
+ORDER BY `202309` DESC 
+LIMIT 10;
+2025-09-29 14:29:51,815 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:29:51,815 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:29:51,816 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:29:51,818 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 10 rows
+2025-09-29 14:29:51,818 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 10 rows
+2025-09-29 14:29:51,819 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:29:51,819 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:29:51,819 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:29:51,819 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:29:51,820 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:29:53,002 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:53,009 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:29:53,010 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:29:53,010 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '어제 판매량', 'name': '어제', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '어제', 'comparison_type': None}
+2025-09-29 14:29:57,012 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:57,029 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202310` as sales 
+FROM sales_performance 
+WHERE `202310` IS NOT NULL 
+ORDER BY `202310` DESC 
+LIMIT 10;
+2025-09-29 14:29:57,029 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, `202310` as sales 
+FROM sales_performance 
+WHERE `202310` IS NOT NULL 
+ORDER BY `202310` DESC 
+LIMIT 10;...
+2025-09-29 14:29:57,029 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 어제님의 실적 (내림차순 정렬) 조회
+2025-09-29 14:29:57,034 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 10 rows
+2025-09-29 14:29:57,035 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:29:57,036 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:29:57,037 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:29:57,044 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:29:44.876199', 'end_time': '2025-09-29T14:29:57.041180'}
+2025-09-29 14:29:57,053 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 최근 판매 현황
+2025-09-29 14:29:58,685 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:29:58,687 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:29:58,697 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 최근 판매 현황...
+2025-09-29 14:29:58,698 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '최근 판매 현황', 'name': '최근', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '최근', 'comparison_type': None}
+2025-09-29 14:30:02,008 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:02,014 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202311` as sales 
+FROM sales_performance 
+WHERE `202311` IS NOT NULL 
+ORDER BY `202311` DESC 
+LIMIT 10;
+2025-09-29 14:30:02,015 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:30:02,015 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:30:02,015 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:30:02,018 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 10 rows
+2025-09-29 14:30:02,018 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 10 rows
+2025-09-29 14:30:02,019 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:30:02,019 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:30:02,019 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:30:02,019 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:30:02,020 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:30:03,178 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:03,185 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:30:03,186 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:30:03,186 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '최근 판매 현황', 'name': '최근', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '최근', 'comparison_type': None}
+2025-09-29 14:30:08,167 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:08,175 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202311` as sales 
+FROM sales_performance 
+WHERE `202311` IS NOT NULL 
+ORDER BY `202311` DESC 
+LIMIT 10;
+2025-09-29 14:30:08,175 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, `202311` as sales 
+FROM sales_performance 
+WHERE `202311` IS NOT NULL 
+ORDER BY `202311` DESC 
+LIMIT 10;...
+2025-09-29 14:30:08,176 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 최근님의 실적 (내림차순 정렬) 조회
+2025-09-29 14:30:08,181 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 10 rows
+2025-09-29 14:30:08,182 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:30:08,182 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:30:08,183 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:30:08,203 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:30:08,203 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:30:08,203 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:30:08,203 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:30:08,203 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:30:08,204 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:30:09,366 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:09,371 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: []
+2025-09-29 14:30:09,373 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:30:09,373 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:30:09,373 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:30:09,374 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:30:09,393 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:29:57.047023', 'end_time': '2025-09-29T14:30:09.390359'}
+2025-09-29 14:30:09,404 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 전체 영업 실적
+2025-09-29 14:30:11,078 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:11,088 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:30:11,088 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 전체 영업 실적...
+2025-09-29 14:30:11,088 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '전체 영업 실적', 'name': '전체', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '전체', 'comparison_type': None}
+2025-09-29 14:30:21,247 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:21,257 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202212`) as sales_202212,
+       SUM(`202301`) as sales_202301,
+       SUM(`202302`) as sales_202302,
+       SUM(`202303`) as sales_202303,
+       SUM(`202304`) as sales_202304,
+       SUM(`202305`) as sales_202305,
+       SUM(`202306`) as sales_202306,
+       SUM(`202307`) as sales_202307,
+       SUM(`202308`) as sales_202308,
+       SUM(`202309`) as sales_202309,
+       SUM(`202310`) as sales_202310,
+       SUM(`202311`) as sales_202311,
+       SUM(`202312`) as sales_202312,
+       SUM(`202401`) as sales_202401,
+       SUM(`202402`) as sales_202402,
+       SUM(`202403`) as sales_202403,
+       SUM(`202404`) as sales_202404,
+       SUM(`202405`) as sales_202405,
+       SUM(`202406`) as sales_202406,
+       SUM(`202407`) as sales_202407,
+       SUM(`202408`) as sales_202408,
+       SUM(`202409`) as sales_202409,
+       SUM(`202410`) as sales_202410,
+       SUM(`202411`) as sales_202411
+FROM sales_performance
+GROUP BY `담당자`
+ORDER BY `담당자`;
+2025-09-29 14:30:21,257 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:30:21,257 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:30:21,258 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:30:21,265 - backend.service.tools.sql_executor - INFO - Query executed in 0.01s, returned 6 rows
+2025-09-29 14:30:21,266 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 6 rows
+2025-09-29 14:30:21,266 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:30:21,266 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:30:21,267 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:30:21,267 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:30:21,267 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:30:23,218 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:23,220 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:30:23,220 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:30:23,221 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '전체 영업 실적', 'name': '전체', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '전체', 'comparison_type': None}
+2025-09-29 14:30:31,864 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:31,872 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202212`) as sales_202212,
+       SUM(`202301`) as sales_202301,
+       SUM(`202302`) as sales_202302,
+       SUM(`202303`) as sales_202303,
+       SUM(`202304`) as sales_202304,
+       SUM(`202305`) as sales_202305,
+       SUM(`202306`) as sales_202306,
+       SUM(`202307`) as sales_202307,
+       SUM(`202308`) as sales_202308,
+       SUM(`202309`) as sales_202309,
+       SUM(`202310`) as sales_202310,
+       SUM(`202311`) as sales_202311,
+       SUM(`202312`) as sales_202312,
+       SUM(`202401`) as sales_202401,
+       SUM(`202402`) as sales_202402,
+       SUM(`202403`) as sales_202403,
+       SUM(`202404`) as sales_202404,
+       SUM(`202405`) as sales_202405,
+       SUM(`202406`) as sales_202406,
+       SUM(`202407`) as sales_202407,
+       SUM(`202408`) as sales_202408,
+       SUM(`202409`) as sales_202409,
+       SUM(`202410`) as sales_202410,
+       SUM(`202411`) as sales_202411
+FROM sales_performance
+GROUP BY `담당자`
+ORDER BY `담당자`;
+2025-09-29 14:30:31,873 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, 
+       SUM(`202212`) as sales_202212,
+       SUM(`202301`) as sales_202301,
+       SUM(`202302`) as sales_202302,
+       SUM(`202303`) as sales_202303,
+       SUM(`202304`) as sales_202...
+2025-09-29 14:30:31,873 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 전체님의 합계 집계 (오름차순 정렬) 조회
+2025-09-29 14:30:31,878 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:30:31,879 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:30:31,880 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:30:31,881 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:30:31,897 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:30:31,898 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:30:31,898 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:30:31,898 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:30:31,898 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:30:31,899 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:30:33,165 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:33,174 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:30:33,175 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:30:33,175 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:30:33,175 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:30:33,176 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:30:33,176 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:30:33,176 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:30:33,190 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:30:09.395360', 'end_time': '2025-09-29T14:30:33.185421'}
+2025-09-29 14:30:33,201 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 현재까지 매출
+2025-09-29 14:30:35,379 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:35,401 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:30:35,401 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 현재까지 매출...
+2025-09-29 14:30:35,401 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '현재까지 매출', 'name': '현재까지', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '현재까지', 'comparison_type': None}
+2025-09-29 14:30:42,666 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:42,670 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202212` + `202301` + `202302` + `202303` + `202304` + `202305` + 
+           `202306` + `202307` + `202308` + `202309` + `202310` + `202311`) AS total_sales 
+FROM sales_performance 
+WHERE `202212` IS NOT NULL 
+   OR `202301` IS NOT NULL 
+   OR `202302` IS NOT NULL 
+   OR `202303` IS NOT NULL 
+   OR `202304` IS NOT NULL 
+   OR `202305` IS NOT NULL 
+   OR `202306` IS NOT NULL 
+   OR `202307` IS NOT NULL 
+   OR `202308` IS NOT NULL 
+   OR `202309` IS NOT NULL 
+   OR `202310` IS NOT NULL 
+   OR `202311` IS NOT NULL 
+GROUP BY `담당자`;
+2025-09-29 14:30:42,670 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:30:42,670 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:30:42,671 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:30:42,677 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:30:42,680 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 6 rows
+2025-09-29 14:30:42,680 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:30:42,681 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:30:42,681 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:30:42,681 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:30:42,682 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:30:43,941 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:43,950 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:30:43,951 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:30:43,951 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '현재까지 매출', 'name': '현재까지', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '현재까지', 'comparison_type': None}
+2025-09-29 14:30:51,561 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:51,638 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202212` + `202301` + `202302` + `202303` + `202304` + `202305` + 
+           `202306` + `202307` + `202308` + `202309` + `202310` + `202311`) as total_sales 
+FROM sales_performance 
+WHERE `202212` IS NOT NULL OR `202301` IS NOT NULL OR `202302` IS NOT NULL OR 
+      `202303` IS NOT NULL OR `202304` IS NOT NULL OR `202305` IS NOT NULL OR 
+      `202306` IS NOT NULL OR `202307` IS NOT NULL OR `202308` IS NOT NULL OR 
+      `202309` IS NOT NULL OR `202310` IS NOT NULL OR `202311` IS NOT NULL 
+GROUP BY `담당자`;
+2025-09-29 14:30:51,639 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, 
+       SUM(`202212` + `202301` + `202302` + `202303` + `202304` + `202305` + 
+           `202306` + `202307` + `202308` + `202309` + `202310` + `202311`) as total_sales 
+FROM sales_perf...
+2025-09-29 14:30:51,639 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 현재까지님의 합계 집계 조회
+2025-09-29 14:30:51,644 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:30:51,646 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:30:51,647 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:30:51,647 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:30:51,652 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:30:51,652 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:30:51,652 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:30:51,652 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:30:51,653 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:30:51,653 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:30:53,033 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:53,042 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:30:53,043 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:30:53,043 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:30:53,044 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:30:53,044 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:30:53,045 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:30:53,045 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:30:53,062 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:30:33.193612', 'end_time': '2025-09-29T14:30:53.056958'}
+2025-09-29 14:30:53,076 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 김철수의 이번달 실적
+2025-09-29 14:30:55,754 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:55,760 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:30:55,760 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 김철수의 이번달 실적...
+2025-09-29 14:30:55,760 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '김철수의 이번달 실적', 'name': '김철수의', 'month': '09', 'year': 2025, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '김철수', 'comparison_type': None}
+2025-09-29 14:30:58,884 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:30:58,894 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202509` as sales 
+FROM sales_performance 
+WHERE `담당자` = '김철수' AND `202509` IS NOT NULL;
+2025-09-29 14:30:58,894 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:30:58,894 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:30:58,894 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:30:58,898 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such column: 202509
+2025-09-29 14:30:58,899 - backend.service.agents.sales_analytics_agent - ERROR - SQL execution error: 실행 오류: no such column: 202509
+2025-09-29 14:30:58,899 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:30:58,899 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:30:58,899 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:30:58,900 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:30:58,900 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:31:00,009 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:00,011 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:31:00,011 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:31:00,012 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '김철수의 이번달 실적', 'name': '김철수의', 'month': '09', 'year': 2025, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '김철수', 'comparison_type': None}
+2025-09-29 14:31:03,235 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:03,249 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202509` as sales 
+FROM sales_performance 
+WHERE `담당자` = '김철수' AND `202509` IS NOT NULL;
+2025-09-29 14:31:03,249 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, `202509` as sales 
+FROM sales_performance 
+WHERE `담당자` = '김철수' AND `202509` IS NOT NULL;...
+2025-09-29 14:31:03,249 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 김철수의님의 2025년 9월 실적 조회
+2025-09-29 14:31:03,252 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such column: 202509
+2025-09-29 14:31:03,252 - backend.service.subgraphs.data_collection_subgraph - ERROR - SQL execution error: 실행 오류: no such column: 202509
+2025-09-29 14:31:03,255 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 100 rows
+2025-09-29 14:31:03,257 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:31:03,258 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:31:03,258 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:31:03,273 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:31:03,274 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:31:03,274 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:31:03,274 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:31:03,274 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:31:03,274 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:31:04,481 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:04,483 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: []
+2025-09-29 14:31:04,484 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:31:04,484 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:31:04,485 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:31:04,485 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:31:04,495 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:30:53.067256', 'end_time': '2025-09-29T14:31:04.493940'}
+2025-09-29 14:31:04,504 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 박영희 판매 현황
+2025-09-29 14:31:06,445 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:06,455 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:31:06,455 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 박영희 판매 현황...
+2025-09-29 14:31:06,456 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '박영희 판매 현황', 'name': '박영희', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '박영희', 'comparison_type': None}
+2025-09-29 14:31:14,364 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:14,370 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       `202212`, 
+       `202301`, 
+       `202302`, 
+       `202303`, 
+       `202304`, 
+       `202305`, 
+       `202306`, 
+       `202307`, 
+       `202308`, 
+       `202309`, 
+       `202310`, 
+       `202311`, 
+       `202312`, 
+       `202401`, 
+       `202402`, 
+       `202403`, 
+       `202404`, 
+       `202405`, 
+       `202406`, 
+       `202407`, 
+       `202408`, 
+       `202409`, 
+       `202410`, 
+       `202411`
+FROM sales_performance 
+WHERE `담당자` = '박영희' 
+ORDER BY `담당자`;
+2025-09-29 14:31:14,371 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:31:14,371 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:31:14,372 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:31:14,376 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:31:14,377 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 0 rows
+2025-09-29 14:31:14,377 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:31:14,378 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:31:14,378 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:31:14,378 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:31:14,378 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:31:15,701 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:15,706 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:31:15,707 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:31:15,707 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '박영희 판매 현황', 'name': '박영희', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '박영희', 'comparison_type': None}
+2025-09-29 14:31:22,162 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:22,164 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       `202212`, 
+       `202301`, 
+       `202302`, 
+       `202303`, 
+       `202304`, 
+       `202305`, 
+       `202306`, 
+       `202307`, 
+       `202308`, 
+       `202309`, 
+       `202310`, 
+       `202311`, 
+       `202312`, 
+       `202401`, 
+       `202402`, 
+       `202403`, 
+       `202404`, 
+       `202405`, 
+       `202406`, 
+       `202407`, 
+       `202408`, 
+       `202409`, 
+       `202410`, 
+       `202411`
+FROM sales_performance 
+WHERE `담당자` = '박영희'
+ORDER BY `담당자`;
+2025-09-29 14:31:22,164 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, 
+       `202212`, 
+       `202301`, 
+       `202302`, 
+       `202303`, 
+       `202304`, 
+       `202305`, 
+       `202306`, 
+       `202307`, 
+       `202308`, 
+       `202309`, 
+     ...
+2025-09-29 14:31:22,164 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 박영희님의 실적 (오름차순 정렬) 조회
+2025-09-29 14:31:22,169 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:31:22,170 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:31:22,170 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:31:22,172 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:31:22,179 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:31:22,179 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:31:22,179 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:31:22,179 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:31:22,179 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:31:22,179 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:31:23,610 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:23,613 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:31:23,613 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:31:23,614 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:31:23,614 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:31:23,614 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:31:23,615 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:31:23,615 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:31:23,633 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:31:04.499153', 'end_time': '2025-09-29T14:31:23.631364'}
+2025-09-29 14:31:23,644 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 이민수의 올해 실적
+2025-09-29 14:31:26,320 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:26,322 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:31:26,322 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 이민수의 올해 실적...
+2025-09-29 14:31:26,322 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '이민수의 올해 실적', 'name': '이민수의', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '이민수', 'comparison_type': None}
+2025-09-29 14:31:33,747 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:33,753 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202301` + `202302` + `202303` + `202304` + `202305` + `202306` + `202307` + `202308` + `202309` + `202310` + `202311` + `202312`) as total_2023 
+FROM sales_performance 
+WHERE `담당자` = '이민수' 
+  AND (`202301` IS NOT NULL OR `202302` IS NOT NULL OR `202303` IS NOT NULL OR 
+       `202304` IS NOT NULL OR `202305` IS NOT NULL OR `202306` IS NOT NULL OR 
+       `202307` IS NOT NULL OR `202308` IS NOT NULL OR `202309` IS NOT NULL OR 
+       `202310` IS NOT NULL OR `202311` IS NOT NULL OR `202312` IS NOT NULL)
+GROUP BY `담당자`;
+2025-09-29 14:31:33,753 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:31:33,753 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:31:33,754 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:31:33,757 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:31:33,758 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 0 rows
+2025-09-29 14:31:33,759 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:31:33,759 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:31:33,759 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:31:33,760 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:31:33,760 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:31:34,897 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:34,901 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:31:34,902 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:31:34,902 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '이민수의 올해 실적', 'name': '이민수의', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '이민수', 'comparison_type': None}
+2025-09-29 14:31:42,333 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:42,340 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202301` + `202302` + `202303` + `202304` + `202305` + `202306` + `202307` + `202308` + `202309` + `202310` + `202311` + `202312`) as total_sales 
+FROM sales_performance 
+WHERE `담당자` = '이민수' 
+  AND (`202301` IS NOT NULL OR `202302` IS NOT NULL OR `202303` IS NOT NULL OR 
+       `202304` IS NOT NULL OR `202305` IS NOT NULL OR `202306` IS NOT NULL OR 
+       `202307` IS NOT NULL OR `202308` IS NOT NULL OR `202309` IS NOT NULL OR 
+       `202310` IS NOT NULL OR `202311` IS NOT NULL OR `202312` IS NOT NULL)
+GROUP BY `담당자`;
+2025-09-29 14:31:42,340 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, 
+       SUM(`202301` + `202302` + `202303` + `202304` + `202305` + `202306` + `202307` + `202308` + `202309` + `202310` + `202311` + `202312`) as total_sales 
+FROM sales_performance 
+WHE...
+2025-09-29 14:31:42,340 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 이민수의님의 합계 집계 조회
+2025-09-29 14:31:42,344 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:31:42,346 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:31:42,347 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:31:42,348 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:31:42,357 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:31:42,357 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:31:42,357 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:31:42,357 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:31:42,357 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:31:42,358 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:31:43,698 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:43,699 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:31:43,700 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:31:43,700 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:31:43,701 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:31:43,701 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:31:43,701 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:31:43,701 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:31:43,715 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:31:23.635364', 'end_time': '2025-09-29T14:31:43.712630'}
+2025-09-29 14:31:43,726 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 정대리 목표 달성률
+2025-09-29 14:31:45,645 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:45,650 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:31:45,650 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 정대리 목표 달성률...
+2025-09-29 14:31:45,650 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '정대리 목표 달성률', 'name': '정대리', 'month': None, 'year': None, 'team': None, 'action': 'target', 'period_type': None, 'person_name': '정대리', 'comparison_type': None}
+2025-09-29 14:31:56,400 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:56,401 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT 
+    sp.`담당자`, 
+    (SUM(sp.`202312`) / SUM(st.`202312`) * 100) AS `목표달성률_202312`,
+    (SUM(sp.`202401`) / SUM(st.`202401`) * 100) AS `목표달성률_202401`,
+    (SUM(sp.`202402`) / SUM(st.`202402`) * 100) AS `목표달성률_202402`,
+    (SUM(sp.`202403`) / SUM(st.`202403`) * 100) AS `목표달성률_202403`,
+    (SUM(sp.`202404`) / SUM(st.`202404`) * 100) AS `목표달성률_202404`,
+    (SUM(sp.`202405`) / SUM(st.`202405`) * 100) AS `목표달성률_202405`,
+    (SUM(sp.`202406`) / SUM(st.`202406`) * 100) AS `목표달성률_202406`,
+    (SUM(sp.`202407`) / SUM(st.`202407`) * 100) AS `목표달성률_202407`,
+    (SUM(sp.`202408`) / SUM(st.`202408`) * 100) AS `목표달성률_202408`,
+    (SUM(sp.`202409`) / SUM(st.`202409`) * 100) AS `목표달성률_202409`,
+    (SUM(sp.`202410`) / SUM(st.`202410`) * 100) AS `목표달성률_202410`,
+    (SUM(sp.`202411`) / SUM(st.`202411`) * 100) AS `목표달성률_202411`
+FROM 
+    sales_performance sp
+JOIN 
+    sales_target_db st ON sp.`담당자` = st.`담당자`
+WHERE 
+    sp.`담당자` = '정대리'
+GROUP BY 
+    sp.`담당자`;
+2025-09-29 14:31:56,401 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:31:56,401 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:31:56,402 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:31:56,406 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such table: sales_target_db
+2025-09-29 14:31:56,406 - backend.service.agents.sales_analytics_agent - ERROR - SQL execution error: 실행 오류: no such table: sales_target_db
+2025-09-29 14:31:56,406 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:31:56,406 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:31:56,407 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:31:56,407 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:31:56,407 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:31:57,715 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:31:57,724 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db', 'sales_target_db']
+2025-09-29 14:31:57,725 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:31:57,725 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '정대리 목표 달성률', 'name': '정대리', 'month': None, 'year': None, 'team': None, 'action': 'target', 'period_type': None, 'person_name': '정대리', 'comparison_type': None}
+2025-09-29 14:31:57,726 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting target data for session batch_20250929_142818
+2025-09-29 14:31:57,728 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:31:57,731 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 6 target records
+2025-09-29 14:32:10,486 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:32:10,492 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT 
+    sp.`담당자`, 
+    (SUM(sp.`202312`) / SUM(st.`202312`) * 100) AS `목표달성률_202312`,
+    (SUM(sp.`202401`) / SUM(st.`202401`) * 100) AS `목표달성률_202401`,
+    (SUM(sp.`202402`) / SUM(st.`202402`) * 100) AS `목표달성률_202402`,
+    (SUM(sp.`202403`) / SUM(st.`202403`) * 100) AS `목표달성률_202403`,
+    (SUM(sp.`202404`) / SUM(st.`202404`) * 100) AS `목표달성률_202404`,
+    (SUM(sp.`202405`) / SUM(st.`202405`) * 100) AS `목표달성률_202405`,
+    (SUM(sp.`202406`) / SUM(st.`202406`) * 100) AS `목표달성률_202406`,
+    (SUM(sp.`202407`) / SUM(st.`202407`) * 100) AS `목표달성률_202407`,
+    (SUM(sp.`202408`) / SUM(st.`202408`) * 100) AS `목표달성률_202408`,
+    (SUM(sp.`202409`) / SUM(st.`202409`) * 100) AS `목표달성률_202409`,
+    (SUM(sp.`202410`) / SUM(st.`202410`) * 100) AS `목표달성률_202410`,
+    (SUM(sp.`202411`) / SUM(st.`202411`) * 100) AS `목표달성률_202411`
+FROM 
+    sales_performance sp
+JOIN 
+    sales_target_db st ON sp.`담당자` = st.`담당자`
+WHERE 
+    sp.`담당자` = '정대리'
+GROUP BY 
+    sp.`담당자`;
+2025-09-29 14:32:10,492 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT 
+    sp.`담당자`, 
+    (SUM(sp.`202312`) / SUM(st.`202312`) * 100) AS `목표달성률_202312`,
+    (SUM(sp.`202401`) / SUM(st.`202401`) * 100) AS `목표달성률_202401`,
+    (SUM(sp.`202402`) / SUM(st.`202402`) * ...
+2025-09-29 14:32:10,492 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 정대리님의 합계 집계 조회
+2025-09-29 14:32:10,496 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such table: sales_target_db
+2025-09-29 14:32:10,497 - backend.service.subgraphs.data_collection_subgraph - ERROR - SQL execution error: 실행 오류: no such table: sales_target_db
+2025-09-29 14:32:10,500 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 100 rows
+2025-09-29 14:32:10,501 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:32:10,502 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:32:10,502 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:32:10,510 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:32:10,510 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:32:10,510 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:32:10,510 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:32:10,510 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:32:10,512 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:32:11,827 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:32:11,829 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:32:11,829 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:32:11,830 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:32:11,830 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:32:11,831 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:32:11,831 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:32:11,831 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:32:11,844 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:31:43.718612', 'end_time': '2025-09-29T14:32:11.839930'}
+2025-09-29 14:32:11,853 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 김과장의 분기 성과
+2025-09-29 14:32:14,024 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:32:14,035 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:32:14,036 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 김과장의 분기 성과...
+2025-09-29 14:32:14,036 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '김과장의 분기 성과', 'name': '장', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '장', 'comparison_type': None, 'names': ['장', '분기']}
+2025-09-29 14:32:18,033 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:32:18,039 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202301`) + SUM(`202302`) + SUM(`202303`) AS total_q1_sales 
+FROM sales_performance 
+WHERE `담당자` = '김과장' 
+  AND (`202301` IS NOT NULL OR `202302` IS NOT NULL OR `202303` IS NOT NULL) 
+GROUP BY `담당자`;
+2025-09-29 14:32:18,039 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:32:18,039 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:32:18,040 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:32:18,043 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:32:18,045 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 0 rows
+2025-09-29 14:32:18,045 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:32:18,045 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:32:18,045 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:32:18,046 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:32:18,046 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:32:19,113 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:32:19,143 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:32:19,144 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:32:19,144 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '김과장의 분기 성과', 'name': '장', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '장', 'comparison_type': None, 'names': ['장', '분기']}
+2025-09-29 14:32:23,271 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:32:23,272 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202301`) + SUM(`202302`) + SUM(`202303`) as total_q1_sales 
+FROM sales_performance 
+WHERE `담당자` = '김과장' 
+  AND (`202301` IS NOT NULL OR `202302` IS NOT NULL OR `202303` IS NOT NULL)
+GROUP BY `담당자`;
+2025-09-29 14:32:23,272 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, 
+       SUM(`202301`) + SUM(`202302`) + SUM(`202303`) as total_q1_sales 
+FROM sales_performance 
+WHERE `담당자` = '김과장' 
+  AND (`202301` IS NOT NULL OR `202302` IS NOT NULL OR `202303` IS N...
+2025-09-29 14:32:23,272 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 장님의 합계 집계 조회
+2025-09-29 14:32:23,277 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:32:23,278 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:32:23,279 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:32:23,280 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:32:23,286 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:32:23,287 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:32:23,287 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:32:23,287 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:32:23,287 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:32:23,287 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:32:24,793 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:32:24,800 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:32:24,801 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:32:24,801 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:32:24,802 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:32:24,802 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:32:24,803 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:32:24,803 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:32:24,816 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:32:11.846820', 'end_time': '2025-09-29T14:32:24.812883'}
+2025-09-29 14:32:24,831 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 최팀장 매출 분석
+2025-09-29 14:32:26,627 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:32:26,644 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:32:26,644 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 최팀장 매출 분석...
+2025-09-29 14:32:26,644 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '최팀장 매출 분석', 'name': '최팀장', 'month': None, 'year': None, 'team': '최팀', 'action': 'sales', 'period_type': None, 'person_name': '최팀장', 'comparison_type': None}
+2025-09-29 14:32:35,386 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:32:35,399 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT 
+    `담당자`, 
+    `202212` as sales_dec_2022, 
+    `202301` as sales_jan_2023, 
+    `202302` as sales_feb_2023, 
+    `202303` as sales_mar_2023, 
+    `202304` as sales_apr_2023, 
+    `202305` as sales_may_2023, 
+    `202306` as sales_jun_2023, 
+    `202307` as sales_jul_2023, 
+    `202308` as sales_aug_2023, 
+    `202309` as sales_sep_2023, 
+    `202310` as sales_oct_2023, 
+    `202311` as sales_nov_2023, 
+    `202312` as sales_dec_2023 
+FROM 
+    sales_performance 
+WHERE 
+    `담당자` = '최팀장' 
+    AND (`202212` IS NOT NULL OR `202301` IS NOT NULL OR `202302` IS NOT NULL OR 
+         `202303` IS NOT NULL OR `202304` IS NOT NULL OR `202305` IS NOT NULL OR 
+         `202306` IS NOT NULL OR `202307` IS NOT NULL OR `202308` IS NOT NULL OR 
+         `202309` IS NOT NULL OR `202310` IS NOT NULL OR `202311` IS NOT NULL OR 
+         `202312` IS NOT NULL);
+2025-09-29 14:32:35,400 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:32:35,400 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:32:35,401 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:32:35,403 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:32:35,404 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 0 rows
+2025-09-29 14:32:35,404 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:32:35,404 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:32:35,404 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:32:35,404 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:32:35,405 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:32:36,400 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:32:36,403 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:32:36,405 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:32:36,405 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '최팀장 매출 분석', 'name': '최팀장', 'month': None, 'year': None, 'team': '최팀', 'action': 'sales', 'period_type': None, 'person_name': '최팀장', 'comparison_type': None}
+2025-09-29 14:32:45,568 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:32:45,573 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT 
+    `담당자`, 
+    `202212`, 
+    `202301`, 
+    `202302`, 
+    `202303`, 
+    `202304`, 
+    `202305`, 
+    `202306`, 
+    `202307`, 
+    `202308`, 
+    `202309`, 
+    `202310`, 
+    `202311`, 
+    `202312`, 
+    `202401`, 
+    `202402`, 
+    `202403`, 
+    `202404`, 
+    `202405`, 
+    `202406`, 
+    `202407`, 
+    `202408`, 
+    `202409`, 
+    `202410`, 
+    `202411`
+FROM 
+    sales_performance 
+WHERE 
+    `담당자` = '최팀장' 
+    AND (`202212` IS NOT NULL OR `202301` IS NOT NULL OR `202302` IS NOT NULL OR 
+         `202303` IS NOT NULL OR `202304` IS NOT NULL OR `202305` IS NOT NULL OR 
+         `202306` IS NOT NULL OR `202307` IS NOT NULL OR `202308` IS NOT NULL OR 
+         `202309` IS NOT NULL OR `202310` IS NOT NULL OR `202311` IS NOT NULL OR 
+         `202312` IS NOT NULL OR `202401` IS NOT NULL OR `202402` IS NOT NULL OR 
+         `202403` IS NOT NULL OR `202404` IS NOT NULL OR `202405` IS NOT NULL OR 
+         `202406` IS NOT NULL OR `202407` IS NOT NULL OR `202408` IS NOT NULL OR 
+         `202409` IS NOT NULL OR `202410` IS NOT NULL OR `202411` IS NOT NULL)
+ORDER BY 
+    `담당자`;
+2025-09-29 14:32:45,574 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT 
+    `담당자`, 
+    `202212`, 
+    `202301`, 
+    `202302`, 
+    `202303`, 
+    `202304`, 
+    `202305`, 
+    `202306`, 
+    `202307`, 
+    `202308`, 
+    `202309`, 
+    `202310`, 
+    `202311`, 
+...
+2025-09-29 14:32:45,574 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 최팀장님의 실적 (오름차순 정렬) 조회
+2025-09-29 14:32:45,579 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:32:45,580 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:32:45,581 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:32:45,581 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:32:45,596 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:32:45,596 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:32:45,596 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:32:45,597 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:32:45,597 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:32:45,597 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:32:46,822 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:32:46,829 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:32:46,829 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:32:46,829 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:32:46,830 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:32:46,830 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:32:46,831 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:32:46,831 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:32:46,853 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:32:24.821099', 'end_time': '2025-09-29T14:32:46.850626'}
+2025-09-29 14:32:46,864 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 신입사원 실적 현황
+2025-09-29 14:32:48,816 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:32:48,817 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:32:48,817 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 신입사원 실적 현황...
+2025-09-29 14:32:48,818 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '신입사원 실적 현황', 'name': '신입사원', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '신입사원', 'comparison_type': None}
+2025-09-29 14:32:56,053 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:32:56,054 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT 
+    ip.`성명`, 
+    sp.`담당자`, 
+    sp.`202403` as sales 
+FROM 
+    hr_data AS ip
+JOIN 
+    sales_performance AS sp ON ip.`사번` = sp.`사번`
+WHERE 
+    ip.`사번` IN (
+        SELECT `사번` 
+        FROM hr_data 
+        ORDER BY `입사일` DESC 
+        LIMIT 1
+    )
+    AND sp.`202403` IS NOT NULL
+ORDER BY 
+    sp.`202403` DESC;
+2025-09-29 14:32:56,054 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:32:56,056 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:32:56,056 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:32:56,060 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such table: hr_data
+2025-09-29 14:32:56,060 - backend.service.agents.sales_analytics_agent - ERROR - SQL execution error: 실행 오류: no such table: hr_data
+2025-09-29 14:32:56,060 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:32:56,061 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:32:56,061 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:32:56,061 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:32:56,061 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:32:57,123 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:32:57,131 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:32:57,133 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:32:57,133 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '신입사원 실적 현황', 'name': '신입사원', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '신입사원', 'comparison_type': None}
+2025-09-29 14:33:03,352 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:03,359 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT 
+    hr.`성명`, 
+    hr.`사번`, 
+    SUM(sp.`202403`) as total_sales 
+FROM 
+    hr_data AS hr
+JOIN 
+    sales_performance AS sp ON hr.`사번` = sp.`사번`
+WHERE 
+    hr.`직급` = '신입' AND 
+    sp.`202403` IS NOT NULL 
+GROUP BY 
+    hr.`사번`, hr.`성명`
+ORDER BY 
+    total_sales DESC;
+2025-09-29 14:33:03,359 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT 
+    hr.`성명`, 
+    hr.`사번`, 
+    SUM(sp.`202403`) as total_sales 
+FROM 
+    hr_data AS hr
+JOIN 
+    sales_performance AS sp ON hr.`사번` = sp.`사번`
+WHERE 
+    hr.`직급` = '신입' AND 
+    sp.`202403` I...
+2025-09-29 14:33:03,359 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 신입사원님의 합계 집계 (내림차순 정렬) 조회
+2025-09-29 14:33:03,361 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such table: hr_data
+2025-09-29 14:33:03,362 - backend.service.subgraphs.data_collection_subgraph - ERROR - SQL execution error: 실행 오류: no such table: hr_data
+2025-09-29 14:33:03,364 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 100 rows
+2025-09-29 14:33:03,365 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:33:03,366 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:33:03,366 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:33:03,369 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:33:03,369 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:33:03,369 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:33:03,369 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:33:03,369 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:33:03,370 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:33:05,857 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:05,859 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: []
+2025-09-29 14:33:05,860 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:33:05,860 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:33:05,861 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:33:05,861 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:33:05,879 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:32:46.855624', 'end_time': '2025-09-29T14:33:05.877354'}
+2025-09-29 14:33:05,888 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 영업1팀 실적
+2025-09-29 14:33:09,405 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:09,410 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:33:09,411 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 영업1팀 실적...
+2025-09-29 14:33:09,411 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '영업1팀 실적', 'name': '영업', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '영업', 'comparison_type': None}
+2025-09-29 14:33:18,363 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:18,364 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       `202212` as sales_202212, 
+       `202301` as sales_202301, 
+       `202302` as sales_202302, 
+       `202303` as sales_202303, 
+       `202304` as sales_202304, 
+       `202305` as sales_202305, 
+       `202306` as sales_202306, 
+       `202307` as sales_202307, 
+       `202308` as sales_202308, 
+       `202309` as sales_202309, 
+       `202310` as sales_202310, 
+       `202311` as sales_202311, 
+       `202312` as sales_202312, 
+       `202401` as sales_202401, 
+       `202402` as sales_202402, 
+       `202403` as sales_202403, 
+       `202404` as sales_202404, 
+       `202405` as sales_202405, 
+       `202406` as sales_202406, 
+       `202407` as sales_202407, 
+       `202408` as sales_202408, 
+       `202409` as sales_202409, 
+       `202410` as sales_202410, 
+       `202411` as sales_202411 
+FROM sales_performance 
+WHERE `담당자` = '영업1팀' 
+AND `202212` IS NOT NULL 
+ORDER BY `담당자`;
+2025-09-29 14:33:18,365 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:33:18,365 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:33:18,365 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:33:18,369 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:33:18,370 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 0 rows
+2025-09-29 14:33:18,370 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:33:18,370 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:33:18,370 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:33:18,372 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:33:18,372 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:33:19,473 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:19,485 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:33:19,486 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:33:19,486 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '영업1팀 실적', 'name': '영업', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '영업', 'comparison_type': None}
+2025-09-29 14:33:26,958 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:26,962 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       `202212` as sales_202212, 
+       `202301` as sales_202301, 
+       `202302` as sales_202302, 
+       `202303` as sales_202303, 
+       `202304` as sales_202304, 
+       `202305` as sales_202305, 
+       `202306` as sales_202306, 
+       `202307` as sales_202307, 
+       `202308` as sales_202308, 
+       `202309` as sales_202309, 
+       `202310` as sales_202310, 
+       `202311` as sales_202311, 
+       `202312` as sales_202312 
+FROM sales_performance 
+WHERE `담당자` = '영업1팀' 
+AND (`202212` IS NOT NULL OR `202301` IS NOT NULL OR `202302` IS NOT NULL OR 
+     `202303` IS NOT NULL OR `202304` IS NOT NULL OR `202305` IS NOT NULL OR 
+     `202306` IS NOT NULL OR `202307` IS NOT NULL OR `202308` IS NOT NULL OR 
+     `202309` IS NOT NULL OR `202310` IS NOT NULL OR `202311` IS NOT NULL OR 
+     `202312` IS NOT NULL);
+2025-09-29 14:33:26,962 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, 
+       `202212` as sales_202212, 
+       `202301` as sales_202301, 
+       `202302` as sales_202302, 
+       `202303` as sales_202303, 
+       `202304` as sales_202304, 
+       `202305`...
+2025-09-29 14:33:26,962 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 영업님의 실적 조회
+2025-09-29 14:33:26,965 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:33:26,967 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:33:26,968 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:33:26,969 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:33:26,986 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:33:26,986 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:33:26,986 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:33:26,987 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:33:26,987 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:33:26,987 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:33:28,279 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:28,285 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:33:28,286 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:33:28,286 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:33:28,286 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:33:28,286 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:33:28,287 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:33:28,287 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:33:28,305 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:33:05.882089', 'end_time': '2025-09-29T14:33:28.303614'}
+2025-09-29 14:33:28,313 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 김영수 담당 고객
+2025-09-29 14:33:29,802 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:29,816 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:33:29,816 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 김영수 담당 고객...
+2025-09-29 14:33:29,816 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '김영수 담당 고객', 'name': '김영수', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '김영수', 'comparison_type': None}
+2025-09-29 14:33:32,398 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:32,409 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `거래처ID`, `담당자`, `202403` as sales 
+FROM sales_performance 
+WHERE `담당자` = '김영수' AND `202403` IS NOT NULL 
+ORDER BY `202403` DESC;
+2025-09-29 14:33:32,409 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:33:32,409 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:33:32,410 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:33:32,412 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:33:32,412 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 0 rows
+2025-09-29 14:33:32,413 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:33:32,413 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:33:32,413 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:33:32,413 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:33:32,414 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:33:33,403 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:33,405 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['clients_db']
+2025-09-29 14:33:33,406 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:33:33,406 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting client data for session batch_20250929_142818
+2025-09-29 14:33:33,407 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:33:33,421 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:33:33,421 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:33:33,421 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:33:33,421 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:33:33,422 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:33:33,422 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:33:34,697 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:34,717 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:33:34,718 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:33:34,719 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:33:34,720 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:33:34,720 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:33:34,721 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:33:34,721 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:33:34,737 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:33:28.307614', 'end_time': '2025-09-29T14:33:34.735369'}
+2025-09-29 14:33:34,747 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 박지민 월별 실적 추이
+2025-09-29 14:33:36,593 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:36,605 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:33:36,606 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 박지민 월별 실적 추이...
+2025-09-29 14:33:36,606 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '박지민 월별 실적 추이', 'name': '박지민', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '박지민', 'comparison_type': None}
+2025-09-29 14:33:42,015 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:42,021 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT 
+    `담당자`, 
+    `202212`, 
+    `202301`, 
+    `202302`, 
+    `202303`, 
+    `202304`, 
+    `202305`, 
+    `202306`, 
+    `202307`, 
+    `202308`, 
+    `202309`, 
+    `202310`, 
+    `202311`, 
+    `202312`, 
+    `202401`, 
+    `202402`, 
+    `202403`, 
+    `202404`, 
+    `202405`, 
+    `202406`, 
+    `202407`, 
+    `202408`, 
+    `202409`, 
+    `202410`, 
+    `202411`
+FROM 
+    sales_performance 
+WHERE 
+    `담당자` = '박지민'
+ORDER BY 
+    `담당자`;
+2025-09-29 14:33:42,021 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:33:42,021 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:33:42,021 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:33:42,025 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:33:42,025 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 0 rows
+2025-09-29 14:33:42,026 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:33:42,026 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:33:42,026 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:33:42,026 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:33:42,027 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:33:43,131 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:43,139 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:33:43,140 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:33:43,140 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '박지민 월별 실적 추이', 'name': '박지민', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '박지민', 'comparison_type': None}
+2025-09-29 14:33:47,737 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:47,744 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT 
+    `담당자`, 
+    `202212`, 
+    `202301`, 
+    `202302`, 
+    `202303`, 
+    `202304`, 
+    `202305`, 
+    `202306`, 
+    `202307`, 
+    `202308`, 
+    `202309`, 
+    `202310`, 
+    `202311`, 
+    `202312`, 
+    `202401`, 
+    `202402`, 
+    `202403`, 
+    `202404`, 
+    `202405`, 
+    `202406`, 
+    `202407`, 
+    `202408`, 
+    `202409`, 
+    `202410`, 
+    `202411`
+FROM 
+    sales_performance 
+WHERE 
+    `담당자` = '박지민'
+ORDER BY 
+    `담당자`;
+2025-09-29 14:33:47,762 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT 
+    `담당자`, 
+    `202212`, 
+    `202301`, 
+    `202302`, 
+    `202303`, 
+    `202304`, 
+    `202305`, 
+    `202306`, 
+    `202307`, 
+    `202308`, 
+    `202309`, 
+    `202310`, 
+    `202311`, 
+...
+2025-09-29 14:33:47,768 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 박지민님의 실적 (오름차순 정렬) 조회
+2025-09-29 14:33:47,779 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:33:47,797 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:33:47,799 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:33:47,800 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:33:47,811 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:33:47,813 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:33:47,814 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:33:47,814 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:33:47,814 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:33:47,814 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:33:49,107 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:49,109 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:33:49,109 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:33:49,109 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:33:49,110 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:33:49,110 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:33:49,111 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:33:49,111 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:33:49,120 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:33:34.741504', 'end_time': '2025-09-29T14:33:49.117501'}
+2025-09-29 14:33:49,131 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 1월 매출 현황
+2025-09-29 14:33:51,310 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:51,320 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:33:51,321 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 1월 매출 현황...
+2025-09-29 14:33:51,321 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '1월 매출 현황', 'name': '매출', 'month': '01', 'year': 2025, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '매출', 'comparison_type': None}
+2025-09-29 14:33:55,082 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:55,091 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202501` as sales 
+FROM sales_performance 
+WHERE `202501` IS NOT NULL 
+ORDER BY `202501` DESC 
+LIMIT 10;
+2025-09-29 14:33:55,091 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:33:55,091 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:33:55,092 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:33:55,094 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such column: 202501
+2025-09-29 14:33:55,094 - backend.service.agents.sales_analytics_agent - ERROR - SQL execution error: 실행 오류: no such column: 202501
+2025-09-29 14:33:55,094 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:33:55,094 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:33:55,094 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:33:55,096 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:33:55,096 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:33:56,058 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:33:56,064 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:33:56,066 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:33:56,066 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '1월 매출 현황', 'name': '매출', 'month': '01', 'year': 2025, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '매출', 'comparison_type': None}
+2025-09-29 14:34:01,763 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:01,773 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202501` as sales 
+FROM sales_performance 
+WHERE `202501` IS NOT NULL 
+ORDER BY `202501` DESC 
+LIMIT 10;
+2025-09-29 14:34:01,773 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, `202501` as sales 
+FROM sales_performance 
+WHERE `202501` IS NOT NULL 
+ORDER BY `202501` DESC 
+LIMIT 10;...
+2025-09-29 14:34:01,774 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 매출님의 2025년 1월 실적 (내림차순 정렬) 조회
+2025-09-29 14:34:01,778 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such column: 202501
+2025-09-29 14:34:01,778 - backend.service.subgraphs.data_collection_subgraph - ERROR - SQL execution error: 실행 오류: no such column: 202501
+2025-09-29 14:34:01,782 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 100 rows
+2025-09-29 14:34:01,783 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:34:01,783 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:34:01,784 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:34:01,799 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:34:01,799 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:34:01,800 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:34:01,800 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:34:01,800 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:34:01,800 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:34:03,158 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:03,159 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:34:03,160 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:34:03,160 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:34:03,161 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:34:03,161 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:34:03,161 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:34:03,161 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:34:03,172 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:33:49.123005', 'end_time': '2025-09-29T14:34:03.169193'}
+2025-09-29 14:34:03,183 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 상반기 실적
+2025-09-29 14:34:04,527 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:04,528 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:34:04,528 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 상반기 실적...
+2025-09-29 14:34:04,528 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '상반기 실적', 'name': '상반기', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '상반기', 'comparison_type': None}
+2025-09-29 14:34:09,706 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:09,712 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202301` + `202302` + `202303` + `202304` + `202305` + `202306`) as total_sales 
+FROM sales_performance 
+WHERE `202301` IS NOT NULL 
+   OR `202302` IS NOT NULL 
+   OR `202303` IS NOT NULL 
+   OR `202304` IS NOT NULL 
+   OR `202305` IS NOT NULL 
+   OR `202306` IS NOT NULL 
+GROUP BY `담당자`
+ORDER BY total_sales DESC;
+2025-09-29 14:34:09,712 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:34:09,712 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:34:09,713 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:34:09,717 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:34:09,724 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 6 rows
+2025-09-29 14:34:09,724 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:34:09,724 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:34:09,725 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:34:09,725 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:34:09,725 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:34:10,899 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:10,908 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:34:10,910 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:34:10,910 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '상반기 실적', 'name': '상반기', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '상반기', 'comparison_type': None}
+2025-09-29 14:34:15,725 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:15,730 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202301` + `202302` + `202303` + `202304` + `202305` + `202306`) as total_sales 
+FROM sales_performance 
+WHERE `202301` IS NOT NULL 
+   OR `202302` IS NOT NULL 
+   OR `202303` IS NOT NULL 
+   OR `202304` IS NOT NULL 
+   OR `202305` IS NOT NULL 
+   OR `202306` IS NOT NULL 
+GROUP BY `담당자`
+ORDER BY total_sales DESC;
+2025-09-29 14:34:15,730 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, 
+       SUM(`202301` + `202302` + `202303` + `202304` + `202305` + `202306`) as total_sales 
+FROM sales_performance 
+WHERE `202301` IS NOT NULL 
+   OR `202302` IS NOT NULL 
+   OR `202303...
+2025-09-29 14:34:15,730 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 상반기님의 합계 집계 (내림차순 정렬) 조회
+2025-09-29 14:34:15,733 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:34:15,733 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:34:15,735 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:34:15,736 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:34:15,748 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:34:15,748 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:34:15,750 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:34:15,750 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:34:15,750 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:34:15,750 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:34:17,027 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:17,029 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:34:17,029 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:34:17,029 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:34:17,030 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:34:17,030 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:34:17,031 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:34:17,031 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:34:17,050 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:34:03.175198', 'end_time': '2025-09-29T14:34:17.046272'}
+2025-09-29 14:34:17,061 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 하반기 목표 대비 실적
+2025-09-29 14:34:19,124 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:19,161 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:34:19,161 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 하반기 목표 대비 실적...
+2025-09-29 14:34:19,161 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '하반기 목표 대비 실적', 'name': '하반기', 'month': None, 'year': None, 'team': None, 'action': 'compare', 'period_type': None, 'person_name': '하반기', 'comparison_type': None}
+2025-09-29 14:34:26,024 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:26,041 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT 
+    sp.`담당자`, 
+    SUM(sp.`202307`) + SUM(sp.`202308`) + SUM(sp.`202309`) + SUM(sp.`202310`) + SUM(sp.`202311`) + SUM(sp.`202312`) AS total_sales,
+    SUM(st.`202312`) + SUM(st.`202311`) + SUM(st.`202310`) + SUM(st.`202309`) + SUM(st.`202308`) + SUM(st.`202307`) AS total_target
+FROM 
+    sales_performance sp
+JOIN 
+    sales_target st ON sp.`담당자` = st.`담당자`
+WHERE 
+    sp.`202307` IS NOT NULL OR 
+    sp.`202308` IS NOT NULL OR 
+    sp.`202309` IS NOT NULL OR 
+    sp.`202310` IS NOT NULL OR 
+    sp.`202311` IS NOT NULL OR 
+    sp.`202312` IS NOT NULL
+GROUP BY 
+    sp.`담당자`
+ORDER BY 
+    total_sales DESC;
+2025-09-29 14:34:26,042 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:34:26,042 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:34:26,043 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:34:26,045 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such table: sales_target
+2025-09-29 14:34:26,045 - backend.service.agents.sales_analytics_agent - ERROR - SQL execution error: 실행 오류: no such table: sales_target
+2025-09-29 14:34:26,046 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:34:26,046 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:34:26,046 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:34:26,046 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:34:26,046 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:34:27,345 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:27,350 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db', 'sales_target_db']
+2025-09-29 14:34:27,351 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:34:27,351 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '하반기 목표 대비 실적', 'name': '하반기', 'month': None, 'year': None, 'team': None, 'action': 'compare', 'period_type': None, 'person_name': '하반기', 'comparison_type': None}
+2025-09-29 14:34:27,352 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting target data for session batch_20250929_142818
+2025-09-29 14:34:27,353 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:34:27,354 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 6 target records
+2025-09-29 14:34:35,982 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:35,994 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT 
+    sp.`담당자`, 
+    SUM(sp.`202307` + sp.`202308` + sp.`202309` + sp.`202310` + sp.`202311` + sp.`202312`) AS total_sales,
+    SUM(st.`202312` + st.`202313` + st.`202314` + st.`202315` + st.`202316` + st.`202317`) AS total_target
+FROM 
+    sales_performance sp
+JOIN 
+    sales_target st ON sp.`담당자` = st.`담당자`
+WHERE 
+    sp.`202307` IS NOT NULL OR 
+    sp.`202308` IS NOT NULL OR 
+    sp.`202309` IS NOT NULL OR 
+    sp.`202310` IS NOT NULL OR 
+    sp.`202311` IS NOT NULL OR 
+    sp.`202312` IS NOT NULL
+GROUP BY 
+    sp.`담당자`
+ORDER BY 
+    total_sales DESC;
+2025-09-29 14:34:35,994 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT 
+    sp.`담당자`, 
+    SUM(sp.`202307` + sp.`202308` + sp.`202309` + sp.`202310` + sp.`202311` + sp.`202312`) AS total_sales,
+    SUM(st.`202312` + st.`202313` + st.`202314` + st.`202315` + st.`20...
+2025-09-29 14:34:35,994 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 하반기님의 합계 집계 (내림차순 정렬) 조회
+2025-09-29 14:34:35,996 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such table: sales_target
+2025-09-29 14:34:35,997 - backend.service.subgraphs.data_collection_subgraph - ERROR - SQL execution error: 실행 오류: no such table: sales_target
+2025-09-29 14:34:36,000 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 100 rows
+2025-09-29 14:34:36,000 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:34:36,001 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:34:36,001 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:34:36,021 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:34:36,021 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:34:36,021 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:34:36,021 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:34:36,022 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:34:36,022 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:34:37,245 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:37,248 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:34:37,250 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:34:37,251 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:34:37,252 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:34:37,252 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:34:37,252 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:34:37,253 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:34:37,274 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:34:17.054674', 'end_time': '2025-09-29T14:34:37.271918'}
+2025-09-29 14:34:37,282 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 3분기 판매 분석
+2025-09-29 14:34:39,589 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:39,602 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:34:39,602 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 3분기 판매 분석...
+2025-09-29 14:34:39,602 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '3분기 판매 분석', 'name': '분기', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '분기', 'comparison_type': None}
+2025-09-29 14:34:44,264 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:44,268 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202307`) AS sales_july, 
+       SUM(`202308`) AS sales_august, 
+       SUM(`202309`) AS sales_september, 
+       SUM(`202307` + `202308` + `202309`) AS total_sales_q3 
+FROM sales_performance 
+WHERE `202307` IS NOT NULL 
+   OR `202308` IS NOT NULL 
+   OR `202309` IS NOT NULL 
+GROUP BY `담당자`
+ORDER BY total_sales_q3 DESC;
+2025-09-29 14:34:44,268 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:34:44,269 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:34:44,269 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:34:44,276 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:34:44,277 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 6 rows
+2025-09-29 14:34:44,277 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:34:44,277 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:34:44,277 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:34:44,278 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:34:44,278 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:34:45,648 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:45,655 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db', 'sales_target_db']
+2025-09-29 14:34:45,656 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:34:45,656 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '3분기 판매 분석', 'name': '분기', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '분기', 'comparison_type': None}
+2025-09-29 14:34:45,657 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting target data for session batch_20250929_142818
+2025-09-29 14:34:45,658 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:34:45,659 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 6 target records
+2025-09-29 14:34:51,089 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:51,097 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, 
+       SUM(`202307`) AS sales_july, 
+       SUM(`202308`) AS sales_august, 
+       SUM(`202309`) AS sales_september, 
+       SUM(`202307` + `202308` + `202309`) AS total_sales_q3 
+FROM sales_performance 
+WHERE `202307` IS NOT NULL OR `202308` IS NOT NULL OR `202309` IS NOT NULL 
+GROUP BY `담당자`
+ORDER BY total_sales_q3 DESC;
+2025-09-29 14:34:51,097 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, 
+       SUM(`202307`) AS sales_july, 
+       SUM(`202308`) AS sales_august, 
+       SUM(`202309`) AS sales_september, 
+       SUM(`202307` + `202308` + `202309`) AS total_sales_q3 
+FROM ...
+2025-09-29 14:34:51,097 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 분기님의 합계 집계 (내림차순 정렬) 조회
+2025-09-29 14:34:51,102 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:34:51,102 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:34:51,103 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:34:51,104 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:34:51,119 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:34:51,119 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:34:51,120 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:34:51,120 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:34:51,120 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:34:51,120 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:34:52,440 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:52,446 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:34:52,447 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:34:52,447 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:34:52,448 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:34:52,448 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:34:52,448 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:34:52,449 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:34:52,468 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:34:37.277325', 'end_time': '2025-09-29T14:34:52.464850'}
+2025-09-29 14:34:52,478 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 작년 대비 올해 실적
+2025-09-29 14:34:54,554 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:34:54,561 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:34:54,561 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 작년 대비 올해 실적...
+2025-09-29 14:34:54,561 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '작년 대비 올해 실적', 'name': '대비', 'month': None, 'year': 2024, 'team': None, 'action': 'compare', 'period_type': None, 'person_name': '대비', 'comparison_type': 'yoy'}
+2025-09-29 14:35:03,628 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:03,637 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT 
+    `담당자`, 
+    SUM(`202301` + `202302` + `202303` + `202304` + `202305` + `202306` + `202307` + `202308` + `202309` + `202310` + `202311`) AS total_sales_2023,
+    SUM(`202401` + `202402` + `202403` + `202404` + `202405` + `202406` + `202407` + `202408` + `202409` + `202410` + `202411`) AS total_sales_2024
+FROM 
+    sales_performance
+WHERE 
+    `202301` IS NOT NULL OR 
+    `202302` IS NOT NULL OR 
+    `202303` IS NOT NULL OR 
+    `202304` IS NOT NULL OR 
+    `202305` IS NOT NULL OR 
+    `202306` IS NOT NULL OR 
+    `202307` IS NOT NULL OR 
+    `202308` IS NOT NULL OR 
+    `202309` IS NOT NULL OR 
+    `202310` IS NOT NULL OR 
+    `202311` IS NOT NULL OR 
+    `202401` IS NOT NULL OR 
+    `202402` IS NOT NULL OR 
+    `202403` IS NOT NULL OR 
+    `202404` IS NOT NULL OR 
+    `202405` IS NOT NULL OR 
+    `202406` IS NOT NULL OR 
+    `202407` IS NOT NULL OR 
+    `202408` IS NOT NULL OR 
+    `202409` IS NOT NULL OR 
+    `202410` IS NOT NULL OR 
+    `202411` IS NOT NULL
+GROUP BY 
+    `담당자`;
+2025-09-29 14:35:03,638 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:35:03,638 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:35:03,639 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:35:03,645 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:35:03,646 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 6 rows
+2025-09-29 14:35:03,647 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:35:03,647 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:35:03,647 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:35:03,647 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:35:03,648 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:35:04,753 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:04,756 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:35:04,757 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:35:04,757 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '작년 대비 올해 실적', 'name': '대비', 'month': None, 'year': 2024, 'team': None, 'action': 'compare', 'period_type': None, 'person_name': '대비', 'comparison_type': 'yoy'}
+2025-09-29 14:35:10,980 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:10,985 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT 
+    `담당자`, 
+    SUM(`202301` + `202302` + `202303` + `202304` + `202305` + `202306` + `202307` + `202308` + `202309` + `202310` + `202311` + `202312`) AS total_sales_2023,
+    SUM(`202401` + `202402` + `202403` + `202404` + `202405` + `202406` + `202407` + `202408` + `202409` + `202410` + `202411`) AS total_sales_2024
+FROM 
+    sales_performance
+WHERE 
+    `202301` IS NOT NULL OR 
+    `202401` IS NOT NULL
+GROUP BY 
+    `담당자`;
+2025-09-29 14:35:10,985 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT 
+    `담당자`, 
+    SUM(`202301` + `202302` + `202303` + `202304` + `202305` + `202306` + `202307` + `202308` + `202309` + `202310` + `202311` + `202312`) AS total_sales_2023,
+    SUM(`202401` + `...
+2025-09-29 14:35:10,985 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 대비님의 합계 집계 조회
+2025-09-29 14:35:10,992 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:35:10,993 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:35:10,993 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:35:10,994 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:35:10,999 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:35:10,999 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:35:10,999 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:35:10,999 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:35:10,999 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:35:10,999 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:35:12,158 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:12,165 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: []
+2025-09-29 14:35:12,166 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:35:12,166 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:35:12,167 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:35:12,167 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:35:12,180 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:34:52.472003', 'end_time': '2025-09-29T14:35:12.176441'}
+2025-09-29 14:35:12,191 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 월요일 평균 매출
+2025-09-29 14:35:13,725 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:13,737 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:35:13,738 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 월요일 평균 매출...
+2025-09-29 14:35:13,738 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '월요일 평균 매출', 'name': '월요일', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '월요일', 'comparison_type': None}
+2025-09-29 14:35:16,998 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:17,000 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT AVG(`매출`) as average_sales
+FROM clients_db
+WHERE `월` = '월요일' AND `매출` IS NOT NULL;
+2025-09-29 14:35:17,001 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:35:17,001 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:35:17,001 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:35:17,003 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such table: clients_db
+2025-09-29 14:35:17,003 - backend.service.agents.sales_analytics_agent - ERROR - SQL execution error: 실행 오류: no such table: clients_db
+2025-09-29 14:35:17,004 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:35:17,004 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:35:17,004 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:35:17,004 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:35:17,005 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:35:18,028 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:18,031 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:35:18,032 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:35:18,033 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '월요일 평균 매출', 'name': '월요일', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '월요일', 'comparison_type': None}
+2025-09-29 14:35:21,285 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:21,300 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT AVG(`매출`) as average_sales
+FROM clients_db
+WHERE `월` = '월요일' AND `매출` IS NOT NULL;
+2025-09-29 14:35:21,300 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT AVG(`매출`) as average_sales
+FROM clients_db
+WHERE `월` = '월요일' AND `매출` IS NOT NULL;...
+2025-09-29 14:35:21,300 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 월요일님의 평균 조회
+2025-09-29 14:35:21,301 - backend.service.tools.sql_executor - ERROR - 실행 오류: no such table: clients_db
+2025-09-29 14:35:21,302 - backend.service.subgraphs.data_collection_subgraph - ERROR - SQL execution error: 실행 오류: no such table: clients_db
+2025-09-29 14:35:21,304 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 100 rows
+2025-09-29 14:35:21,305 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:35:21,305 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:35:21,306 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:35:21,311 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:35:21,311 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:35:21,311 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:35:21,311 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:35:21,311 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:35:21,311 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:35:22,630 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:22,639 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:35:22,640 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:35:22,640 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:35:22,641 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:35:22,641 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:35:22,641 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:35:22,641 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:35:22,658 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:35:12.183215', 'end_time': '2025-09-29T14:35:22.656827'}
+2025-09-29 14:35:22,667 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 주말 판매 현황
+2025-09-29 14:35:24,675 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:24,684 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:35:24,684 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 주말 판매 현황...
+2025-09-29 14:35:24,684 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '주말 판매 현황', 'name': '주말', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '주말', 'comparison_type': None}
+2025-09-29 14:35:29,928 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:29,935 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202403` as sales 
+FROM sales_performance 
+WHERE `202403` IS NOT NULL 
+ORDER BY `202403` DESC 
+LIMIT 10;
+2025-09-29 14:35:29,936 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:35:29,936 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:35:29,936 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:35:29,939 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 10 rows
+2025-09-29 14:35:29,939 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 10 rows
+2025-09-29 14:35:29,940 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:35:29,940 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:35:29,940 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:35:29,940 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:35:29,940 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:35:30,987 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:30,995 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:35:30,996 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:35:30,996 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '주말 판매 현황', 'name': '주말', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '주말', 'comparison_type': None}
+2025-09-29 14:35:35,483 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:35,488 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202403` as sales 
+FROM sales_performance 
+WHERE `202403` IS NOT NULL 
+ORDER BY `202403` DESC 
+LIMIT 10;
+2025-09-29 14:35:35,488 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, `202403` as sales 
+FROM sales_performance 
+WHERE `202403` IS NOT NULL 
+ORDER BY `202403` DESC 
+LIMIT 10;...
+2025-09-29 14:35:35,488 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 주말님의 실적 (내림차순 정렬) 조회
+2025-09-29 14:35:35,490 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 10 rows
+2025-09-29 14:35:35,491 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:35:35,493 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:35:35,494 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:35:35,500 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:35:35,500 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:35:35,500 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:35:35,500 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:35:35,501 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:35:35,501 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:35:36,674 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:36,679 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: []
+2025-09-29 14:35:36,680 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:35:36,680 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:35:36,681 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:35:36,681 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:35:36,694 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:35:22.660973', 'end_time': '2025-09-29T14:35:36.690749'}
+2025-09-29 14:35:36,705 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 휴일 매출 분석
+2025-09-29 14:35:38,425 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:38,431 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:35:38,431 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 휴일 매출 분석...
+2025-09-29 14:35:38,432 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '휴일 매출 분석', 'name': '휴일', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '휴일', 'comparison_type': None}
+2025-09-29 14:35:46,630 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:46,633 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT 
+    `담당자`, 
+    SUM(`202301`) as sales_jan,
+    SUM(`202302`) as sales_feb,
+    SUM(`202303`) as sales_mar,
+    SUM(`202304`) as sales_apr,
+    SUM(`202305`) as sales_may,
+    SUM(`202306`) as sales_jun,
+    SUM(`202307`) as sales_jul,
+    SUM(`202308`) as sales_aug,
+    SUM(`202309`) as sales_sep,
+    SUM(`202310`) as sales_oct,
+    SUM(`202311`) as sales_nov,
+    SUM(`202312`) as sales_dec
+FROM 
+    sales_performance 
+WHERE 
+    `사번` = '12345' 
+    AND (`202301` IS NOT NULL OR `202302` IS NOT NULL OR `202303` IS NOT NULL OR 
+         `202304` IS NOT NULL OR `202305` IS NOT NULL OR `202306` IS NOT NULL OR 
+         `202307` IS NOT NULL OR `202308` IS NOT NULL OR `202309` IS NOT NULL OR 
+         `202310` IS NOT NULL OR `202311` IS NOT NULL OR `202312` IS NOT NULL)
+GROUP BY 
+    `담당자`;
+2025-09-29 14:35:46,633 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:35:46,633 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:35:46,634 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:35:46,636 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:35:46,637 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 0 rows
+2025-09-29 14:35:46,637 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:35:46,637 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:35:46,638 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:35:46,638 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:35:46,638 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:35:48,000 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:48,013 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:35:48,013 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:35:48,013 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '휴일 매출 분석', 'name': '휴일', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '휴일', 'comparison_type': None}
+2025-09-29 14:35:50,950 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:50,958 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, SUM(`202312`) as holiday_sales 
+FROM sales_performance 
+WHERE `202312` IS NOT NULL 
+GROUP BY `담당자` 
+ORDER BY holiday_sales DESC;
+2025-09-29 14:35:50,959 - backend.service.subgraphs.data_collection_subgraph - INFO - Generated SQL with LLM: SELECT `담당자`, SUM(`202312`) as holiday_sales 
+FROM sales_performance 
+WHERE `202312` IS NOT NULL 
+GROUP BY `담당자` 
+ORDER BY holiday_sales DESC;...
+2025-09-29 14:35:50,959 - backend.service.subgraphs.data_collection_subgraph - INFO - Explanation: 휴일님의 합계 집계 (내림차순 정렬) 조회
+2025-09-29 14:35:50,968 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 6 rows
+2025-09-29 14:35:50,969 - backend.service.subgraphs.data_collection_subgraph - INFO - Collected 0 performance records
+2025-09-29 14:35:50,969 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:35:50,970 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:35:50,986 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:35:50,986 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:35:50,986 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:35:50,986 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:35:50,986 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:35:50,987 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:35:52,672 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:52,678 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: ['CalculationTool']
+2025-09-29 14:35:52,679 - backend.service.subgraphs.analysis_subgraph - INFO - Calculating basic metrics for session batch_20250929_142818
+2025-09-29 14:35:52,679 - backend.service.subgraphs.analysis_subgraph - INFO - Calculated 0 basic metrics
+2025-09-29 14:35:52,680 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session batch_20250929_142818
+2025-09-29 14:35:52,680 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:35:52,680 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session batch_20250929_142818
+2025-09-29 14:35:52,680 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:35:52,701 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:35:36.698029', 'end_time': '2025-09-29T14:35:52.698184'}
+2025-09-29 14:35:52,714 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 분기별 성장률
+2025-09-29 14:35:55,285 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:35:55,298 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:35:55,298 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 분기별 성장률...
+2025-09-29 14:35:55,298 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '분기별 성장률', 'name': '분기별', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '분기별', 'comparison_type': None}
+2025-09-29 14:36:07,340 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:36:07,348 - backend.service.tools.sql_generator - WARNING - Only SELECT queries are allowed
+2025-09-29 14:36:07,348 - backend.service.tools.sql_generator - WARNING - LLM generated unsafe SQL, falling back to rule-based
+2025-09-29 14:36:07,348 - backend.service.tools.sql_generator - INFO - Generated SQL: SELECT *, `202411` as target_month FROM sales_performance WHERE `담당자` = '분기별' AND `202411` IS NOT NULL AND `202411` > 0 LIMIT 100
+2025-09-29 14:36:07,349 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:36:07,349 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:36:07,349 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session batch_20250929_142818
+2025-09-29 14:36:07,353 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:36:07,354 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 0 rows
+2025-09-29 14:36:07,354 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:36:07,354 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:36:07,355 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:36:07,355 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:36:07,355 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:36:09,353 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:36:09,360 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: ['sales_performance_db']
+2025-09-29 14:36:09,361 - backend.service.subgraphs.data_collection_subgraph - INFO - Collecting performance data for session batch_20250929_142818
+2025-09-29 14:36:09,361 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '분기별 성장률', 'name': '분기별', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '분기별', 'comparison_type': None}

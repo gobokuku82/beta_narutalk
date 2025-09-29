@@ -1,0 +1,7 @@
+2025-09-29 14:32:24,560 - backend.service.agents.sales_analytics_agent - INFO - LLM planning enabled with model: gpt-4o
+2025-09-29 14:32:24,560 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:32:24,561 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:32:24,561 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:32:24,561 - backend.service.tools.text2sql_tool - INFO - Text2SQL Tool initialized with LLM support
+2025-09-29 14:32:24,564 - backend.service.agents.sales_analytics_agent - INFO - Workflow graph built
+2025-09-29 14:32:24,564 - backend.service.agents.sales_analytics_agent - INFO - Initialized sales_analytics_agent

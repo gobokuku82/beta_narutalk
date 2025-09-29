@@ -1,0 +1,51 @@
+2025-09-29 14:27:39,430 - backend.service.agents.sales_analytics_agent - INFO - LLM planning enabled with model: gpt-4o
+2025-09-29 14:27:39,431 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:27:39,432 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:27:39,432 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:27:39,433 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:27:39,443 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:27:39,443 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:27:39,443 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:27:39,443 - backend.service.tools.text2sql_tool - INFO - Text2SQL Tool initialized with LLM support
+2025-09-29 14:27:39,444 - backend.service.agents.sales_analytics_agent - INFO - Workflow graph built
+2025-09-29 14:27:39,445 - backend.service.agents.sales_analytics_agent - INFO - Initialized sales_analytics_agent
+2025-09-29 14:27:39,447 - backend.service.agents.sales_analytics_agent - INFO - LLM planning enabled with model: gpt-4o
+2025-09-29 14:27:39,448 - backend.service.agents.sales_analytics_agent - INFO - Workflow graph built
+2025-09-29 14:27:39,448 - backend.service.agents.sales_analytics_agent - INFO - Initialized sales_analytics_agent
+2025-09-29 14:27:39,459 - backend.service.agents.sales_analytics_agent - INFO - Planning for user test_user: 테스트 쿼리
+2025-09-29 14:27:41,342 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:27:41,356 - backend.service.agents.sales_analytics_agent - INFO - Plan requires SQL, generating with Text2SQL Tool...
+2025-09-29 14:27:41,357 - backend.service.tools.text2sql_tool - INFO - Generating SQL for query: 테스트 쿼리...
+2025-09-29 14:27:41,358 - backend.service.tools.sql_generator - INFO - Parsed query: {'original_query': '테스트 쿼리', 'name': '테스트', 'month': None, 'year': None, 'team': None, 'action': 'sales', 'period_type': None, 'person_name': '테스트', 'comparison_type': None}
+2025-09-29 14:27:45,445 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:27:45,457 - backend.service.tools.sql_generator - INFO - LLM generated SQL: SELECT `담당자`, `202403`, `202404`, `202405` 
+FROM sales_performance 
+WHERE `사번` = '특정사번' AND `202403` IS NOT NULL 
+ORDER BY `202403` DESC;
+2025-09-29 14:27:45,458 - backend.service.tools.text2sql_tool - INFO - SQL generated successfully using llm method
+2025-09-29 14:27:45,458 - backend.service.agents.sales_analytics_agent - INFO - SQL generated successfully using llm method
+2025-09-29 14:27:45,458 - backend.service.agents.sales_analytics_agent - INFO - Executing plan for session test_session
+2025-09-29 14:27:45,461 - backend.service.tools.sql_executor - INFO - Query executed in 0.00s, returned 0 rows
+2025-09-29 14:27:45,461 - backend.service.agents.sales_analytics_agent - INFO - SQL executed successfully, returned 0 rows
+2025-09-29 14:27:45,462 - backend.service.tools.schema_context - WARNING - Table descriptions file not found: database\schemas\table_descriptions.json
+2025-09-29 14:27:45,462 - backend.service.tools.schema_context - WARNING - Relationships file not found: database\schemas\relationships.json
+2025-09-29 14:27:45,462 - backend.service.tools.schema_context - INFO - SchemaContext initialized successfully
+2025-09-29 14:27:45,462 - backend.service.tools.sql_generator - INFO - LLM initialized for SQL generation
+2025-09-29 14:27:45,463 - backend.service.subgraphs.data_collection_subgraph - INFO - DataCollectionSubgraph initialized with LLM and tools
+2025-09-29 14:27:46,563 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:27:46,570 - backend.service.subgraphs.data_collection_subgraph - INFO - Selected databases: []
+2025-09-29 14:27:46,571 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:27:46,572 - backend.service.subgraphs.data_collection_subgraph - INFO - Aggregating collected data
+2025-09-29 14:27:46,579 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:27:46,579 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:27:46,580 - backend.service.tools.calculation_tool - INFO - CalculationTool initialized
+2025-09-29 14:27:46,580 - backend.service.tools.trend_analysis_tool - INFO - TrendAnalysisTool initialized
+2025-09-29 14:27:46,580 - backend.service.tools.cross_db_analysis_tool - INFO - CrossDBAnalysisTool initialized
+2025-09-29 14:27:46,580 - backend.service.subgraphs.analysis_subgraph - INFO - AnalysisSubgraph initialized with LLM-based tool selection
+2025-09-29 14:27:48,171 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-29 14:27:48,178 - backend.service.subgraphs.analysis_subgraph - INFO - Selected analysis tools: []
+2025-09-29 14:27:48,179 - backend.service.subgraphs.analysis_subgraph - INFO - Generating insights for session test_session
+2025-09-29 14:27:48,179 - backend.service.subgraphs.analysis_subgraph - INFO - Generated 0 insights
+2025-09-29 14:27:48,179 - backend.service.subgraphs.analysis_subgraph - INFO - Creating final report for session test_session
+2025-09-29 14:27:48,179 - backend.service.subgraphs.analysis_subgraph - INFO - Final report created successfully
+2025-09-29 14:27:48,188 - backend.service.agents.sales_analytics_agent - INFO - Execution complete: {'status': 'completed', 'step': 'formatted', 'errors_count': 0, 'has_results': True, 'data_collected': True, 'insights_count': 0, 'start_time': '2025-09-29T14:27:39.448139', 'end_time': '2025-09-29T14:27:48.186845'}
