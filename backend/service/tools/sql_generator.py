@@ -70,6 +70,11 @@ class SQLGenerator:
         # Time-related words to skip during name extraction
         self.time_words = ["지난달", "이번달", "작년", "올해", "내년", "전월", "당월", "지난", "이번", "다음"]
 
+        # Valid employees list (from actual database - only 6 employees have sales data)
+        self.valid_employees = [
+            '윤수아', '윤하은', '정예준', '조시현', '조하은', '최수아'
+        ]
+
     async def extract_entities_with_llm(self, query: str) -> Dict[str, Any]:
         """
         Extract entities from query using LLM for better accuracy
@@ -122,6 +127,63 @@ class SQLGenerator:
         except Exception as e:
             logger.warning(f"LLM entity extraction failed, falling back to rule-based: {e}")
             return self.parse_query(query)
+
+    def validate_query_entities(self, parsed: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate entities in the query (employees, dates, etc.)
+
+        Args:
+            parsed: Parsed query components
+
+        Returns:
+            Validation result with warnings
+        """
+        validation_result = {
+            'is_valid': True,
+            'warnings': [],
+            'suggestions': []
+        }
+
+        # Check if parsed name is a valid employee
+        if parsed.get('person_name'):
+            clean_name = parsed['person_name']
+            if clean_name not in self.valid_employees:
+                validation_result['warnings'].append(
+                    f"'{clean_name}'님의 데이터를 찾을 수 없습니다."
+                )
+                validation_result['suggestions'].append(
+                    f"등록된 직원: {', '.join(self.valid_employees)}"
+                )
+                validation_result['is_valid'] = False
+
+        # Check for multiple names
+        if parsed.get('names'):
+            invalid_names = []
+            for name in parsed['names']:
+                if name not in self.valid_employees:
+                    invalid_names.append(name)
+
+            if invalid_names:
+                validation_result['warnings'].append(
+                    f"다음 직원의 데이터를 찾을 수 없습니다: {', '.join(invalid_names)}"
+                )
+                validation_result['is_valid'] = False
+
+        # Check if requested date is within available range
+        if parsed.get('year') and parsed.get('month'):
+            month_col = f"{parsed['year']}{parsed['month']}"
+            if month_col not in self.available_columns:
+                validation_result['warnings'].append(
+                    f"{parsed['year']}년 {int(parsed['month'])}월 데이터는 없습니다. (가용 기간: 2022년 12월 ~ 2024년 11월)"
+                )
+                validation_result['is_valid'] = False
+        elif parsed.get('year') and parsed['year'] > 2024:
+            validation_result['warnings'].append(
+                f"{parsed['year']}년 데이터는 없습니다. (가용 기간: 2022년 12월 ~ 2024년 11월)"
+            )
+            validation_result['is_valid'] = False
+
+        return validation_result
 
     def parse_query(self, query: str) -> Dict[str, Any]:
         """
@@ -395,6 +457,20 @@ class SQLGenerator:
         Returns:
             Tuple of (SQL query, explanation)
         """
+        # First validate the query entities
+        validation = self.validate_query_entities(parsed)
+
+        # If validation fails, return special SQL with validation message
+        if not validation['is_valid']:
+            error_msg = ' '.join(validation['warnings'])
+            if validation['suggestions']:
+                error_msg += ' ' + ' '.join(validation['suggestions'])
+
+            # Return a SQL that will produce empty results
+            sql = f"SELECT '' as result WHERE 1=0"
+            explanation = error_msg
+            return sql, explanation
+
         names = parsed.get("names")  # Multiple names
         name = parsed.get("name") if not names else None  # Single name
         month = parsed.get("month")
