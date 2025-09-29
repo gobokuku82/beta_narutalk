@@ -46,7 +46,7 @@ async def test_validation():
 
             # Check result
             if result.get('status') == 'completed':
-                print("✓ Query executed successfully")
+                print("O Query executed successfully")
                 if result.get('formatted_result'):
                     # Show first 200 chars of result
                     output = result['formatted_result'][:200]
@@ -54,14 +54,14 @@ async def test_validation():
                         output += "..."
                     print(f"Result: {output}")
             elif result.get('status') == 'failed':
-                print(f"✗ Query failed: {result.get('error', 'Unknown error')}")
+                print(f"X Query failed: {result.get('error', 'Unknown error')}")
                 if result.get('formatted_result'):
                     print(f"Message: {result['formatted_result']}")
             else:
                 print(f"? Unknown status: {result.get('status')}")
 
         except Exception as e:
-            print(f"✗ Exception: {str(e)}")
+            print(f"X Exception: {str(e)}")
 
 if __name__ == "__main__":
     print("Testing validation logic for Sales Analytics Agent")

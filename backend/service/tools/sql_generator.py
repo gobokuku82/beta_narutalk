@@ -70,6 +70,9 @@ class SQLGenerator:
         # Time-related words to skip during name extraction
         self.time_words = ["지난달", "이번달", "작년", "올해", "내년", "전월", "당월", "지난", "이번", "다음"]
 
+        # Keywords that shouldn't be treated as names
+        self.skip_words = ["실적", "매출", "판매", "목표", "달성", "평균", "합계", "순위", "현황", "분석", "조회", "데이터"]
+
         # Valid employees list (from actual database - only 6 employees have sales data)
         self.valid_employees = [
             '윤수아', '윤하은', '정예준', '조시현', '조하은', '최수아'
@@ -246,16 +249,30 @@ class SQLGenerator:
 
         # STEP 5: Extract names (AFTER handling time expressions)
         # Pattern for Korean names (2-4 characters) with optional titles/particles
+        # Updated to better capture names with particles
         name_pattern = r'([가-힣]{2,4})(?:의|씨|님|대리|과장|부장|차장|팀장)?'
 
+        # Also check for names with possessive particle '의'
+        possessive_pattern = r'([가-힣]{2,4})의'
+        possessive_match = re.search(possessive_pattern, query)
+        if possessive_match:
+            potential_name = possessive_match.group(1)
+            if (potential_name not in self.time_words and
+                potential_name not in self.month_map and
+                potential_name not in self.skip_words):
+                parsed["name"] = potential_name
+                parsed["person_name"] = potential_name
+                # Skip the general pattern matching below
+                name_pattern = None
+
         # Check for multiple names (와, 과, 및, 그리고, comma)
-        if any(separator in query for separator in ["와", "과", ",", "및", "그리고"]):
+        if name_pattern and any(separator in query for separator in ["와", "과", ",", "및", "그리고"]):
             names = []
             # Split by various separators
             parts = query
             for sep in ["와", "과", ",", "및", "그리고"]:
                 parts = parts.replace(sep, "|")
-            
+
             for part in parts.split("|"):
                 part = part.strip()
                 # Find potential names in each part
@@ -266,17 +283,20 @@ class SQLGenerator:
                         clean_name = match.rstrip('의').rstrip('씨').rstrip('님')
                         if clean_name and clean_name not in names:
                             names.append(clean_name)
-            
+
             if len(names) > 1:
                 parsed["names"] = names
                 parsed["name"] = names[0]
                 parsed["person_name"] = names[0]
-        else:
-            # Single name extraction
+        elif name_pattern and not parsed.get("name"):
+            # Single name extraction (only if not already found with possessive particle)
             matches = re.findall(name_pattern, query)
             for match in matches:
-                # Skip time-related words and month names
-                if match not in self.time_words and match not in self.month_map and "달" not in match:
+                # Skip time-related words, month names, and keywords
+                if (match not in self.time_words and
+                    match not in self.month_map and
+                    match not in self.skip_words and
+                    "달" not in match):
                     clean_name = match.rstrip('의').rstrip('씨').rstrip('님')
                     parsed["name"] = match  # Keep original for backward compatibility
                     parsed["person_name"] = clean_name  # Clean version
