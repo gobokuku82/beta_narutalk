@@ -132,17 +132,18 @@ class BatchTester:
         ]
 
         # Category 2: Employee-specific Queries (10 queries)
+        # Using actual employee names: 윤수아, 윤하은, 정예준, 조시현, 조하은, 최수아
         employee_queries = [
-            TestQuery("employee", "김철수의 이번달 실적", ["김철수"], "특정 직원 월 실적"),
-            TestQuery("employee", "박영희 판매 현황", ["박영희"], "특정 직원 판매 현황"),
-            TestQuery("employee", "이민수의 올해 실적", ["이민수"], "특정 직원 연간 실적"),
-            TestQuery("employee", "정대리 목표 달성률", ["정대리", "목표"], "특정 직원 목표 달성"),
-            TestQuery("employee", "김과장의 분기 성과", ["김과장", "분기"], "특정 직원 분기 성과"),
-            TestQuery("employee", "최팀장 매출 분석", ["최팀장", "매출"], "팀장 매출 분석"),
-            TestQuery("employee", "신입사원 실적 현황", ["신입"], "신입 직원 실적"),
-            TestQuery("employee", "영업1팀 실적", ["영업1팀"], "팀별 실적"),
-            TestQuery("employee", "김영수 담당 고객", ["김영수", "고객"], "직원별 고객 정보"),
-            TestQuery("employee", "박지민 월별 실적 추이", ["박지민", "월별"], "직원 월별 추이"),
+            TestQuery("employee", "윤수아의 이번달 실적", ["윤수아"], "특정 직원 월 실적"),
+            TestQuery("employee", "정예준 판매 현황", ["정예준"], "특정 직원 판매 현황"),
+            TestQuery("employee", "조시현의 올해 실적", ["조시현"], "특정 직원 연간 실적"),
+            TestQuery("employee", "조하은 목표 달성률", ["조하은", "목표"], "특정 직원 목표 달성"),
+            TestQuery("employee", "최수아의 분기 성과", ["최수아", "분기"], "특정 직원 분기 성과"),
+            TestQuery("employee", "윤하은 매출 분석", ["윤하은", "매출"], "팀장 매출 분석"),
+            TestQuery("employee", "윤수아 실적 현황", ["윤수아"], "직원 실적"),
+            TestQuery("employee", "정예준 팀 실적", ["정예준"], "팀별 실적"),
+            TestQuery("employee", "조시현 담당 고객", ["조시현", "고객"], "직원별 고객 정보"),
+            TestQuery("employee", "최수아 월별 실적 추이", ["최수아", "월별"], "직원 월별 추이"),
         ]
 
         # Category 3: Period-based Analysis (10 queries)
@@ -161,7 +162,7 @@ class BatchTester:
 
         # Category 4: Complex Multi-dimensional Queries (10 queries)
         complex_queries = [
-            TestQuery("complex", "김철수의 이번달 목표 달성률과 작년 동기 대비", ["김철수", "목표", "작년"], "복합 분석"),
+            TestQuery("complex", "윤수아의 이번달 목표 달성률과 작년 동기 대비", ["윤수아", "목표", "작년"], "복합 분석"),
             TestQuery("complex", "상위 5명 영업사원 실적 비교", ["상위", "5명", "비교"], "순위 비교"),
             TestQuery("complex", "제품별 판매량과 매출 분석", ["제품", "판매량", "매출"], "제품 분석"),
             TestQuery("complex", "지역별 영업 성과 분석", ["지역", "성과"], "지역 분석"),

@@ -30,6 +30,17 @@ class SQLGenerator:
         # Available columns from schema context
         self.available_columns = self.schema_context.available_months
 
+        # Table name mapping (English -> Korean)
+        self.table_mapping = {
+            'sales_performance': 'sales_performance',  # Already matches
+            'sales_target': '지점별목표',
+            'sales_target_db': '지점별목표',  # Alias
+            'clients': '거래처자료',
+            'clients_db': '거래처자료',  # Alias
+            'hr_data': '인사자료',
+            'hr_info': '인사자료',  # Alias
+        }
+
         # Initialize LLM client for SQL generation
         api_key = os.getenv("OPENAI_API_KEY")
         if api_key:
@@ -281,6 +292,9 @@ class SQLGenerator:
             # Extract SQL from response
             sql = self._extract_sql_from_response(sql_content)
 
+            # Map table names to Korean
+            sql = self._map_table_names(sql)
+
             # Validate generated SQL
             if not self.validate_sql(sql):
                 logger.warning("LLM generated unsafe SQL, falling back to rule-based")
@@ -295,6 +309,16 @@ class SQLGenerator:
         except Exception as e:
             logger.error(f"LLM SQL generation failed: {e}, falling back to rule-based")
             return self.generate_sql(parsed)
+
+    def _map_table_names(self, sql: str) -> str:
+        """Map English table names to Korean table names in SQL"""
+        # Replace table names in SQL
+        for eng_name, kor_name in self.table_mapping.items():
+            # Replace table names with word boundaries to avoid partial replacements
+            # Handle both direct references and JOIN clauses
+            sql = re.sub(rf'\b{eng_name}\b', kor_name, sql, flags=re.IGNORECASE)
+
+        return sql
 
     def _extract_sql_from_response(self, response: str) -> str:
         """Extract SQL query from LLM response"""
