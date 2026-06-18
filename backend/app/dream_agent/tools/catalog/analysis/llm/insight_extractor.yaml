@@ -1,0 +1,26 @@
+name: insight_extractor
+description: "LLM으로 감성/키워드 분석 결과에서 핵심 인사이트 도출"
+version: "0.1.0"
+category: analysis
+
+parameters:
+  - name: max_insights
+    type: integer
+    required: false
+    default: 5
+
+timeout_sec: 60
+max_retries: 2
+requires_approval: false
+
+dependencies:
+  - sentiment_analyzer
+  - keyword_extractor
+
+produces:
+  - insights
+
+has_cost: true
+estimated_cost: 0.01
+
+tags: [analysis, llm, insight]

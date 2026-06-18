@@ -1,0 +1,30 @@
+name: creative_radar_ai
+visualization_id: C11
+category: creative
+description: "소재 AI 5축 RadarChart — ml_model.score_ai_axes (POC=Mock fixture)"
+methodology_id: M13
+priority: P0
+client: ${client}
+
+trigger:
+  type: manual
+
+steps:
+  - id: ai_axes
+    tool: creative_ai_axes
+    inputs:
+      client: ${client}
+
+validator:
+  schema: AiAxesRadarOutput
+  expected:
+    value_min: 0
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "creative_ai_axes.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [creative, radar, ai_axes, ml_model]

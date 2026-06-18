@@ -1,0 +1,25 @@
+name: review_collector
+description: |
+  clumi reviews.csv (24 raw) 수집 — raw 통째 반환 (review_normalizer 가 표준화).
+  ADR-027 권한: DataSource 호출만, 도메인 필터링·컬럼 hardcode 금지.
+version: "0.3.0"
+category: collection
+
+parameters: []  # ADR-027 Tool 권한 — filtering = MVP+ cleaning tool 결정
+
+timeout_sec: 30
+max_retries: 1
+requires_approval: false
+
+dependencies: []
+produces:
+  - raw_reviews
+
+has_cost: false
+estimated_cost: 0.0
+
+# C:LUMI 메타 (51/90 yaml 정합)
+clumi_methodology: "data/clumi/raw/reviews.csv (5 컬럼: review_id, date, product, rating, text), 24 raw rows"
+clumi_source_ids: ["reviews"]
+
+tags: [collection, review, helper-b, adr-027]

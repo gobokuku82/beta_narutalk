@@ -1,0 +1,30 @@
+name: cost_kpi_budget_total
+visualization_id: K22
+category: cost
+description: "총 예산 — budget_allocation total_budget 합 (K22·K23 cache 공유)"
+methodology_id: M01
+priority: P0
+client: ${client}
+
+trigger:
+  type: manual
+
+steps:
+  - id: budget_totals
+    tool: budget_totals
+    inputs:
+      client: ${client}
+
+validator:
+  schema: BudgetTotalsOutput
+  expected:
+    value_min: 0
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "budget_totals.json"       # K22·K23 공유
+  ttl_seconds: null
+
+owner: developer
+tags: [cost, kpi, budget, cache_shared]

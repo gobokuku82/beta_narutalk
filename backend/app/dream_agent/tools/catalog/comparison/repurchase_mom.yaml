@@ -1,0 +1,44 @@
+name: repurchase_mom
+description: "재구매율 MoM 비교 (S028 MoM) — 두 월의 전체·기존·재구매율 변화율"
+version: "0.1.0"
+category: comparison
+
+parameters:
+  - name: period_a
+    type: string
+    required: true
+    description: "이전 월 YYYY-MM (예: '2026-03')"
+  - name: period_b
+    type: string
+    required: true
+    description: "비교 월 YYYY-MM (예: '2026-04')"
+
+timeout_sec: 30
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - period_a_stats             # {total_buyers, existing_buyers, repurchase_rate}
+  - period_b_stats
+  - delta                      # {total_buyers_pct, existing_buyers_pct, repurchase_rate_pp}
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [clumi, comparison, mom, repurchase, methodology_S028]
+
+clumi_methodology: "calculations"
+clumi_source_ids: ["S028"]
+clumi_answer_values:
+  "2026-03 -> 2026-04":
+    delta:
+      total_buyers_pct: 14.9
+      existing_buyers_pct: 19.2
+      repurchase_rate_pp: 2.8
+
+storage:
+  layer: "computed"
+  key_template: "S028mom_repurchase_{period_a}_to_{period_b}.json"
+  partition: ["period_a", "period_b"]
+  cache_ttl_sec: 0

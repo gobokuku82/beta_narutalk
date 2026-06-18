@@ -1,0 +1,32 @@
+name: dashboard1_mom_revenue
+visualization_id: M01
+category: dashboard1
+description: "전월 대비 매출 비교 (S001 MoM)"
+methodology_id: M02
+priority: P0
+client: ${client}
+period_a: ${period_a}
+period_b: ${period_b}
+
+trigger:
+  type: manual
+
+steps:
+  - id: mom_revenue_compute
+    tool: mom_revenue
+    inputs:
+      client: ${client}
+      period_a: ${period_a}
+      period_b: ${period_b}
+
+validator:
+  schema: MomRevenueOutput
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "S001mom_revenue_${period_a}_to_${period_b}.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [mom, revenue, dashboard1]

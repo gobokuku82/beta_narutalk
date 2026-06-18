@@ -4,16 +4,27 @@ __pycache__/
 *$py.class
 *.so
 .Python
-venv/
 env/
+venv/
 ENV/
+env.bak/
+venv.bak/
+
+# Virtual Environment
+.venv/
+
+# uv
+.uv/
+uv.lock
+
+# Distribution / packaging
+.Python
 build/
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -23,29 +34,46 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
-.pytest_cache/
-.coverage
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
 htmlcov/
-.mypy_cache/
-.dmypy.json
-dmypy.json
-.ruff_cache/
-models/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
 
-# Environment
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Environments
 .env
-.env.local
-.env.*.local
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# Data
-# data/sqlite/*.db
-# data/sqlite/*.db-journal
-# data/chroma/
-# data/checkpoints/
-# data/storage/
-# logs/
-
-# IDE
+# IDEs
 .vscode/
 .idea/
 *.swp
@@ -53,41 +81,95 @@ models/
 *~
 .DS_Store
 
-# Node.js / React
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-.pnpm-store/
-frontend/dist/
-frontend/build/
-.parcel-cache/
-.next/
-.nuxt/
+# Project specific
+*.log
+*.db
+*.sqlite
+*.sqlite3
 .cache/
-
-# Testing
-coverage/
-*.lcov
-.nyc_output/
+tmp/
+temp/
 
 # Documentation
 docs/_build/
+backend/_scratch/
 site/
 
-# Temporary files
-*.tmp
-*.bak
-*.backup
-temp/
-tmp/
+# Secrets
+.env
+.env.local
+.env.*.local
+secrets/
+credentials/
+*.pem
+*.key
+
+# ============================================================
+# data/ — 외부 리소스 (git 추적 제외)
+# ============================================================
+# 2026-05-23 결정 (history rewrite 적용):
+#   - data/clumi/clumi_mock_08_ga4_page_events.jsonl  253MB  ← GitHub 100MB 제한 위반
+#   - data/clumi/clumi_mock_07_ga4_traffic_source.jsonl 96MB ← 제한 근접
+#   - GA4 raw 가 너무 커서 push 불가 → data/ 전체 ignore 로 단순화
+#   - 미래 raw / mock / pipeline 산출물 자동 제외 보장
+#   - 디스크 보존 — local 작업은 그대로. raw 는 별도 공유 경로 (S3 / Drive 등) 권장.
+data/
+# *.csv
+# *.xlsx
+# *.json
+# !package.json
+# !package-lock.json
+# !data/**/*.json     # 전문지식 mock 데이터는 추적
+
+# Model files
+# models/
+*.pkl
+*.h5
+*.pt
+*.pth
+*.ckpt
+
+# Output files
+output/
+results/
+logs/*
+!logs/.gitkeep
+backend/logs/
+**/logs/*.jsonl
+**/logs/*.log
 
 # OS files
 Thumbs.db
-Desktop.ini
+.DS_Store
+desktop.ini
 
-# Docker
-.dockerignore
-docker-compose.override.yml
+# Backend specific
+backend/__pycache__/
+backend/*.pyc
+backend/.env
+
+# Frontend specific (if applicable)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Claude Code
+.claude/
+.omc/
+CLAUDE.md
+docs/TECH_DEBT.md
+
+# model absa_model
+results/
+
+# model kure_v1
+backend/app/services/ml/models/kure_v1
+# bge-reranker-v2-m3-ko
+backend/app/services/ml/models/bge-reranker-v2-m3-ko
+
+# reports
+reports/
+!docs/reports/
+collector/
+# Claude Code 문서 영역 (gitignored, renamed from .claude to avoid permission prompts)
+docs/_claude/

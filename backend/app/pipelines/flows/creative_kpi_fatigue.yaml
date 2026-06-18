@@ -1,0 +1,30 @@
+name: creative_kpi_fatigue
+visualization_id: K21
+category: creative
+description: "피로 소재 수 — ml_model.diagnose_fatigue (POC=Mock fixture)"
+methodology_id: M01
+priority: P0
+client: ${client}
+
+trigger:
+  type: manual
+
+steps:
+  - id: fatigue
+    tool: creative_fatigue
+    inputs:
+      client: ${client}
+
+validator:
+  schema: MetricScalarOutput
+  expected:
+    value_min: 0
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "creative_fatigue_count.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [creative, kpi, fatigue, ml_model]

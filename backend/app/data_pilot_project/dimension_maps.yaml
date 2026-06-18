@@ -1,0 +1,36 @@
+# dimension_maps.yaml — 프로토타입 dimension 값 매핑 (Step3, 2026-06-16)
+#
+# production 하드코딩 dict 를 config 로 외부화한 프로토타입:
+#   channel_attribution_normalizer.CHANNEL_GROUP_MAP → channel_group.map
+#   grade_system_unifier.STANDARD_ORDER             → membership_grade.order
+#   utm_normalizer.normalize_utm 규칙               → utm.rules
+# = "신규 채널/등급/utm 추가 = 코드 아닌 config 한 줄" 을 실증.
+# P1 구현 시 octorad_conversion_config_v0.1.yaml 의 dimension_maps 섹션으로 병합 예정.
+
+channel_group:                       # contract dimension channel_group (I7)
+  source: { table: orders, column: channel_attribution }
+  map:
+    meta_facebook: Meta
+    meta_instagram: Meta
+    naver_search: Naver
+    naver_shopping: Naver
+    naver_brand: Naver
+    naver_advoost: Naver
+    naver_talktalk: CRM
+    kakao_message: CRM
+    direct: Direct
+    google_organic: Organic
+    oliveyoung_referral: Referral
+    unknown: Unknown
+  default: Other
+
+membership_grade:                    # contract dimension membership_grade (I11)
+  source: { table: customers, column: member_grade }
+  order: [WELCOME, REGULAR, SILVER, GOLD, VIP]
+
+utm:                                 # contract dimension utm_source / utm_medium (I8/I9)
+  source: { table: orders, columns: [utm_source, utm_medium] }
+  rules:                             # raw 값 → 정규화 ("" = drop)
+    "(not set)": unknown
+    "(direct)": direct
+    "(none)": ""

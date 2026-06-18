@@ -1,0 +1,39 @@
+name: revenue_total
+description: "총 매출 (S001) — SUM(orders.payment_amount) WHERE 활성주문 AND 기간. methodology_calculations §S001"
+version: "0.1.0"
+category: metrics
+
+parameters:
+  - name: period
+    type: string
+    required: true
+    description: "YYYY-MM 또는 YYYY-MM/YYYY-MM. orders.order_date prefix 매치"
+
+timeout_sec: 30
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - revenue_total            # int — 총 매출 (KRW 정수)
+  - active_orders_count      # int — 합산에 들어간 활성 주문 수
+  # period 는 artifact 아님 (슬라이스 1, 2026-06-12) — 스코프 param 은 쿼리에서만 (데이터 키는 회귀 확인용으로 유지)
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [clumi, metrics, revenue, methodology_S001]
+
+# C:LUMI 메타
+clumi_methodology: "calculations"
+clumi_source_ids: ["S001"]
+clumi_answer_values:
+  "2026-04": 119539660           # methodology 정답 — 회귀 테스트가 검증
+  "2026-03/2026-04": 198951769   # 자체 산출 검증값
+
+# 저장 정책 (computed layer)
+storage:
+  layer: "computed"
+  key_template: "S001_revenue_total_{period_safe}.json"
+  partition: ["period"]
+  cache_ttl_sec: 0

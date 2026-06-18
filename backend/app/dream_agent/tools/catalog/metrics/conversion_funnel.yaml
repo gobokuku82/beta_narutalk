@@ -1,0 +1,11 @@
+name: conversion_funnel
+description: "daily_performance 전체 노출→클릭→전환 퍼널 단계 (C06)."
+version: "0.1.0"
+category: metrics
+
+timeout_sec: 30
+max_retries: 0
+produces: [rows]
+has_cost: false
+estimated_cost: 0.0
+tags: [channel, funnel, dashboard_v1]

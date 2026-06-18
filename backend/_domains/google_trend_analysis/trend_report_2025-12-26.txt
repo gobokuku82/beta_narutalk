@@ -1,0 +1,104 @@
+=== Google Trends Broad Market Discovery Report ===
+
+This report identifies rising related search queries for broad skincare topics.
+
+
+============================================================
+             GOOGLE TRENDS RISING QUERIES - US (LAST 3 MONTHS)
+============================================================
+[US] Google Trends Broad Discovery (Timeframe: today 3-m)...
+  - 'Skincare': Found 10 rising terms
+  - 'Korean Skincare': Found 7 rising terms
+  - 'Sunscreen': Found 10 rising terms
+  - 'Face Serum': No rising terms found
+  - 'Moisturizer': Found 6 rising terms
+  - 'Toner pad': Found 1 rising terms
+
+[Skincare] Rising Related Queries:
+  - shay mitchell kids skincare (Growth: 30200%)
+  - rini skincare (Growth: 5950%)
+  - skincare advent calendar (Growth: 900%)
+  - skincare advent calendar 2025 (Growth: 900%)
+  - rhode skincare set (Growth: 450%)
+  - byoma skincare set (Growth: 350%)
+  - mens skincare set (Growth: 300%)
+  - evereden kids skincare (Growth: 200%)
+  - bubble skincare set (Growth: 140%)
+  - abib skincare (Growth: 140%)
+
+[Korean Skincare] Rising Related Queries:
+  - korean skincare advent calendar 2025 (Growth: 1200%)
+  - is medicube korean (Growth: 80%)
+  - pdrn korean skincare (Growth: 70%)
+  - pdrn (Growth: 60%)
+  - torriden (Growth: 40%)
+  - is medicube korean skincare (Growth: 40%)
+  - mixsoon (Growth: 40%)
+
+[Sunscreen] Rising Related Queries:
+  - azelaic acid (Growth: 90%)
+  - roundlab sunscreen (Growth: 80%)
+  - round lab birch juice sunscreen (Growth: 80%)
+  - elta md (Growth: 80%)
+  - elta md sunscreen (Growth: 80%)
+  - beauty of joseon tinted sunscreen (Growth: 70%)
+  - stylevana (Growth: 70%)
+  - round lab sunscreen (Growth: 60%)
+  - beauty of joseon sunscreen (Growth: 60%)
+  - best sunscreen for oily skin (Growth: 60%)
+
+[Moisturizer] Rising Related Queries:
+  - perricone md intensive overnight moisturizer (Growth: 250%)
+  - byoma milky moisturizer (Growth: 200%)
+  - embryolisse moisturizer (Growth: 60%)
+  - best lip moisturizer (Growth: 60%)
+  - aestura moisturizer (Growth: 50%)
+  - medicube moisturizer (Growth: 50%)
+
+[Toner pad] Rising Related Queries:
+  - torriden (Growth: 150%)
+
+============================================================
+             GOOGLE TRENDS RISING QUERIES - JP (LAST 3 MONTHS)
+============================================================
+[JP] Google Trends Broad Discovery (Timeframe: today 3-m)...
+  - 'Skincare': Found 10 rising terms
+  - 'Korean Skincare': Found 2 rising terms
+  - 'Sunscreen': Found 3 rising terms
+  - 'Face Serum': No rising terms found
+  - 'Moisturizer': Found 8 rising terms
+  - 'Toner pad': No rising terms found
+
+[Skincare] Rising Related Queries:
+  - bubble skincare (Growth: 89600%)
+  - medicube (Growth: 83550%)
+  - best korean skincare brands (Growth: 34100%)
+  - ipsa skincare (Growth: 24150%)
+  - men's skincare routine (Growth: 17550%)
+  - tranexamic acid (Growth: 4450%)
+  - korean skincare near me (Growth: 3500%)
+  - korean skincare products (Growth: 180%)
+  - niacinamide (Growth: 130%)
+  - muji skincare (Growth: 90%)
+
+[Korean Skincare] Rising Related Queries:
+  - best korean skincare products (Growth: 881550%)
+  - korean skincare products (Growth: 170%)
+
+[Sunscreen] Rising Related Queries:
+  - elixir sunscreen (Growth: 80%)
+  - best sunscreen (Growth: 50%)
+  - centella sunscreen (Growth: 40%)
+
+[Moisturizer] Rising Related Queries:
+  - aestura moisturizer (Growth: 10400%)
+  - aestura atobarrier 365 cream (Growth: 5600%)
+  - serum (Growth: 120%)
+  - ceramide moisturizer (Growth: 90%)
+  - moisturizer for dry skin (Growth: 90%)
+  - moisturizer for oily skin (Growth: 70%)
+  - hair moisturizer (Growth: 70%)
+  - facial moisturizer (Growth: 40%)
+
+============================================================
+End of Report

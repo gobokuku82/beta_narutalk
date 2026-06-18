@@ -1,0 +1,29 @@
+name: text_preprocessor
+description: "리뷰 텍스트 통합 클렌징 (HTML/URL/반복/길이/중복/협찬 처리)"
+version: "0.1.0"
+category: preprocessing
+
+parameters:
+  - name: min_length
+    type: integer
+    required: false
+    default: 5
+  - name: max_length
+    type: integer
+    required: false
+    default: 500
+
+timeout_sec: 60
+max_retries: 1
+requires_approval: false
+
+dependencies:
+  - review_normalizer  # ADR-014 v2: format_normalizer (ads 전용) → review_normalizer 분리
+
+produces:
+  - cleaned_texts
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [preprocessing, text, cleaning]

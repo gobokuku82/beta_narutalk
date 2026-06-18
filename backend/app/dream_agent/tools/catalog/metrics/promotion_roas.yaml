@@ -1,0 +1,39 @@
+name: promotion_roas
+description: "프로모션 ROAS (S005) — 프로모션매출 ÷ 총마케팅비. methodology §S005"
+version: "0.1.0"
+category: metrics
+
+parameters:
+  - name: period
+    type: string
+    required: true
+    description: "YYYY-MM"
+
+timeout_sec: 30
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - promotion_roas             # float (2자리)
+  - promotion_revenue          # int
+  - total_marketing_cost       # int
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [clumi, metrics, roas, promotion, methodology_S005]
+
+clumi_methodology: "calculations"
+clumi_source_ids: ["S005"]
+clumi_answer_values:
+  "2026-04":
+    promotion_roas: 1.62   # 가 결정 A-5.2: google 포함 re-baseline (2.37 → 1.62 = 43,400,360 / 26,806,923)
+    promotion_revenue: 43400360
+    total_marketing_cost: 26806923
+
+storage:
+  layer: "computed"
+  key_template: "S005_promotion_roas_{period}.json"
+  partition: ["period"]
+  cache_ttl_sec: 0

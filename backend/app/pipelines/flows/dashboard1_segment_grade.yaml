@@ -1,0 +1,30 @@
+name: dashboard1_segment_grade
+visualization_id: T01
+category: dashboard1
+description: "등급별 회원·매출 (S046)"
+methodology_id: M05
+priority: P0
+client: ${client}
+period: ${period}
+
+trigger:
+  type: manual
+
+steps:
+  - id: grade_revenue_compute
+    tool: grade_revenue
+    inputs:
+      client: ${client}
+      period: ${period}
+
+validator:
+  schema: GradeRevenueOutput
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "S046_grade_revenue_${period}.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [segment, grade, revenue, dashboard1]

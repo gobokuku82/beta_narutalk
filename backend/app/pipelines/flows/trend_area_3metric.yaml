@@ -1,0 +1,33 @@
+name: trend_area_3metric
+visualization_id: C07
+category: trend
+description: "일별 성과 AreaChart — 노출·클릭·전환 3 시리즈 (daily_performance_aggregate 재사용)"
+methodology_id: M03
+priority: P0
+client: ${client}
+period: ${period}
+
+trigger:
+  type: manual
+
+steps:
+  - id: daily_timeseries
+    tool: daily_performance_aggregate         # Batch 2 도구 재사용 (metrics 만 변경)
+    inputs:
+      client: ${client}
+      period: ${period}
+      metrics: [impressions, clicks, conversions]
+
+validator:
+  schema: DailySeriesOutput
+  expected:
+    rows_min: 1
+  fail_policy: alert
+
+cache:
+  layer: normalized
+  key_template: "daily_timeseries_3metric_${period}.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [trend, area, timeseries]

@@ -1,0 +1,28 @@
+name: dashboard1_segment_grade_timeseries
+visualization_id: C01
+category: dashboard1
+description: "등급 회원수 시계열 4시점 (S045, period 없음)"
+methodology_id: M03
+priority: P0
+client: ${client}
+
+trigger:
+  type: manual
+
+steps:
+  - id: grade_timeseries_compute
+    tool: grade_timeseries
+    inputs:
+      client: ${client}
+
+validator:
+  schema: GradeTimeseriesOutput
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "S045_grade_timeseries.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [segment, grade, timeseries, dashboard1]

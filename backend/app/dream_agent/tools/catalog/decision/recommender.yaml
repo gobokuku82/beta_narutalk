@@ -1,0 +1,21 @@
+name: recommender
+description: "의사결정 추천 — 데이터/분석 → 행동 제안(우선순위). ml_model.generate_recommendation (POC=Mock / MVP+=Llm). 단일 추천 tool."
+version: "0.1.0"
+category: decision
+
+parameters:
+  - {name: methodology, type: string, required: false, default: "데이터 기반 행동 추천"}
+
+timeout_sec: 60
+max_retries: 0
+requires_approval: false
+
+produces:
+  - recommendations
+  - count
+  - recommendation_text
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [decision, recommendation, ml_model]

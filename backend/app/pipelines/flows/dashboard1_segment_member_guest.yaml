@@ -1,0 +1,30 @@
+name: dashboard1_segment_member_guest
+visualization_id: O01
+category: dashboard1
+description: "회원/비회원 주문 분리 (정제 10)"
+methodology_id: M09
+priority: P0
+client: ${client}
+period: ${period}
+
+trigger:
+  type: manual
+
+steps:
+  - id: member_guest_split
+    tool: member_guest_stats
+    inputs:
+      client: ${client}
+      period: ${period}
+
+validator:
+  schema: MemberGuestOutput
+  fail_policy: alert
+
+cache:
+  layer: normalized
+  key_template: "orders_split_${period}.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [segment, member, guest, dashboard1]

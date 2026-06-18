@@ -1,0 +1,39 @@
+name: kst_timezone_normalizer
+description: "시간대 KST 통일 (정제 2) — GA4 event_timestamp(microsec UTC) → KST datetime. methodology §정제 2"
+version: "0.1.0"
+category: normalization
+
+parameters:
+  - name: source_id
+    type: string
+    required: true
+    description: "ga4 jsonl source_id ('ga4_traffic_source' | 'ga4_page_events'). event_timestamp 컬럼 적용"
+  - name: sample_size
+    type: integer
+    required: false
+    default: 1000
+    description: "검증용 샘플 — 전체 streaming 카운트 + 첫 N개 변환 결과 반환"
+
+timeout_sec: 60
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - total_events
+  - sample_converted             # list[{event_timestamp, kst_datetime, kst_date}]
+  - date_boundary_shifts         # int — UTC date vs KST date 다른 행 수 (KST 자정 후 = +9hr 이동)
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [clumi, normalization, kst, methodology_cleaning_2]
+
+clumi_methodology: "cleaning"
+clumi_methodology_rule: 2
+
+storage:
+  layer: "normalized"
+  key_template: "kst_summary_{source_id}.json"
+  partition: []
+  cache_ttl_sec: 0

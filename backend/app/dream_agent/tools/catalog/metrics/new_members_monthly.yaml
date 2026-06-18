@@ -1,0 +1,36 @@
+name: new_members_monthly
+description: "월별 신규 회원 + 채널별 분포 (S069) — customers.signup_date 기준. methodology §S069"
+version: "0.1.0"
+category: metrics
+
+parameters:
+  - name: period
+    type: string
+    required: true
+    description: "YYYY-MM (단월). customers.signup_date prefix"
+
+timeout_sec: 30
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - new_members_total           # int — 합계
+  - new_members_by_channel      # dict[str, int] — signup_utm_source 별 카운트
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [clumi, metrics, new_members, methodology_S069]
+
+clumi_methodology: "calculations"
+clumi_source_ids: ["S069"]
+clumi_answer_values:
+  "2026-04":
+    new_members_total: 600
+
+storage:
+  layer: "computed"
+  key_template: "S069_new_members_{period}.json"
+  partition: ["period"]
+  cache_ttl_sec: 0

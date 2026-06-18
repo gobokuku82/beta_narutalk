@@ -1,0 +1,32 @@
+name: dashboard1_kpi_ad_cost
+visualization_id: K02
+category: dashboard1
+description: "총 광고비 KPI — 5 매체 합산 (ad_cost_total self-load)"
+methodology_id: M01
+priority: P0
+client: ${client}
+period: ${period}
+
+trigger:
+  type: manual
+
+steps:
+  - id: ad_cost_aggregate
+    tool: ad_cost_total
+    inputs:
+      client: ${client}
+      period: ${period}
+
+validator:
+  schema: AdCostOutput
+  expected:
+    value_min: 0
+  fail_policy: alert
+
+cache:
+  layer: normalized
+  key_template: "ad_cost_total_${period}.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [ad_cost, kpi, dashboard1, aggregation]

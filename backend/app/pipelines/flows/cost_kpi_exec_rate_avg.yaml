@@ -1,0 +1,30 @@
+name: cost_kpi_exec_rate_avg
+visualization_id: K23
+category: cost
+description: "평균 집행률 — budget_totals cache 공유 (frontend 가 avg_exec_rate 표시)"
+methodology_id: M01
+priority: P0
+client: ${client}
+
+trigger:
+  type: manual
+
+steps:
+  - id: budget_totals
+    tool: budget_totals
+    inputs:
+      client: ${client}
+
+validator:
+  schema: BudgetTotalsOutput
+  expected:
+    value_min: 0
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "budget_totals.json"       # K22 와 동일 key
+  ttl_seconds: null
+
+owner: developer
+tags: [cost, kpi, exec_rate, cache_shared]

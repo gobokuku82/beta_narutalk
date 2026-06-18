@@ -1,0 +1,11 @@
+name: creative_ai_axes
+description: "소재 AI 5축 평균 (C11 radar) — ml_model.score_ai_axes (POC=Mock)."
+version: "0.1.0"
+category: analysis
+
+timeout_sec: 30
+max_retries: 0
+produces: [ai_sales, ai_short, ai_clear, ai_visual, ai_benefit]
+has_cost: false
+estimated_cost: 0.0
+tags: [creative, ai_axes, radar, ml_model]

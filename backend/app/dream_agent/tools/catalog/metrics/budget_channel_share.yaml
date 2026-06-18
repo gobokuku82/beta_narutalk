@@ -1,0 +1,10 @@
+name: budget_channel_share
+description: "채널별 예산 비중 (C09 도넛)."
+version: "0.1.0"
+category: metrics
+timeout_sec: 30
+max_retries: 0
+produces: [rows, total_budget]
+has_cost: false
+estimated_cost: 0.0
+tags: [cost, channel, pie]

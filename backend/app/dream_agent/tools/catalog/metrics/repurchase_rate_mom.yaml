@@ -1,0 +1,42 @@
+name: repurchase_rate_mom
+description: "재구매율 MoM (S028) — is_first_order=0 회원 비율. methodology §S028"
+version: "0.1.0"
+category: metrics
+
+parameters:
+  - name: period
+    type: string
+    required: true
+    description: "YYYY-MM (단월). 단일 월의 재구매율 산출"
+
+timeout_sec: 30
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - repurchase_rate          # float — 재구매율 (%)
+  - total_buyers             # int — 전체 구매 고객
+  - existing_buyers          # int — 기존 (재구매) 고객
+  - new_buyers               # int — 신규 고객 (is_first_order=1)
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [clumi, metrics, repurchase, methodology_S028]
+
+clumi_methodology: "calculations"
+clumi_source_ids: ["S028"]
+clumi_answer_values:
+  "2026-04":
+    repurchase_rate: 79.0
+    total_buyers: 1386
+  "2026-03":
+    repurchase_rate: 76.2
+    total_buyers: 1206
+
+storage:
+  layer: "computed"
+  key_template: "S028_repurchase_rate_{period}.json"
+  partition: ["period"]
+  cache_ttl_sec: 0

@@ -1,0 +1,10 @@
+name: budget_totals
+description: "총 예산 + 평균 집행률 (K22·K23 공유)."
+version: "0.1.0"
+category: metrics
+timeout_sec: 30
+max_retries: 0
+produces: [total_budget, avg_exec_rate]
+has_cost: false
+estimated_cost: 0.0
+tags: [cost, budget, cache_shared]

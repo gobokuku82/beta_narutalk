@@ -1,0 +1,15 @@
+name: daily_performance_aggregate
+description: "일별 성과 date 별 metric 합산 (C04 라인차트)."
+version: "0.1.0"
+category: metrics
+
+parameters:
+  - {name: metrics, type: array, required: false, description: "합산 metric 목록 (기본 ad_cost·conversion_revenue)"}
+  - {name: period, type: string, required: false, description: "YYYY-MM 필터 (없으면 전체)"}
+
+timeout_sec: 30
+max_retries: 0
+produces: [rows, metrics]
+has_cost: false
+estimated_cost: 0.0
+tags: [daily, timeseries, dashboard_v1]

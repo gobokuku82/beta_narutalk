@@ -1,0 +1,262 @@
+// erd_octorad_normalized_computed_v0.1.dbml
+// 물리 ERD — 정규화/계산 레이어 (피봇 P1 산출 설계)
+// raw({raw})  →  {raw}_normalized  →  {raw}_computed   (+ blended_computed)
+// 검증: workflow w99ntt85s — 7 소스 raw 직접 대조로 컬럼 확정 (2026-06-16)
+// 자매: erd_octorad_raw_v1.0.dbml(raw) · octorad_canonical_contract_v0.1.yaml(표준)
+
+Project octorad_normalized_computed {
+  database_type: 'PostgreSQL'
+  Note: '''
+  # OctorAD 정규화/계산 레이어 — 물리 ERD v0.1
+
+  ## ★ client 구분 = schema-per-client (컬럼 아님)
+  - DB = **octormate_data** 1개. 그 안에 **client별 PostgreSQL schema**.
+  - 모든 테이블의 물리 식별자 = `{client}.{table}`.
+    예: `clumi.meta_ads_performance_normalized` / `acme.meta_ads_performance_normalized`.
+  - 즉 테이블에 client 컬럼 없음 — **schema 이름이 곧 client**. (코드: postgres.py ensure_schema/Identifier(client))
+  - 본 ERD의 테이블 = 각 client schema에 동일 구조로 복제됨.
+
+  ## 레이어 (3단계 · 접미사 네이밍)
+  - raw      = JSONB blob (`{client}._workspace`, layer='raw'). 본 ERD엔 _workspace로 표기.
+  - normalized = `{raw}_normalized` (관계형) — 컬럼 통일(meta spend·naver salesAmt → ad_cost_krw).
+  - computed   = `{raw}_computed` (관계형) — 소스별 파생지표.
+  - blended    = `blended_computed` — 교차소스 지표(MER 등), period 단위 1행.
+
+  ## 인스코프 7 소스 ("필요시" = canonical measure source[]에 호출되는 것만)
+  ad: meta_ads_performance·naver_searchad·naver_advoost·google_ads_performance
+  msg: kakao_bizmessage·naver_talktalk   |   commerce: orders
+  (나머지 ~24 raw = raw에 머묾)
+
+  ## 공통 규칙
+  - 채널 보고 파생값(ror·crto·roas·ctr…) = normalized 미포함 → computed서 재계산(lineage 대조용만).
+  - `_lineage jsonb` = canonical 값마다 {source_column, raw_value, transform} 동반(신뢰·감사).
+  - report_date ⚠ = kakao/talktalk/google/orders는 contract time.sources 미등재 → P1서 추가(파생).
+  '''
+}
+
+// ════════════════════ raw (blob) ════════════════════
+Table _workspace {
+  layer varchar [note: 'raw | normalized | computed | blended (ADR-032 D2)']
+  key varchar
+  payload jsonb [note: 'raw 원천 = layer=raw blob (이종 유연)']
+  meta jsonb
+  updated_at timestamp
+  indexes { (layer, key) [pk] }
+  Note: '{client}._workspace — raw 진실원천(blob). normalized/computed는 관계형 테이블로 분리 적재.'
+}
+
+// ════════════════════ AD CHANNELS ════════════════════
+Table meta_ads_performance_normalized {
+  campaign_id varchar
+  report_date date [note: '← date_start rename']
+  channel varchar [note: "const 'meta' (raw에 channel 컬럼 없음 → 주입)"]
+  campaign_name varchar
+  ad_cost_krw int
+  impressions int
+  clicks int
+  link_clicks int [note: 'Meta 전용 (inline_link_clicks) — CTR 분자']
+  conversion_count int [note: 'actions[omni_purchase]; 미존재 행=0 (silent-0 함정 C6.2)']
+  conversion_revenue_krw int [note: 'action_values[omni_purchase]']
+  paid_reach int [note: 'reach — IG organic과 합산 금지']
+  impression_frequency float [note: 'frequency = imp/reach']
+  _lineage jsonb
+  indexes { (campaign_id, report_date) [pk] }
+  Note: 'grain = performance만 (by_age/instagram_inapp breakdown 제외 — 이중계상 방지)'
+}
+
+Table naver_searchad_normalized {
+  campaign_id varchar
+  device_type varchar [note: 'M→mobile / P→desktop']
+  report_date date [note: 'statDt (ISO)']
+  channel varchar [note: "const 'naver_sa'"]
+  ad_cost_krw int [note: 'salesAmt = 비용 (C6.1)']
+  impressions int [note: 'impCnt']
+  clicks int [note: 'clkCnt']
+  conversion_count int [note: 'ccnt']
+  conversion_revenue_krw int [note: 'convAmt = 매출']
+  _lineage jsonb
+  indexes { (campaign_id, device_type, report_date) [pk] }
+  Note: '⚠ raw grain = keyword×device×day(1680행). keyword/adgroup ID = canonical 차원 밖 → 본 테이블은 keyword 합산. 키워드 분석 시 정보손실(기록).'
+}
+
+Table naver_advoost_normalized {
+  campaign_id varchar [note: 'GFA prefix']
+  report_date date
+  channel varchar [note: "const 'advoost'"]
+  ad_cost_krw int [note: 'cost']
+  impressions int
+  clicks int
+  conversion_count int [note: 'click_through_conversions (CT)']
+  vt_conversion_count int [note: 'view_through (VT) — CT와 분리, 이중계상 방지']
+  conversion_revenue_krw int [note: 'conversion_value']
+  _lineage jsonb
+  indexes { (campaign_id, report_date) [pk] }
+}
+
+Table google_ads_performance_normalized {
+  campaign_id varchar [note: 'GADS prefix']
+  report_date date
+  channel varchar [note: "const 'google_ads' (⚠ contract campaign_id/report_date sources에 google 미등재 → P1 추가)"]
+  ad_cost_krw int [note: 'cost']
+  impressions int
+  clicks int
+  conversion_count int [note: 'conversions (flat — meta처럼 actions[] 필터 없음)']
+  conversion_revenue_krw int [note: 'conversion_value']
+  _lineage jsonb
+  indexes { (campaign_id, report_date) [pk] }
+  Note: 'flat CSV(180행). re-baseline 시 total +8.5M → 26.8M·MER 4.46 (P2)'
+}
+
+// ════════════════════ MSG CHANNELS (msg_ prefix — 광고와 절대 분리 C6.3) ════════════════════
+Table kakao_bizmessage_normalized {
+  campaign_id varchar [note: 'CMP_KKO_…']
+  report_date date [note: '⚠ ← send_request_date (contract time.sources에 kakao 미등재 → P1)']
+  channel varchar [note: "const 'kakao'"]
+  msg_cost_krw int [note: 'total_cost_krw — MER 분모(총마케팅비) 포함']
+  msg_target_count int [note: 'target_recipients']
+  msg_open_count int
+  msg_click_count int
+  msg_conversion_count int
+  msg_conversion_revenue_krw int [note: 'conversion_amount_krw — msg_roi 분자']
+  msg_avg_order_value_krw int [note: '채널 직수집값 (M12)']
+  _lineage jsonb
+  indexes { (campaign_id) [pk] }
+  Note: 'grain = campaign summary(2행). open_rate/click_rate(%)는 분모 미확정으로 보류 — count만 채택.'
+}
+
+Table naver_talktalk_normalized {
+  campaign_id varchar [note: 'NTT_…']
+  report_date date [note: '⚠ ← send_request_date']
+  channel varchar [note: "'naver_talktalk'"]
+  msg_cost_krw int [note: 'total_cost_krw']
+  msg_target_count int [note: 'target_friends']
+  msg_open_count int
+  msg_click_count int
+  msg_conversion_count int
+  msg_conversion_revenue_krw int
+  msg_avg_order_value_krw int
+  _lineage jsonb
+  indexes { (campaign_id) [pk] }
+}
+
+// ════════════════════ COMMERCE ════════════════════
+Table orders_normalized {
+  order_id varchar
+  report_date date [note: '← order_date (date 파트)']
+  member_id varchar [note: 'null=비회원']
+  channel_group varchar [note: 'channel_attribution 정규화']
+  utm_source varchar
+  utm_medium varchar
+  utm_campaign varchar [note: 'campaign_id 부재 → orders↔campaign = utm/crosswalk']
+  order_revenue_krw int [note: 'payment_amount — MER 분자']
+  _lineage jsonb
+  indexes { (order_id) [pk] }
+  Note: '활성주문만 = is_active_order(취소 C계열 전체 제외, ADR-032 D3). ⚠ N00(입금전) 포함 — 결제완료만 인정은 오너/UX 영역.'
+}
+
+// ════════════════════ COMPUTED (소스별 {source_id}_computed — normalized와 동일 stem) ════════════════════
+// ★ 네이밍: computed 테이블 = {source_id}_computed (접미사 규칙, normalized와 동일 stem).
+//   meta_ads_performance_computed / kakao_bizmessage_computed (이전 shorthand meta_computed/kakao_computed 정정 2026-06-17).
+Table meta_ads_performance_computed {
+  campaign_id varchar
+  report_date date
+  channel varchar
+  roas_x float [note: 'conversion_revenue_krw / ad_cost_krw (재계산)']
+  ctr_pct float
+  cpc_krw int
+  cpm_krw int
+  cvr_pct float
+  link_ctr_pct float [note: 'link_clicks/imp*100 — meta 전용 (구현됨 2026-06-17)']
+  indexes { (campaign_id, report_date) [pk] }
+}
+
+Table naver_searchad_computed {
+  campaign_id varchar
+  device_type varchar
+  report_date date
+  channel varchar
+  roas_x float
+  ctr_pct float
+  cpc_krw int
+  cpm_krw int [note: '검색=CPC라 CPM 의미 약함']
+  cvr_pct float
+  indexes { (campaign_id, device_type, report_date) [pk] }
+}
+
+Table naver_advoost_computed {
+  campaign_id varchar
+  report_date date
+  channel varchar
+  roas_x float
+  ctr_pct float
+  cpc_krw int
+  cpm_krw int
+  cvr_pct float
+  indexes { (campaign_id, report_date) [pk] }
+}
+
+Table google_ads_performance_computed {
+  campaign_id varchar
+  report_date date
+  channel varchar
+  roas_x float
+  ctr_pct float
+  cpc_krw int
+  cpm_krw int
+  cvr_pct float
+  indexes { (campaign_id, report_date) [pk] }
+}
+
+Table kakao_bizmessage_computed {
+  campaign_id varchar
+  channel varchar
+  msg_roi_pct float [note: '(rev/cost - 1)*100 — ROI≠ROAS, 광고 roas와 비교 금지']
+  msg_avg_order_value_krw int [note: 'msg_conv_revenue/msg_conv_count 재계산 (normalized=채널보고 M12)']
+  indexes { (campaign_id) [pk] }
+}
+
+Table naver_talktalk_computed {
+  campaign_id varchar
+  channel varchar
+  msg_roi_pct float
+  msg_avg_order_value_krw int
+  indexes { (campaign_id) [pk] }
+}
+
+// ════════════════════ BLENDED (교차소스 — period 단위 1행) ════════════════════
+Table blended_computed {
+  period varchar [pk, note: 'YYYY-MM (예 2026-04)']
+  total_ad_cost_krw int [note: 'Σ ad_cost (meta·naver_sa·advoost·google)']
+  total_msg_cost_krw int [note: 'Σ msg_cost (kakao·talktalk)']
+  total_marketing_cost_krw int [note: 'ad+msg = MER 분모']
+  total_order_revenue_krw int [note: 'orders = MER 분자']
+  mer float [note: 'revenue / total_marketing_cost (comparability: ok — blended 안전)']
+  tacos_pct float [note: 'total_ad_cost / revenue * 100']
+  acquisition_mer float [note: '⏳ P2/measure16 — new_customer_revenue(is_first_order=1) / total_marketing_cost (미구현)']
+  blended_platform_roas_x float [note: '⏳ P2/measure16 — Σ채널 보고매출 / Σ비용 (과대, mer 대비용; 미구현)']
+  _lineage jsonb
+  Note: '교차소스라 소스별 테이블에 안 맞음 — period당 1행 세로형. 근거: comparability(mer=ok vs 채널roas=warn) + grain 불일치(분모 5채널/분자 orders).'
+}
+
+// ════════════════════ 흐름 (raw → normalized → computed) ════════════════════
+// 파생 방향 표기 (FK 아님 — 데이터 흐름). normalized.campaign_id → computed.
+Ref: meta_ads_performance_computed.campaign_id > meta_ads_performance_normalized.campaign_id
+Ref: naver_searchad_computed.campaign_id > naver_searchad_normalized.campaign_id
+Ref: naver_advoost_computed.campaign_id > naver_advoost_normalized.campaign_id
+Ref: google_ads_performance_computed.campaign_id > google_ads_performance_normalized.campaign_id
+Ref: kakao_bizmessage_computed.campaign_id > kakao_bizmessage_normalized.campaign_id
+Ref: naver_talktalk_computed.campaign_id > naver_talktalk_normalized.campaign_id
+
+// blended ← 전 normalized 집계 (period 합산; FK 불가 — Note로 표기)
+// meta/naver_sa/advoost/google ad_cost + kakao/talktalk msg_cost + orders revenue → blended_computed
+
+// 시각 클러스터 (소스별 3레이어)
+TableGroup meta { meta_ads_performance_normalized meta_ads_performance_computed }
+TableGroup naver_searchad { naver_searchad_normalized naver_searchad_computed }
+TableGroup naver_advoost { naver_advoost_normalized naver_advoost_computed }
+TableGroup google { google_ads_performance_normalized google_ads_performance_computed }
+TableGroup kakao { kakao_bizmessage_normalized kakao_bizmessage_computed }
+TableGroup talktalk { naver_talktalk_normalized naver_talktalk_computed }
+TableGroup commerce { orders_normalized }
+TableGroup blended { blended_computed }
+TableGroup raw_store { _workspace }

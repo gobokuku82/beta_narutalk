@@ -1,0 +1,34 @@
+name: utm_normalizer
+description: "UTM 정규화 (정제 9) — orders.utm_source/medium 의 (not set)·(none)·null·empty 통일. methodology §정제 9"
+version: "0.1.0"
+category: normalization
+
+parameters:
+  - name: period
+    type: string
+    required: false
+    description: "YYYY-MM (선택)"
+
+timeout_sec: 30
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - source_dist                 # dict[str, int] — 정규화 utm_source 분포
+  - medium_dist                 # dict[str, int]
+  - normalized_count            # int — 정규화 적용된 행 수
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [clumi, normalization, utm, methodology_cleaning_9]
+
+clumi_methodology: "cleaning"
+clumi_methodology_rule: 9
+
+storage:
+  layer: "normalized"
+  key_template: "utm_normalized_{period_safe}.json"
+  partition: ["period"]
+  cache_ttl_sec: 0

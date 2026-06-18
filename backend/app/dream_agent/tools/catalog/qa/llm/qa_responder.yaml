@@ -1,0 +1,22 @@
+name: qa_responder
+description: "질의응답 — 데이터 계산이 아닌 지식·메타·대화로 답변 (정의/시스템메타/대화). 단일 QA tool."
+version: "0.1.0"
+category: qa
+
+parameters:
+  - name: question
+    type: string
+    required: true
+    description: "사용자 질문 원문 (planner 가 결정론 QA 라우팅 시 주입)"
+
+timeout_sec: 60
+max_retries: 2
+requires_approval: false
+
+produces:
+  - answer
+
+has_cost: true
+estimated_cost: 0.01
+
+tags: [qa, llm, answer]

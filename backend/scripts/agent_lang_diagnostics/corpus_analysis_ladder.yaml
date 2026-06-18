@@ -1,0 +1,38 @@
+# 분석 사다리 end-to-end 측정 코퍼스 — DEGRADE_OPS 해소 검증 (2026-06-10)
+#
+# 목적: 분석레이어 v2 구현(diagnoser/forecaster/insight_extractor + intent_shim 라우팅)이
+#       실제 cognitive→planning 에서 *작동*하는지 = "큰틀 구동" 측정.
+#       핵심 질문: 진단/예측/추론 쿼리가 degrade 안 하고 실제 분석 tool 을 plan 에 잡는가?
+#                 + CP#1 = 깨끗한 매출 보고서가 리뷰 파이프를 안 끌어오는가?
+# 범위: 단일 의도(intra) — operation 신호를 깨끗하게 분리하려 복합 회피.
+# 사용: python -m scripts.agent_lang_diagnostics.measure_gate_correction --corpus corpus_analysis_ladder.yaml
+#
+# expect = operation(cognitive 판정 기대) / 기대 tool 군 / degrade 여부.
+
+client: clumi
+
+queries:
+  # ── 탐색(measure) = 기존, baseline ──
+  - {q: "4월 매출 알려줘", type: ladder_explore, expect: "op=measure / metric tool / degrade=NO / review=0"}
+
+  # ── 진단(diagnose) = 신규 diagnoser, 구 DEGRADE ──
+  - {q: "4월 매출이 왜 떨어졌는지 진단해줘", type: ladder_diagnose, expect: "op=diagnose / diagnoser(causal) / degrade=NO(구: YES)"}
+  - {q: "ROAS 부진 원인 분석해줘", type: ladder_diagnose, expect: "op=diagnose / diagnoser / degrade=NO"}
+
+  # ── 추론(attribute) = insight_extractor 도메인무관, 구 DEGRADE ──
+  - {q: "4월 매출 실적이 목표 대비 어떤 의미인지 해석해줘", type: ladder_attribute, expect: "op=attribute / insight_extractor / degrade=NO(구: YES) / review=0"}
+  - {q: "이 ROAS 수치가 무슨 의미인지 해석해줘", type: ladder_attribute, expect: "op=attribute / insight_extractor"}
+  - {q: "4월 실적 시사점 알려줘", type: ladder_attribute, expect: "op=attribute / insight_extractor"}
+
+  # ── 음성대조: measure 로 남아야 (attribute 로 새면 회귀) ──
+  - {q: "4월 매출 어때?", type: ladder_neg_measure, expect: "op=measure (조회 — attribute 아님)"}
+  - {q: "4월 매출 분석해줘", type: ladder_neg_measure, expect: "op=measure (분석≠해석 — attribute 아님)"}
+
+  # ── 예측(forecast) = 신규 forecaster, 구 DEGRADE ──
+  - {q: "5월 매출이 어떻게 될지 예측해줘", type: ladder_forecast, expect: "op=forecast / forecaster(trend) / degrade=NO(구: YES)"}
+
+  # ── 리뷰(sentiment) = 리뷰 파이프 정당 (대조군) ──
+  - {q: "4월 리뷰 감성 분석해줘", type: ladder_reviews, expect: "op=measure+reviews / sentiment / review pipe 정당(review>0)"}
+
+  # ── CP#1: 깨끗한 매출 보고서 = 리뷰 끌어오면 안 됨 ──
+  - {q: "4월 매출 보고서 만들어줘", type: ladder_cp1_report, expect: "report tool / review=0 (CP#1 핵심 — 리뷰 역주입 금지)"}

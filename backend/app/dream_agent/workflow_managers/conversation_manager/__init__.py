@@ -1,0 +1,7 @@
+"""ConversationManager 패키지 — 대화(turn) 조회 전용 (checkpoint 읽기).
+
+메모리(MemoryManager)와 분리된 대화 경로 매니저. 설계: docs/reports/대화이력_설계_단계적_2026-06-09.md.
+"""
+from .manager import ConversationManager
+
+__all__ = ["ConversationManager"]

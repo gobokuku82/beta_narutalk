@@ -1,0 +1,65 @@
+# ============================================================
+# Tool Definition Schema (V2)
+# ============================================================
+#
+# 이 파일은 Tool YAML 정의의 스키마 가이드입니다.
+# 모든 tool YAML 파일은 이 구조를 따라야 합니다.
+#
+# ToolRegistry가 이 폴더의 모든 *.yaml 파일을 자동 로드합니다.
+# (_schema.yaml, _example.yaml 등 언더스코어 시작 파일은 제외)
+#
+# ============================================================
+
+# --- 필수 필드 ---
+
+name: string                    # 도구 고유 식별자 (영문, snake_case)
+description: string             # 도구 설명 (LLM이 Plan 생성 시 참조)
+version: string                 # 시맨틱 버전 (예: "1.0.0")
+
+# 도구 분류
+category: string                # 실행 카테고리 (★정본 = models/enums.py ToolCategory 11 멤버·디스크 11 디렉토리 실측):
+                                #   데이터 단계축(8): collection | normalization | cleaning | preprocessing |
+                                #                     metrics | comparison | analysis | report
+                                #   비단계축(3):     rendering(출력) | qa(질의응답) | decision(의사결정)
+
+# Executor 매핑
+executor: string                # 실행할 Executor 클래스 경로
+                                # 예: "executors.data_executor.DataExecutor"
+
+# --- 파라미터 정의 ---
+
+parameters:                     # LLM이 Plan 생성 시 이 정보를 참조하여 todo.params 생성
+  - name: string                # 파라미터 이름
+    type: string                # 타입: string | integer | float | boolean | array | object
+    required: boolean           # 필수 여부
+    default: any                # 기본값 (optional)
+    description: string         # 설명 (LLM 참조용)
+    enum: [string]              # 허용 값 목록 (optional)
+
+# --- 실행 설정 ---
+
+timeout_sec: integer            # 타임아웃 (초, 기본: 120)
+max_retries: integer            # 최대 재시도 (기본: 3)
+requires_approval: boolean      # HITL 승인 필요 여부 (기본: false)
+
+# --- 의존성 & 산출물 ---
+
+dependencies: [string]          # 선행 필요 도구 이름 (DAG 구성에 사용)
+produces: [string]              # 산출물 키 (다음 도구가 참조 가능)
+
+# --- 비용 ---
+
+has_cost: boolean               # 외부 API 비용 발생 여부
+estimated_cost: float           # 예상 비용 (USD, 1회 실행 기준)
+
+# --- 메타데이터 ---
+
+tags: [string]                  # 검색/필터용 태그
+enabled: boolean                # 활성화 여부 (기본: true)
+
+# --- 예시 (LLM few-shot용) ---
+
+examples:
+  - input: object               # 입력 예시
+    output: object              # 출력 예시
+    description: string         # 예시 설명 (optional)

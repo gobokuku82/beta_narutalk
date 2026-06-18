@@ -1,0 +1,22 @@
+name: diagnoser
+description: "LLM 인과 진단 — 분석 결과에서 '왜'(원인 가설) 도출"
+version: "0.1.0"
+category: analysis
+
+parameters:
+  - name: max_causes
+    type: integer
+    required: false
+    default: 4
+
+timeout_sec: 60
+max_retries: 2
+requires_approval: false
+
+produces:
+  - diagnosis
+
+has_cost: true
+estimated_cost: 0.01
+
+tags: [analysis, llm, diagnosis]

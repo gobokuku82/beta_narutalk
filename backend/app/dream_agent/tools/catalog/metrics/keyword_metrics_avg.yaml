@@ -1,0 +1,10 @@
+name: keyword_metrics_avg
+description: "키워드 평균 ROAS + 운영 수 (K24)."
+version: "0.1.0"
+category: metrics
+timeout_sec: 30
+max_retries: 0
+produces: [avg_roas, keyword_count]
+has_cost: false
+estimated_cost: 0.0
+tags: [cost, keyword, kpi]

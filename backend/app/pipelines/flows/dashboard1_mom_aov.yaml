@@ -1,0 +1,32 @@
+name: dashboard1_mom_aov
+visualization_id: M02
+category: dashboard1
+description: "전월 대비 주문·객단가 비교 (S048 MoM)"
+methodology_id: M02
+priority: P0
+client: ${client}
+period_a: ${period_a}
+period_b: ${period_b}
+
+trigger:
+  type: manual
+
+steps:
+  - id: mom_aov_compute
+    tool: aov_mom
+    inputs:
+      client: ${client}
+      period_a: ${period_a}
+      period_b: ${period_b}
+
+validator:
+  schema: AovMomOutput
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "S048mom_aov_${period_a}_to_${period_b}.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [mom, aov, dashboard1]

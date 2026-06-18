@@ -1,0 +1,44 @@
+name: aov_mom
+description: "객단가·구매자·주문 MoM 비교 (S048 MoM) — 두 월의 변화율"
+version: "0.1.0"
+category: comparison
+
+parameters:
+  - name: period_a
+    type: string
+    required: true
+    description: "이전 월 YYYY-MM"
+  - name: period_b
+    type: string
+    required: true
+    description: "비교 월 YYYY-MM"
+
+timeout_sec: 30
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - period_a_stats             # {aov, unique_buyers, orders_count}
+  - period_b_stats
+  - delta                      # {aov_pct, orders_pct, revenue_pct}
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [clumi, comparison, mom, aov, methodology_S048]
+
+clumi_methodology: "calculations"
+clumi_source_ids: ["S048"]
+clumi_answer_values:
+  "2026-03 -> 2026-04":
+    delta:
+      aov_pct: 5.6
+      orders_pct: 42.6
+      buyers_pct: 14.9
+
+storage:
+  layer: "computed"
+  key_template: "S048mom_aov_{period_a}_to_{period_b}.json"
+  partition: ["period_a", "period_b"]
+  cache_ttl_sec: 0

@@ -1,0 +1,51 @@
+name: missing_value_diagnostic
+description: "결측값 진단 리포트 — entity 의 컬럼별 null 통계 + 의미있는 NaN(비주문 회원 등) vs 데이터 누락 분류. methodology 외 POC 운영 도구. shared/missing_helper 사용"
+version: "0.1.0"
+category: cleaning
+
+parameters:
+  - name: source_id
+    type: string
+    required: true
+    description: "raw source 의 semantic name (DataSource SOURCE_REGISTRY 등록). 예: 'orders', 'customers'"
+  - name: entity_name
+    type: string
+    required: false
+    description: "출력 entity 이름 (default = source_id). cleaned ERD 의 entity 표시명"
+
+timeout_sec: 30
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - column_stats             # list[dict] — 컬럼별 통계 + 분류
+  - total_columns            # int — 컬럼 수
+  - total_rows               # int — 행 수
+  - complete_columns         # int — null 없는 컬럼 수
+  - columns_with_gap         # int — 누락 있는 컬럼 수
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [cleaning, diagnostic, poc_utility]
+
+# C:LUMI 메타
+clumi_methodology: "cleaning_extension"   # methodology 외 — POC 운영 도구
+clumi_methodology_rule: 0                 # 0 = methodology 외 명시
+clumi_answer_values:
+  "orders":
+    total_columns: 26
+    total_rows: 3420
+    complete_columns_min: 18   # member_id 등 일부 누락 있음 (의미있는 NaN)
+  "customers":
+    total_columns: 29
+    total_rows: 8500
+    complete_columns_min: 15   # last_order_date 74.5% 누락 (의미있음 — 비주문자)
+
+# 저장 정책
+storage:
+  layer: "normalized"
+  key_template: "missing_diagnostic_{entity_name}.json"  # JSON — 통계 리포트
+  partition: []
+  cache_ttl_sec: 0

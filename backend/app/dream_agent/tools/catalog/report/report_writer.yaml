@@ -1,0 +1,21 @@
+name: report_writer
+description: "인사이트 기반 한국어 마케팅 분석 보고서 생성 (LLM)"
+version: "0.1.0"
+category: report
+
+parameters: []
+
+timeout_sec: 90
+max_retries: 2
+requires_approval: false
+
+dependencies:
+  - insight_extractor
+
+produces:
+  - report_text
+
+has_cost: true
+estimated_cost: 0.02
+
+tags: [report, content, llm]

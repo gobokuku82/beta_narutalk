@@ -1,0 +1,45 @@
+name: member_guest_stats
+description: "회원/비회원 카운트·비율 통계 묶음 (정제 10) — orders.member_id IS NULL 라벨 후 집계. methodology_cleaning §정제 10"
+version: "0.1.0"
+category: metrics
+
+parameters:
+  - name: period
+    type: string
+    required: false
+    description: "YYYY-MM (선택). 누락 시 전체 (3-4월)"
+
+timeout_sec: 30
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - member_count
+  - guest_count
+  - total_active
+  - member_share_pct
+  - guest_share_pct
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [preprocessing, methodology_cleaning_10]
+
+clumi_methodology: "cleaning"
+clumi_methodology_rule: 10
+clumi_answer_values:
+  "2026-04":
+    member_count: 1779
+    guest_count: 140
+    total_active: 1919
+  "all":
+    member_count: 3007
+    guest_count: 258
+    total_active: 3265
+
+storage:
+  layer: "normalized"
+  key_template: "orders_split_{period_safe}.json"
+  partition: ["period"]
+  cache_ttl_sec: 0

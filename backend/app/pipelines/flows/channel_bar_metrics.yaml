@@ -1,0 +1,30 @@
+name: channel_bar_metrics
+visualization_id: C05
+category: channel
+description: "매체별 노출·클릭·전환 BarChart (daily_performance channel 집계)"
+methodology_id: M04
+priority: P0
+client: ${client}
+
+trigger:
+  type: manual
+
+steps:
+  - id: channel_metrics
+    tool: channel_aggregate
+    inputs:
+      client: ${client}
+
+validator:
+  schema: ChannelMetricsOutput
+  expected:
+    rows_min: 1
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "channel_metrics.json"     # T05 와 공유 (cache hit)
+  ttl_seconds: null
+
+owner: developer
+tags: [channel, bar, cache_shared]

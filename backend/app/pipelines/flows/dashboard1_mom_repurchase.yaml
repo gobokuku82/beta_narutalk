@@ -1,0 +1,32 @@
+name: dashboard1_mom_repurchase
+visualization_id: M03
+category: dashboard1
+description: "전월 대비 재구매율 비교 (S028 MoM)"
+methodology_id: M02
+priority: P0
+client: ${client}
+period_a: ${period_a}
+period_b: ${period_b}
+
+trigger:
+  type: manual
+
+steps:
+  - id: mom_repurchase_compute
+    tool: repurchase_mom
+    inputs:
+      client: ${client}
+      period_a: ${period_a}
+      period_b: ${period_b}
+
+validator:
+  schema: RepurchaseMomOutput
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "S028mom_repurchase_${period_a}_to_${period_b}.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [mom, repurchase, dashboard1]

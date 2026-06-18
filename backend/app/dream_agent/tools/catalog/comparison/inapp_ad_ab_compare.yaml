@@ -1,0 +1,45 @@
+name: inapp_ad_ab_compare
+description: "인앱광고 A/B 비교 (S017~S021) — 인스타 캠페인 2개 비교. methodology 명시: mock 에 명확한 A/B 없음 → 캠페인 선정 룰 정의 필요 (status: partial)"
+version: "0.1.0"
+category: comparison
+
+parameters:
+  - name: campaign_a_substr
+    type: string
+    required: false
+    default: "NewSet"
+    description: "A 캠페인 campaign_name substring (default: 'NewSet' — 분석가 가정)"
+  - name: campaign_b_substr
+    type: string
+    required: false
+    default: "Serum"
+    description: "B 캠페인 substring (default: 'Serum')"
+
+timeout_sec: 30
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - a_meta                      # {period, spend, impressions, clicks, ctr}
+  - b_meta
+  - status                      # "partial" — methodology 추가 정의 필요 명시
+  - data_gaps                   # list — S019(프로필방문), S020(메시지시작) 미수록
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [clumi, comparison, ab_test, inapp, methodology_S017]
+
+clumi_methodology: "calculations"
+clumi_source_ids: ["S017", "S018", "S019", "S020", "S021"]
+clumi_status: "partial"
+clumi_data_gaps:
+  S019: "프로필 방문 미수록"
+  S020: "메시지 시작 미수록"
+
+storage:
+  layer: "computed"
+  key_template: "S017_inapp_ab_compare_{period}.json"
+  partition: ["period"]
+  cache_ttl_sec: 0

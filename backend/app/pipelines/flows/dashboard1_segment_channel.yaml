@@ -1,0 +1,30 @@
+name: dashboard1_segment_channel
+visualization_id: T02
+category: dashboard1
+description: "채널 분포 — UTM 정규화 10채널 + 7그룹 (정제 4)"
+methodology_id: M09
+priority: P0
+client: ${client}
+period: ${period}
+
+trigger:
+  type: manual
+
+steps:
+  - id: channel_normalize
+    tool: channel_attribution_normalizer
+    inputs:
+      client: ${client}
+      period: ${period}
+
+validator:
+  schema: ChannelDistOutput
+  fail_policy: alert
+
+cache:
+  layer: normalized
+  key_template: "channel_normalized_${period}.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [segment, channel, normalization, dashboard1]

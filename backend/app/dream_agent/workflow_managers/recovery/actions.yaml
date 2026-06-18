@@ -1,0 +1,30 @@
+# 데이터 없음 → HITL 복구 메뉴 (G6). 변경 용이 — 이 파일만 고치면 코드·재시작 불요.
+# 설계: docs/_claude/4layer_system/silent0_g6_hitl복구_설계_260607_v1.md
+
+message: "해당 질문에 맞는 데이터가 없습니다. 어떻게 할까요?"
+
+# 어떤 SKIP 을 "막힘"으로 볼지 (감지 기준도 데이터화)
+block_when:
+  reason: data_insufficient
+  no_other_output: true        # collector 외 COMPLETED 산출이 없을 때만 막힘(부분성공이면 진행)
+
+# 옵션 — 추가/삭제/순서/문구/파라미터 전부 여기서. action = 기계가 아는 동사.
+options:
+  - id: broaden_period
+    label: "기간 확대"
+    desc: "조회 기간을 넓혀 다시 시도"
+    action: adjust_query
+    params: {period: "+3months"}
+  - id: change_target
+    label: "대상 변경"
+    desc: "다른 대상/조건으로 조회"
+    action: ask_input
+    prompt: "어떤 대상으로 볼까요?"
+  - id: reset_scope
+    label: "범위 재설정"
+    desc: "처음부터 다시"
+    action: restart
+  - id: abort
+    label: "중단"
+    desc: "여기서 종료"
+    action: end

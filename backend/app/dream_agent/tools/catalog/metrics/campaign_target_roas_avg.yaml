@@ -1,0 +1,15 @@
+name: campaign_target_roas_avg
+description: "평균 목표 ROAS — campaigns.target_roas 평균. K13."
+version: "0.1.0"
+category: metrics
+
+parameters:
+  - {name: label, type: string, required: false, default: "평균 목표 ROAS", description: "표시 라벨"}
+  - {name: unit, type: string, required: false, default: "%", description: "단위"}
+
+timeout_sec: 30
+max_retries: 0
+produces: [value, op, field]
+has_cost: false
+estimated_cost: 0.0
+tags: [campaign, metric, kpi, K13, roas]

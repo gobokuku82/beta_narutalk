@@ -1,0 +1,41 @@
+name: mom_revenue
+description: "매출 MoM (S001 MoM) — 두 월 revenue_total 비교 + 변화율"
+version: "0.1.0"
+category: comparison
+
+parameters:
+  - name: period_a
+    type: string
+    required: true
+  - name: period_b
+    type: string
+    required: true
+
+timeout_sec: 30
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - period_a_revenue
+  - period_b_revenue
+  - delta_pct
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [clumi, comparison, mom, revenue, methodology_S001]
+
+clumi_methodology: "calculations"
+clumi_source_ids: ["S001"]
+clumi_answer_values:
+  "2026-03 -> 2026-04":
+    period_a_revenue: 79412109
+    period_b_revenue: 119539660
+    delta_pct: 50.5
+
+storage:
+  layer: "computed"
+  key_template: "S001mom_revenue_{period_a}_to_{period_b}.json"
+  partition: ["period_a", "period_b"]
+  cache_ttl_sec: 0

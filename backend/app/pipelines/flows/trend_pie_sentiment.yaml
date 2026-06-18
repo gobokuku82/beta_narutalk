@@ -1,0 +1,30 @@
+name: trend_pie_sentiment
+visualization_id: C08
+category: trend
+description: "리뷰 감성 도넛 — ml_model.analyze_sentiment (POC=Mock fixture)"
+methodology_id: M11
+priority: P0
+client: ${client}
+
+trigger:
+  type: manual
+
+steps:
+  - id: sentiment
+    tool: review_sentiment
+    inputs:
+      client: ${client}
+
+validator:
+  schema: SentimentDistributionOutput
+  expected:
+    value_min: 0
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "review_sentiment.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [trend, pie, sentiment, ml_model]

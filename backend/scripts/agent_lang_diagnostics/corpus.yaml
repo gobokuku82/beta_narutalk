@@ -1,0 +1,73 @@
+# 에이전트 언어 진단 코퍼스 (③ 100쿼리 하니스) — 2026-06-06
+#
+# 목적: cognitive+planning 을 헤드리스로 돌려 쿼리당 raw/cleaned/intent/tasks/todos/gaps 를 모아
+#       "에이전트가 무엇으로 이해하나 / 무엇을 잃나"를 유형별로 본다 → 에이전트 언어 재설계 방향.
+# 사용: python -m scripts.agent_lang_diagnostics.run_harness  (backend/ 에서)
+#
+# type = 의도 유형 (집계 버킷). note = 알려진 어려운 점(가설). 확장 자유 — 여기 추가하면 하니스가 돈다.
+# (현 ~35개. 100 까지 유형별로 늘리면 됨.)
+
+client: clumi
+
+queries:
+  # ── simple measure (baseline: 잘 돼야 함) ──
+  - {q: "4월 ROAS 알려줘", type: measure_simple}
+  - {q: "4월 매출 얼마나 나왔어?", type: measure_simple}
+  - {q: "4월 신규 회원 몇 명이야?", type: measure_simple}
+  - {q: "4월 CAC 알려줘", type: measure_simple}
+
+  # ── provenance ("어떻게 나온거야") — 언어에 explain op 없음(가설) ──
+  - {q: "전체 로아스는 어떻게 나온거야?", type: provenance, note: "Run#1 — 전체(기간없음)+provenance"}
+  - {q: "이 ROAS 어떻게 계산된 거야?", type: provenance}
+  - {q: "4월 매출이 이렇게 나온 근거가 뭐야?", type: provenance}
+  - {q: "이 숫자 어떻게 도출했는지 설명해줘", type: provenance}
+
+  # ── period 없는 measure (Run#1 근원: roas_overall 은 단일 월 필수) ──
+  - {q: "전체 ROAS 알려줘", type: period_missing, note: "period 없음 → roas_overall 크래시(②가 gap 으로 잡아야)"}
+  - {q: "우리 ROAS 어때?", type: period_missing}
+
+  # ── fan-out ("~별로 다") ──
+  - {q: "채널별로 ROAS 다 뽑아줘", type: fan_out}
+  - {q: "소재별 성과 세세하게 다 보여줘", type: fan_out}
+  - {q: "4월 채널별로 광고비 어떻게 나뉘어?", type: fan_out}
+
+  # ── quantifier ("모든/전체 X") — 양화사 전개 주체 없음(D7) ──
+  - {q: "모든 채널에서 4월 자료 수집해줘", type: quantifier}
+  - {q: "4월 모든 지표 분석해줘", type: quantifier}
+
+  # ── multi-intent (다의도) — operation 스칼라 천장(D1/D2) ──
+  - {q: "4월 매출 진단하고 채널별 ROAS 비교해서 보고서로 정리해줘", type: multi_intent}
+  - {q: "리뷰 키워드 뽑고 그걸로 이번달 캠페인 추천해줘", type: multi_intent}
+  - {q: "모든 채널 수집해서 4월 모든 지표 분석하고 각각 ROAS 뽑고 소재별로 다시 표시한 다음 보고서로 써줘", type: multi_intent, note: "Q-A lv5"}
+
+  # ── reference (대시보드/이전턴 참조) — cognitive 입력경로 없음(D8) ──
+  - {q: "지금 페이지 데이터 어떻게 나온건지 분석하고 이번달 캠페인 추천해줘", type: reference, note: "Q-B — 지금 페이지 + 파생추천"}
+  - {q: "그 분석 두 개 차이가 뭐야?", type: reference}
+  - {q: "방금 그거 다시 채널별로 해줘", type: reference}
+
+  # ── diagnose ("왜") — 인과 도구 부재 → 정직 degrade 기대 ──
+  - {q: "지난달 CAC가 왜 올랐어?", type: diagnose}
+  - {q: "4월 매출이 왜 줄었어?", type: diagnose}
+
+  # ── forecast/attribute — 도구 부재 → degrade 기대 ──
+  - {q: "다음 달 ROAS 예측해줘", type: forecast}
+  - {q: "매출 증가에 어떤 채널이 기여했어?", type: attribute}
+
+  # ── report (산출물) — report_writer silent-0 위험(D4) ──
+  - {q: "4월 종합 성과 보고서 만들어줘", type: report}
+  - {q: "팀장 보고용으로 4월 광고 성과 PDF로 정리해줘", type: report}
+
+  # ── reviews (텍스트) ──
+  - {q: "클루미 리뷰 반응 어때?", type: reviews}
+  - {q: "부정 리뷰 키워드 뽑아줘", type: reviews}
+
+  # ── ambiguous (모호) — clarify 기대 ──
+  - {q: "분석해줘", type: ambiguous}
+  - {q: "어때?", type: ambiguous}
+
+  # ── definition (정의) — 데이터 분석 아님 ──
+  - {q: "ROAS가 뭐야?", type: definition}
+  - {q: "CAC랑 ROAS 차이가 뭐야?", type: definition}
+
+  # ── 0건 유발 가능 (silent-0 진단) ──
+  - {q: "4월 부정 리뷰 키워드로 보고서 만들어줘", type: report, note: "리뷰 0건이면 D4 silent-0 위험"}

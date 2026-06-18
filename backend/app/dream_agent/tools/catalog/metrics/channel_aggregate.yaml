@@ -1,0 +1,11 @@
+name: channel_aggregate
+description: "daily_performance 매체별 집계 + 파생율 (C05 bar / T05 table 공용)."
+version: "0.1.0"
+category: metrics
+
+timeout_sec: 30
+max_retries: 0
+produces: [rows, count]
+has_cost: false
+estimated_cost: 0.0
+tags: [channel, aggregate, dashboard_v1]

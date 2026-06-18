@@ -1,0 +1,23 @@
+name: ga4_page_events_collector
+description: "Raw collector — #8 ga4_page_events. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+version: "0.1.0"
+category: collection
+
+parameters: []
+
+timeout_sec: 60
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - clumi_ga4_page_raw
+  - count
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [collection, behavior, ga4, large]
+
+clumi_methodology: "collection"
+clumi_file_no: 8

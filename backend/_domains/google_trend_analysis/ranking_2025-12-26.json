@@ -1,0 +1,67 @@
+{
+  "title": "Global Google Trend Ranking",
+  "source": "Google Trends (US, Last 3 months)",
+  "generated_at": "2025-12-26 14:03:51",
+  "ranking": [
+    {
+      "keyword": "Rice Water",
+      "count": 70,
+      "growth": -4.9,
+      "status": "Stable"
+    },
+    {
+      "keyword": "Retinol",
+      "count": 66,
+      "growth": 8.8,
+      "status": "Stable"
+    },
+    {
+      "keyword": "Moisturizer",
+      "count": 65,
+      "growth": 20.5,
+      "status": "Rising"
+    },
+    {
+      "keyword": "Hyaluronic Acid",
+      "count": 65,
+      "growth": 10.5,
+      "status": "Stable"
+    },
+    {
+      "keyword": "Snail Mucin",
+      "count": 60,
+      "growth": 24.3,
+      "status": "Rising"
+    },
+    {
+      "keyword": "Face Serum",
+      "count": 55,
+      "growth": 7.5,
+      "status": "Stable"
+    },
+    {
+      "keyword": "Reef Safe",
+      "count": 54,
+      "growth": 6.6,
+      "status": "Stable"
+    },
+    {
+      "keyword": "Cica",
+      "count": 53,
+      "growth": 9.9,
+      "status": "Stable"
+    },
+    {
+      "keyword": "Glass Skin",
+      "count": 51,
+      "growth": 9.4,
+      "status": "Stable"
+    },
+    {
+      "keyword": "Toner Pad",
+      "count": 47,
+      "growth": 309.9,
+      "status": "HOT"
+    }
+  ]
+}

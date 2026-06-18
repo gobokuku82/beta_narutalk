@@ -1,0 +1,15 @@
+name: creative_cards
+description: "소재 카드 Top-N (O04) — sort_by 지표 desc + slice."
+version: "0.1.0"
+category: metrics
+
+parameters:
+  - {name: n, type: integer, required: false, default: 9}
+  - {name: sort_by, type: string, required: false, default: roas}
+
+timeout_sec: 30
+max_retries: 0
+produces: [rows, count]
+has_cost: false
+estimated_cost: 0.0
+tags: [creative, card]

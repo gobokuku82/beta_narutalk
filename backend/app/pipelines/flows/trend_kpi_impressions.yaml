@@ -1,0 +1,32 @@
+name: trend_kpi_impressions
+visualization_id: K14
+category: trend
+description: "총 노출수 (daily_performance_totals — K14~K17 cache 공유)"
+methodology_id: M01
+priority: P0
+client: ${client}
+period: ${period}
+
+trigger:
+  type: manual
+
+steps:
+  - id: daily_totals
+    tool: daily_performance_totals
+    inputs:
+      client: ${client}
+      period: ${period}
+
+validator:
+  schema: DailyPerformanceTotalsOutput
+  expected:
+    value_min: 0
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "daily_performance_totals_${period}.json"   # K14~K17 공유
+  ttl_seconds: null
+
+owner: developer
+tags: [trend, kpi, impressions, cache_shared]

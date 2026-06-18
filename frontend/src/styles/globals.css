@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * 디자인 토큰 — PALETTE.md (본 파일 옆) 5 룰 기반.
+ * 비주얼: "2026 Warm Neutral" — 따뜻한 모래/스톤 뉴트럴 + 옥스블러드 액센트 1개.
+ *
+ * 모든 토큰 값 변경 시 frontend/src/styles/PALETTE.md §3 현 토큰 매핑도 동시 갱신.
+ * 새 토큰 추가 시 PALETTE.md §5 절차 (segment 결정 → S/L 범위 검증 → hue 충돌 확인 → 다크 모드 invert).
+ */
+
+@layer base {
+  :root {
+    /* 베이스 — 따뜻한 뉴트럴 (라이트) */
+    --background: 39 38% 96%;
+    --foreground: 20 8% 15%;
+
+    /* 카드는 순백 — 따뜻한 배경과 또렷이 분리 */
+    --card: 0 0% 100%;
+    --card-foreground: 20 8% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 8% 15%;
+
+    /* 액센트 1개 — 마호가니/옥스블러드 (살짝 더 선명하게) */
+    --primary: 350 55% 38%;
+    --primary-foreground: 40 33% 98%;
+
+    --secondary: 38 25% 92%;
+    --secondary-foreground: 20 8% 22%;
+
+    --muted: 40 24% 93%;
+    --muted-foreground: 34 9% 42%;
+
+    --accent: 350 35% 93%;
+    --accent-foreground: 350 55% 36%;
+
+    /* status — warm dusty (채도 통일 2026-06-08): destructive 60→38, warning 80→42, success warm shift */
+    --destructive: 6 38% 44%;
+    --destructive-foreground: 40 33% 98%;
+
+    --success: 142 24% 40%;
+    --success-foreground: 40 33% 98%;
+
+    --warning: 32 42% 44%;
+    --warning-foreground: 40 33% 98%;
+
+    --border: 38 23% 88%;
+    --input: 38 23% 88%;
+    --ring: 350 55% 38%;
+
+    --radius: 0.5rem;
+
+    /* 매체별 컬러 — 차분하되 살아있는 카테고리 컬러 (brand segment, S 36~58%) */
+    --channel-naver: 140 36% 40%;
+    --channel-kakao: 40 58% 48%;
+    --channel-meta: 214 40% 48%;
+    --channel-google: 8 52% 50%;
+
+    /* 차트 팔레트 — 비채널 다계열용 (Warm Dusty family, 2026-06-08).
+     * 채도 14~32% / 명도 40~54% 로 통일 → warm neutral 배경과 같은 톤.
+     * 액센트(--primary 옥스블러드)·채널 색과 겹치지 않는 절제된 5색.
+     * 채널 분해 차트는 --channel-* 사용, 비채널 다계열은 이 팔레트. */
+    --chart-1: 210 25% 48%;
+    --chart-2: 20 32% 50%;
+    --chart-3: 160 22% 40%;
+    --chart-4: 285 14% 54%;
+    --chart-5: 34 14% 50%;
+
+    /* 의미적 토큰 — Workflow Canvas (spec 62) */
+    --node-task: 38 20% 90%;
+    --node-branch: 40 60% 70%;
+    --node-start: 138 24% 40%;
+    --node-end: 350 45% 42%;
+    --node-running: 32 62% 48%;
+    --node-completed: 138 24% 34%;
+    --node-failed: 6 60% 46%;
+    --node-invalidated: 6 50% 92%;
+
+    --edge-default: 34 12% 65%;
+    --edge-invalidated: 6 60% 50%;
+  }
+
+  [data-theme='dark'] {
+    /* 베이스 — 따뜻한 다크 */
+    --background: 28 10% 9%;
+    --foreground: 38 14% 90%;
+
+    --card: 28 9% 12%;
+    --card-foreground: 38 14% 90%;
+
+    --popover: 28 9% 12%;
+    --popover-foreground: 38 14% 90%;
+
+    --primary: 350 55% 58%;
+    --primary-foreground: 28 10% 9%;
+
+    --secondary: 28 8% 18%;
+    --secondary-foreground: 38 14% 90%;
+
+    --muted: 28 8% 17%;
+    --muted-foreground: 34 8% 60%;
+
+    --accent: 350 25% 22%;
+    --accent-foreground: 350 50% 82%;
+
+    /* status — 다크 invert (라이트 L+12, S+2, hue 동일 — PALETTE.md R5 다크 변환 룰) */
+    --destructive: 6 40% 56%;
+    --destructive-foreground: 28 10% 9%;
+
+    --success: 142 26% 52%;
+    --success-foreground: 28 10% 9%;
+
+    --warning: 32 44% 56%;
+    --warning-foreground: 28 10% 9%;
+
+    --border: 30 8% 20%;
+    --input: 30 8% 20%;
+    --ring: 350 55% 58%;
+
+    /* 차트 팔레트 다크 — 라이트 invert (L+12, S+2, hue 동일) */
+    --chart-1: 210 27% 60%;
+    --chart-2: 20 34% 62%;
+    --chart-3: 160 24% 52%;
+    --chart-4: 285 16% 66%;
+    --chart-5: 34 16% 62%;
+
+    /* 의미적 토큰 다크 — 일부 조정 */
+    --node-task: 28 8% 24%;
+    --node-invalidated: 6 45% 28%;
+    --edge-default: 30 8% 42%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'tnum';
+  }
+}
+
+@layer components {
+  /* 카드 hover — 그림자 대신 보더 강조 (절제) */
+  .card-hover {
+    @apply transition-colors duration-150 hover:border-foreground/20;
+  }
+}

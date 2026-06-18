@@ -1,0 +1,32 @@
+name: dashboard1_kpi_signup_conversion
+visualization_id: K09
+category: dashboard1
+description: "가입 전환율 KPI — 신규/세션 (S067)"
+methodology_id: M01
+priority: P0
+client: ${client}
+period: ${period}
+
+trigger:
+  type: manual
+
+steps:
+  - id: signup_conversion_compute
+    tool: signup_conversion
+    inputs:
+      client: ${client}
+      period: ${period}
+
+validator:
+  schema: SignupConversionOutput
+  expected:
+    value_min: 0
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "S067_signup_conversion_${period}.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [signup, conversion, kpi, dashboard1]

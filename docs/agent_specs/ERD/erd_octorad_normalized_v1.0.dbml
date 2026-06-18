@@ -1,0 +1,35 @@
+// ============================================================
+// octorad normalized ERD v1.0 — cleaned(정규화) *결과* 스키마
+// ============================================================
+// 생성: gen_normalized_erd.py (SPEC=octorad_canonical_contract_v0.1.yaml). 2026-06-14
+// 채널 translator 출력 = canonical measures(원자값) + lineage. grain = 채널 × period.
+// 사용: https://dbdiagram.io paste. raw=erd_octorad_raw_v1.0 · 연결=erd_octorad_raw_normalized_v1.0
+// ============================================================
+
+Project octorad_normalized {
+  Note: 'raw → cleaned(normalized) 결과. 영문 snake_case·단위접미사·lineage 신뢰.'
+}
+
+Table normalized_measures {
+  channel varchar [note: 'meta/naver_sa/advoost/kakao/talktalk/orders']
+  period varchar [note: 'YYYY-MM (KST)']
+  ad_cost_krw int [note: '광고 매체 집행비(meta/naver/advoost). ⚠ salesAmt=비용(C6.1). ★C6']
+  impressions int [note: '노출수 — 광고가 화면에 표출된 횟수 (매체 공통, Naver impCnt 포함). 도달(paid_']
+  clicks int [note: '전체 클릭(링크 외 포함). 링크클릭은 link_clicks 별 필드.']
+  link_clicks int [note: '링크 클릭 (Meta 전용). CTR canonical 분자.']
+  conversion_count int [note: '전환수. Meta는 actions[] 배열에서 action_type=omni_purchase 필터(']
+  vt_conversion_count int [note: '조회연결(view-through) 전환 — CT와 분리(이중계상 방지).']
+  conversion_revenue_krw int [note: '전환매출. ⚠ Naver convAmt=매출(salesAmt=비용과 짝, C6.1). Meta ac']
+  paid_reach int [note: '유료 도달 (Meta). ⚠ IG organic reach(organic_reach)와 합산 금지(']
+  impression_frequency float [note: '노출/도달 (Meta 전용). customer_rfm.frequency(구매빈도)와 동음이의 — 무']
+  msg_cost_krw int [note: '메시징 발송비(★C6.3 ad_cost와 분리, verify A4). MER 분모(총마케팅비)엔 포']
+  msg_target_count int [note: '메시징 발송 대상 수 (수신동의 친구·대상). 광고 impressions와 무관 — 메시징 깔때기 ']
+  msg_open_count int [note: '메시징 오픈(열람) 수. 광고 노출과 다른 행동 — open_rate 분모 미확정(M5 보류)이라 ']
+  msg_click_count int [note: '광고 clicks와 동음이의(분리)']
+  msg_conversion_count int [note: '광고 전환과 절대 분리(C6.3)']
+  msg_conversion_revenue_krw int [note: '메시징 전환 매출. ★C6.3 광고 conversion_revenue_krw와 절대 분리(별 mea']
+  order_revenue_krw int [note: '자사몰 주문 매출(MER 분자). 활성주문(order_status!=C40)']
+  _lineage json [note: 'source_channel·source_column·raw_value·transform (신뢰)']
+}
+
+// 파생지표(roas·mer·ctr…)는 computed 레이어 — erd_octorad_canonical_layers 참조.

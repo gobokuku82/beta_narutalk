@@ -1,0 +1,32 @@
+name: creative_cards_top
+visualization_id: O04
+category: creative
+description: "소재 Top 9 카드 — ROAS desc sort + slice(0,9)"
+methodology_id: M08
+priority: P0
+client: ${client}
+
+trigger:
+  type: manual
+
+steps:
+  - id: cards
+    tool: creative_cards
+    inputs:
+      client: ${client}
+      n: 9
+      sort_by: roas
+
+validator:
+  schema: CreativeCardsOutput
+  expected:
+    rows_min: 1
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "creative_cards_top9.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [creative, card]

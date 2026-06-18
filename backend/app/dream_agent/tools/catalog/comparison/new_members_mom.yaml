@@ -1,0 +1,45 @@
+name: new_members_mom
+description: "신규 가입 회원 MoM (S069 MoM) — customers.signup_date 두 월 비교"
+version: "0.1.0"
+category: comparison
+
+parameters:
+  - name: period_a
+    type: string
+    required: true
+    description: "이전 월 YYYY-MM"
+  - name: period_b
+    type: string
+    required: true
+    description: "비교 월 YYYY-MM"
+
+timeout_sec: 30
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - period_a_total
+  - period_b_total
+  - delta_pct                  # float — 변화율 (%)
+  - by_channel_a               # dict[str, int]
+  - by_channel_b
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [clumi, comparison, mom, new_members, methodology_S069]
+
+clumi_methodology: "calculations"
+clumi_source_ids: ["S069"]
+clumi_answer_values:
+  "2026-03 -> 2026-04":
+    period_a_total: 601
+    period_b_total: 600
+    delta_pct: -0.2
+
+storage:
+  layer: "computed"
+  key_template: "S069mom_new_members_{period_a}_to_{period_b}.json"
+  partition: ["period_a", "period_b"]
+  cache_ttl_sec: 0

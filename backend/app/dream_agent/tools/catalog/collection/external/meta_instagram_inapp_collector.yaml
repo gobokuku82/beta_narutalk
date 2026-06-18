@@ -1,0 +1,23 @@
+name: meta_instagram_inapp_collector
+description: "Raw collector — #3 meta_instagram_inapp. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+version: "0.1.0"
+category: collection
+
+parameters: []
+
+timeout_sec: 60
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - meta_inapp_raw
+  - count
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [collection, ads, meta]
+
+clumi_methodology: "collection"
+clumi_file_no: 3

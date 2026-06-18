@@ -1,0 +1,30 @@
+name: creative_ab_table
+visualization_id: T06
+category: creative
+description: "AB 테스트 테이블 — winner·lift 파생 (ab_tests)"
+methodology_id: M09
+priority: P0
+client: ${client}
+
+trigger:
+  type: manual
+
+steps:
+  - id: ab_table
+    tool: ab_test_table
+    inputs:
+      client: ${client}
+
+validator:
+  schema: AbTestTableOutput
+  expected:
+    rows_min: 1
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "ab_test_table.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [creative, ab_test, table]

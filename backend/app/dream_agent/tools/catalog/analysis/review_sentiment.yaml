@@ -1,0 +1,11 @@
+name: review_sentiment
+description: "리뷰 감성 분포 (C08) — ml_model.analyze_sentiment (POC=Mock)."
+version: "0.1.0"
+category: analysis
+
+timeout_sec: 30
+max_retries: 0
+produces: [positive, neutral, negative, total]
+has_cost: false
+estimated_cost: 0.0
+tags: [trend, sentiment, ml_model]

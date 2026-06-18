@@ -1,0 +1,40 @@
+name: promotion_revenue
+description: "프로모션 매출 (S002) — orders 활성 + promotion_code 있는 행 SUM. methodology §S002"
+version: "0.1.0"
+category: metrics
+
+parameters:
+  - name: period
+    type: string
+    required: true
+    description: "YYYY-MM"
+
+timeout_sec: 30
+max_retries: 0
+requires_approval: false
+
+dependencies: []
+produces:
+  - promotion_revenue           # int
+  - promotion_share_pct         # float — promo / total × 100
+  - promotion_orders_count      # int
+  - total_revenue               # int — 비교용
+
+has_cost: false
+estimated_cost: 0.0
+
+tags: [clumi, metrics, promotion, methodology_S002]
+
+clumi_methodology: "calculations"
+clumi_source_ids: ["S002"]
+clumi_answer_values:
+  "2026-04":
+    promotion_revenue: 43400360
+    promotion_share_pct: 36.3
+    total_revenue: 119539660
+
+storage:
+  layer: "computed"
+  key_template: "S002_promotion_revenue_{period}.json"
+  partition: ["period"]
+  cache_ttl_sec: 0

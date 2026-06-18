@@ -1,0 +1,15 @@
+name: creative_ctr_avg
+description: "평균 소재 CTR — creatives.ctr 평균. K19."
+version: "0.1.0"
+category: metrics
+
+parameters:
+  - {name: label, type: string, required: false, default: "평균 CTR", description: "표시 라벨"}
+  - {name: unit, type: string, required: false, default: "%", description: "단위"}
+
+timeout_sec: 30
+max_retries: 0
+produces: [value, op, field]
+has_cost: false
+estimated_cost: 0.0
+tags: [creative, metric, kpi, K19, ctr]

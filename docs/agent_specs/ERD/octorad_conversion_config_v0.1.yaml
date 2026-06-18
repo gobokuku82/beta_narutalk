@@ -1,0 +1,60 @@
+# octorad conversion config — 값 변환 규칙집 (canonical contract의 transform 참조처)
+# v0.1 2026-06-14. matching(이름)=contract / mapping(값변환)=여기 분리 (구현리서치 ⓓ · 07 Kimball conversion table).
+# 신규 채널 = 여기 rule 바인딩만 추가 (engine 코드 불변). 환율은 시변 -> effective date.
+
+meta:
+  version: v0.1
+  base_currency: KRW
+  base_timezone: Asia/Seoul        # KST = UTC+9
+  principle: contract sources[].transform 이 아래 rule_id 를 참조. 값 변환 로직을 코드 아닌 config 로 외부화.
+
+# ===== 재사용 변환 primitive (rule_id -> 정의) =====
+transforms:
+  cast_int:            { op: cast, to: int, on_error: "null" }
+  cast_float2:         { op: cast, to: float, round: 2 }
+  pct_to_ratio:        { op: divide, by: 100 }                 # percent -> 배수 (Naver ror, advoost roas) — C1.1
+  currency_to_krw:     { op: currency_convert, base: KRW, rate_table: currency_rates, key: account_currency }  # C2.2
+  yyyymmdd_to_date:    { op: date_parse, fmt: yyyymmdd, to: date }      # GA4 event_date (Naver statDt 는 ISO — PILOT 정정) — C4.1
+  iso_to_date:         { op: date_parse, fmt: "yyyy-mm-dd", to: date }
+  utc_date_to_kst:     { op: tz_shift_date, from: UTC, to: KST }        # GA4 event_date 자정경계 +/-1일 주의 — C4.2
+  micros_epoch_to_kst: { op: ts_parse, unit: microseconds, tz_out: KST, to: iso8601 }   # GA4 event_timestamp — C3.1
+  sec_epoch_to_kst:    { op: ts_parse, unit: seconds, tz_out: KST, to: iso8601 }         # ad_change_history event_time_unix
+  meta_action_extract: { op: array_filter_extract, where_field: action_type, where_value: omni_purchase, extract: value, then: cast_int }  # actions[]/action_values[]/purchase_roas[] — C6.2 미필터=silent-0
+
+# ===== 통화 환율 테이블 (effective date — 07 업계 Kimball) =====
+# clumi mock 은 KRW(identity). 실 API USD/현지통화 가능 -> 시변 환율 갱신.
+currency_rates:
+  - { currency: KRW, to_krw: 1.0,    effective: "2026-01-01" }
+  - { currency: USD, to_krw: 1350.0, effective: "2026-01-01", status: "예시값 — 실 환율/시변 갱신 필요" }
+
+# ===== 채널 값 quirk -> rule 바인딩 (분류 §3 충돌 해소) =====
+apply:
+  naver_searchad:
+    ror:      pct_to_ratio        # percent -> roas_x 배수
+    crto:     cast_float2         # CVR percent
+    ccnt:     cast_int            # 전환수 (convCnt 부재)
+    statDt:   iso_to_date         # ★PILOT 적발: 실제 ISO '2026-04-01' (사전 yyyymmdd 오기)
+    salesAmt: cast_int            # =비용 (C6.1)
+    convAmt:  cast_int            # =매출 (C6.1)
+  naver_advoost:
+    roas:     pct_to_ratio
+    ctcvr:    cast_float2
+    cost:     cast_int
+  meta_ads:                       # meta_ads_performance / by_age / instagram_inapp 공통
+    spend:               [cast_int, currency_to_krw]
+    "actions[]":         meta_action_extract                   # 전환수
+    "action_values[]":   [meta_action_extract, currency_to_krw]  # 전환매출
+    "purchase_roas[]":   [meta_action_extract, cast_float2]     # 배수 — 그대로(÷100 없음)
+    date_start:          iso_to_date
+  ga4:
+    event_date:                utc_date_to_kst
+    event_timestamp:           micros_epoch_to_kst
+    purchase_revenue:          cast_int                         # ★D1 검증역반영: native KRW 사용(권장 — round-trip 손실 없음)
+    purchase_revenue_in_usd:   currency_to_krw                  # USD 병기 — native 있으면 미사용 (C2.1)
+  ad_change_history:
+    event_time_unix: sec_epoch_to_kst
+
+# ===== 미해결 (보류) =====
+blocked:
+  - { field: msg open_rate/click_rate 분모, reason: Kakao 공식 doc(대행사) 필요 — 06 PARTIAL }
+  - { field: meta account_currency 실제 분포, reason: mock=KRW 가정, 실 API 확인 시 currency_to_krw 활성 }

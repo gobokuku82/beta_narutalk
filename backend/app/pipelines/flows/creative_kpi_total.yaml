@@ -1,0 +1,31 @@
+name: creative_kpi_total
+visualization_id: K18
+category: creative
+description: "총 소재 수 — creatives 행수"
+methodology_id: M01
+priority: P0
+client: ${client}
+
+trigger:
+  type: manual
+
+steps:
+  - id: creative_count
+    tool: creative_count
+    inputs:
+      client: ${client}
+      label: "총 소재 수"
+
+validator:
+  schema: MetricScalarOutput
+  expected:
+    value_min: 0
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "creative_count_total.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [creative, kpi]

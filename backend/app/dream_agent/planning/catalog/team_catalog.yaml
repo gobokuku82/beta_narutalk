@@ -1,0 +1,785 @@
+# ==============================================================
+# Team/Agent/Tool Catalog (10 에이전트 구조 — 2026-05-18 D9 + D13 Y 반영)
+# ==============================================================
+#
+# 3-Level 계층: Team → Agent → Tool
+# Planning의 LLM이 이 카탈로그를 참조해 StructuredQuery의 tasks[]를
+# Todo[] + DAG로 변환한다.
+#
+# 10 에이전트:
+#   chat_hub (Cognitive Stage 내부 — 본 카탈로그 외)
+#   analysis_team 7: collection / text_preprocessing / channel_normalizing /
+#                    analysis / report_text / pdf / ppt
+#   (2026-06-12 폐기) creative_team — 외부 API·제품 결정 필요 영역으로 POC 범위 외 확정 (spec 32 §7.1)
+#
+# Reference:
+# - docs/agent_specs/17_functions_to_io_v1.0.md  (종단 매핑)
+# - docs/agent_specs/40_agent_tool_lifecycle_v1.0.md  (변경 절차)
+# - docs/_claude/tool/TOBE_MVP/03_drift_report.md D9 + D13
+# - backend/app/dream_agent/schemas/structured_query.py  (TaskType enum)
+#
+# 표기:
+#   status: implemented  — 현재 POC에 실제 구현 있음 (2026-06-12 부로 전 tool implemented)
+#   (status: stub 제도 폐지, 2026-06-12 오너 결정 "구현하면서 줄이자" 완결 —
+#    mock_tools "되는 척" 경로 삭제. 비구현 tool 은 카탈로그 등재 금지: 등재되면
+#    executor 가 시끄럽게 실패한다. 미구현 의도는 코드 Status: planned 마커로.)
+# ==============================================================
+
+teams:
+
+  # ─────────────────────────────────────────────────────────────
+  # 1팀 — 분석팀 (Analysis Team) — 7 agent
+  # 순차 파이프라인:
+  #   수집 → (자연어전처리 || 채널정규화) → 분석 → 보고서텍스트 → (pdf || ppt)
+  # ─────────────────────────────────────────────────────────────
+  analysis_team:
+    description: "데이터 수집부터 분석·보고서·출력물까지 7 agent 파이프라인"
+    agents:
+
+      collection_agent:
+        description: "마케팅 raw 수집 (콘텐츠 4 + 광고/SNS/웹분석 13 + 거래/회원 8 = 25 tool, helper-B 패턴, ADR-022)"
+        handles_tasks: [data_collection]
+        # ────────────────────────────────────────────────────────────
+        # ⑭ (2026-06-01) 등재 완료: 신 21 collector (external 13 + internal 8) + 기존 review + stub 3 = 25 tool.
+        # 본 작업 ⑭ 으로 collection 카테고리 dual-source drift 100% 해소 (ToolRegistry 22 = catalog 22 visible).
+        # description = per-tool yaml 단일 진실 (D6, 계획 v3 §3.A.2 박제).
+        # produces = per-tool yaml 2-key [<name>_raw, count] 그대로 (계획 v3 §2.2).
+        #
+        # Tool 분류:
+        #   - 콘텐츠 수집 (4): review (helper-B) + youtube/coupang/oliveyoung (stub, ⑱ 폐기 후보)
+        #   - 광고/SNS/웹분석 (13, external/): meta_ads_* / naver_* / kakao_bizmessage / ga4_* / instagram / ad_change / household
+        #   - 거래/회원 (8, internal/): orders / customers / customer_* / signup / promotions / category / crm
+        # 진실 소스: data/clumi/raw/ (helper-B + ADR-022)
+        # ────────────────────────────────────────────────────────────
+        tools:
+          # ─── 콘텐츠 수집 (4) ───
+          - name: review_collector
+            status: implemented
+            description: "clumi reviews.csv (24 raw) 수집 — raw 통째 반환. review_normalizer 가 표준화 (ADR-014 v2 분리). filtering = MVP+ cleaning tool 결정. ADR-027 Tool 권한 정합 (helper-B)."
+            params_required: []
+            params_optional: []
+            produces: [raw_reviews]
+          # ⑱ (2026-06-01): stub 3 (youtube/coupang/oliveyoung) 폐기 — 역드리프트 (ToolRegistry 0)
+          # MVP+ 실 외부 source 진입 시 helper-B 패턴 (RawCollectorBase) 으로 신규 작성.
+
+          # ─── ⑭ (2026-06-01) 신 등재: external 13 (광고/SNS/웹분석) ───
+          # description = per-tool yaml 그대로 (D6 단일 진실), produces = per-tool yaml 2-key
+          - name: meta_ads_performance_collector
+            status: implemented
+            description: "Raw collector — #1 meta_ads_performance. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [meta_ads_raw, count]
+          - name: meta_ads_by_age_collector
+            status: implemented
+            description: "Raw collector — #2 meta_ads_by_age. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [meta_ads_by_age_raw, count]
+          - name: meta_instagram_inapp_collector
+            status: implemented
+            description: "Raw collector — #3 meta_instagram_inapp. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [meta_inapp_raw, count]
+          - name: naver_searchad_collector
+            status: implemented
+            description: "Raw collector — #4 naver_searchad. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [naver_sa_raw, count]
+          - name: naver_advoost_collector
+            status: implemented
+            description: "Raw collector — #15 naver_advoost. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [naver_advoost_raw, count]
+          - name: naver_interest_alert_collector
+            status: implemented
+            description: "Raw collector — #13 naver_interest_alert. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [naver_alert_raw, count]
+          - name: naver_talktalk_collector
+            status: implemented
+            description: "Raw collector — #17 naver_talktalk. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [talktalk_raw, count]
+          - name: kakao_bizmessage_collector
+            status: implemented
+            description: "Raw collector — #16 kakao_bizmessage. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [kakao_raw, count]
+          - name: ga4_traffic_source_collector
+            status: implemented
+            description: "Raw collector — #7 ga4_traffic_source. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [clumi_ga4_traffic_raw, count]
+          - name: ga4_page_events_collector
+            status: implemented
+            description: "Raw collector — #8 ga4_page_events. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [clumi_ga4_page_raw, count]
+          - name: ad_change_history_collector
+            status: implemented
+            description: "Raw collector — #20 ad_change_history. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [ad_change_raw, count]
+          - name: household_structure_collector
+            status: implemented
+            description: "Raw collector — #19 household_structure. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [household_raw, count]
+          - name: instagram_engagement_collector
+            status: implemented
+            description: "Raw collector — #14 instagram_engagement. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [instagram_raw, count]
+
+          # ─── ⑭ (2026-06-01) 신 등재: internal 8 (거래/회원/프로모션/CRM) ───
+          - name: orders_collector
+            status: implemented
+            description: "Raw collector — #5 orders. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [orders_raw, count]
+          - name: customers_collector
+            status: implemented
+            description: "Raw collector — #6 customers. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [customers_raw, count]
+          - name: customer_rfm_collector
+            status: implemented
+            description: "Raw collector — #10 customer_rfm. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [rfm_raw, count]
+          - name: customer_grade_history_collector
+            status: implemented
+            description: "Raw collector — #21 grade_history. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [grade_history_raw, count]
+          - name: signup_events_collector
+            status: implemented
+            description: "Raw collector — #9 signup_events. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [signup_raw, count]
+          - name: promotions_collector
+            status: implemented
+            description: "Raw collector — #11 promotions. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [promotions_raw, count]
+          - name: category_sales_collector
+            status: implemented
+            description: "Raw collector — #12 category_sales. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [category_sales_raw, count]
+          - name: crm_messages_collector
+            status: implemented
+            description: "Raw collector — #18 crm_messages. POC: clumi_loader thin wrapper. MVP+: 실 API 교체"
+            params_required: []
+            params_optional: []
+            produces: [crm_raw, count]
+          # ⑭ (2026-06-01) 완료: broken 5 폐기 (⑫.A) + external 13 + internal 8 = 신 21 collection_agent 등재.
+          # ⑱ (2026-06-01) 후속: stub 3 (youtube/coupang/oliveyoung) 폐기 → collection 카테고리
+          # ToolRegistry 22 = team_catalog 22 (review 1 + 신 21) 100% 가시화 + 역드리프트 0.
+          # 잔존 invisible (작업 ⑰+): metrics 35 + comparison 7 + analysis 6 + normalization 4 = 52
+          # (cleaning 3 = 본 ⑱.B 에서 cleaning_agent 신설 등재).
+
+      cleaning_agent:
+        description: "raw 정제 (C:LUMI methodology cleaning rule 1·3 + 결측 진단) — ADR-014 v2 단일 책임 분리"
+        handles_tasks: [data_preprocessing]
+        # ⑱.B (2026-06-01) 신설 — cleaning 카테고리 3 tool 100% 가시화.
+        # 흐름: collection (orders/customers raw) → cleaning_agent (정제) → channel_normalizing_agent (정규화)
+        # description = per-tool yaml 단일 진실 (D6, 계획서 작업 ⑭ v3 정합).
+        tools:
+          - name: active_orders_filter
+            status: implemented
+            description: "활성 주문 필터링 (정제 1) — order_status != 'C40' 인 행만 유지. C:LUMI methodology_cleaning §정제 1"
+            params_required: [period]
+            params_optional: []
+            produces: [orders_active, count, dropped]
+          - name: member_metrics_validator
+            status: implemented
+            description: "회원 누적 지표 정합 검증 (정제 3) — customers.total_orders/total_purchase_amount/last_order_date 가 실제 orders 활성주문과 일치하는지 검증. C:LUMI methodology_cleaning §정제 3"
+            params_required: []
+            params_optional: [fields, include_lifetime]
+            produces: [validated_customers, mismatches, mismatch_count, customer_count, active_orders_member]
+          - name: missing_value_diagnostic
+            status: implemented
+            description: "결측값 진단 리포트 — entity 의 컬럼별 null 통계 + 의미있는 NaN(비주문 회원 등) vs 데이터 누락 분류. methodology 외 POC 운영 도구"
+            params_required: [source_id]
+            params_optional: [entity_name]
+            produces: [column_stats, total_columns, total_rows, complete_columns, columns_with_gap]
+
+      metrics_agent:
+        description: "KPI 메트릭 계산 (35 tool)"
+        handles_tasks: [metric_calculation]
+        # ⑰.C (2026-06-01) 신설 — metrics 카테고리 35 tool 100% 가시화.
+        # 흐름: collection (raw) → cleaning (정제) → channel_normalizing (정규화 시) → metrics (KPI 계산)
+        # description = per-tool yaml 단일 진실 (D6, 계획 v3 §3.2a.1 박제).
+        # 페어: TaskType.METRIC_CALCULATION ↔ GoalType.METRIC (KPI 질의).
+        tools:
+          - name: ab_test_table
+            status: implemented
+            description: "AB 테스트 테이블 (T06) — winner·lift_pct 파생."
+            params_required: []
+            params_optional: []
+            produces: [rows, count]
+          - name: ad_cost_total
+            status: implemented
+            description: "광고비 5매체 합산 (정제 5) — Meta·NaverSA·ADVoost·Kakao·Talktalk 의 cost 통일 합. methodology_cleaning §정제 5"
+            params_required: []
+            params_optional: [period]
+            produces: [total_cost, by_channel]   # period 는 artifact 아님 — 스코프 param 은 쿼리에서만 (슬라이스 1, 헌법 D3·R2: 'all' 주입 silent-0 오염원이었음)
+          - name: age_segment
+            status: implemented
+            description: "연령대 5세 bucket 분포 (S037) — customers.age FLOOR(/5)*5. methodology §S037"
+            params_required: []
+            params_optional: []
+            produces: [table, total_members, core_segment_35_44]
+          - name: aov_monthly
+            status: implemented
+            description: "월별 객단가·구매자수·주문수 (S048) — orders 활성 기반. methodology_calculations §S048"
+            params_required: [period]   # 코드(aov_monthly.py:28-29)가 period 강제 — drift 정합(슬라이스 1, 2026-06-12)
+            params_optional: []
+            produces: [aov, unique_buyers, orders_count]
+          - name: budget_channel_share
+            status: implemented
+            description: "채널별 예산 비중 (C09 도넛)."
+            params_required: []
+            params_optional: []
+            produces: [rows, total_budget]
+          - name: budget_stacked
+            status: implemented
+            description: "구분 × 채널 예산 누적 (C10 stacked bar)."
+            params_required: []
+            params_optional: []
+            produces: [rows, channels]
+          - name: budget_totals
+            status: implemented
+            description: "총 예산 + 평균 집행률 (K22·K23 공유)."
+            params_required: []
+            params_optional: []
+            produces: [total_budget, avg_exec_rate]
+          - name: cac_overall
+            status: implemented
+            description: "전체 CAC (S032) — 총마케팅비 ÷ 신규회원수. methodology §S032"
+            params_required: [period]   # 코드(cac_overall.py:20-21)가 period 강제 — drift 정합(슬라이스 1, 2026-06-12). G2 의 'CAC 0원' 경로 차단.
+            params_optional: []
+            produces: [cac, total_marketing_cost, new_members_count]
+          - name: campaign_active_count
+            status: implemented
+            description: "진행중 캠페인 수 — campaigns.status='active' 행수. K11."
+            params_required: []
+            params_optional: []
+            produces: [value, op, field]
+          - name: campaign_budget_total
+            status: implemented
+            description: "총 월예산 — campaigns.monthly_budget 합산. K12."
+            params_required: []
+            params_optional: []
+            produces: [value, op, field]
+          - name: campaign_count
+            status: implemented
+            description: "총 캠페인 수 — campaigns 행수 (period 무관). K10."
+            params_required: []
+            params_optional: []
+            produces: [value, op, field]
+          - name: campaign_target_roas_avg
+            status: implemented
+            description: "평균 목표 ROAS — campaigns.target_roas 평균. K13."
+            params_required: []
+            params_optional: []
+            produces: [value, op, field]
+          - name: campaigns_table
+            status: implemented
+            description: "캠페인 행 목록 (T04 테이블). 선택적 columns projection."
+            params_required: []
+            params_optional: []
+            produces: [rows, count]
+          - name: category_multi_distributor
+            status: implemented
+            description: "상품 카테고리 다중 분배 (정제 7) — orders.product_categories 콤마 분리 + 매출 균등 분배. methodology §정제 7 옵션 A"
+            params_required: []
+            params_optional: [period]
+            produces: [by_category, total_categories, total_distributed_revenue]
+          - name: channel_aggregate
+            status: implemented
+            description: "daily_performance 매체별 집계 + 파생율 (C05 bar / T05 table 공용)."
+            params_required: []
+            params_optional: []
+            produces: [rows, count]
+          - name: conversion_funnel
+            status: implemented
+            description: "daily_performance 전체 노출→클릭→전환 퍼널 단계 (C06)."
+            params_required: []
+            params_optional: []
+            produces: [rows]
+          - name: creative_cards
+            status: implemented
+            description: "소재 카드 Top-N (O04) — sort_by 지표 desc + slice."
+            params_required: []
+            params_optional: []
+            produces: [rows, count]
+          - name: creative_count
+            status: implemented
+            description: "총 소재 수 — creatives 행수. K18."
+            params_required: []
+            params_optional: []
+            produces: [value, op, field]
+          - name: creative_ctr_avg
+            status: implemented
+            description: "평균 소재 CTR — creatives.ctr 평균. K19."
+            params_required: []
+            params_optional: []
+            produces: [value, op, field]
+          - name: creative_roas_avg
+            status: implemented
+            description: "평균 소재 ROAS — creatives.roas 평균. K20."
+            params_required: []
+            params_optional: []
+            produces: [value, op, field]
+          - name: daily_performance_aggregate
+            status: implemented
+            description: "일별 성과 date 별 metric 합산 (C04 라인차트)."
+            params_required: []
+            params_optional: [period, metrics]   # 코드(daily_performance_aggregate.py:23-24) 정합 — drift 보정(리뷰 R-3, 2026-06-12)
+            produces: [rows, metrics]
+          - name: daily_performance_totals
+            status: implemented
+            description: "daily_performance 기간 총 노출·클릭·전환·광고비 (K14~K17 공유)."
+            params_required: []
+            params_optional: [period]   # 코드(daily_performance_totals.py:23) 정합 — drift 보정(리뷰 R-3, 2026-06-12)
+            produces: [total_impressions, total_clicks, total_conversions, total_ad_cost]
+          - name: ga4_session_aggregator
+            status: implemented
+            description: "GA4 #07 세션 단위 집계 (정제 6) — session_start 카운트·event 분포·채널별 분포. methodology_cleaning §정제 6"
+            params_required: []
+            params_optional: []
+            produces: [session_start_total, by_source, by_event]
+          - name: grade_revenue
+            status: implemented
+            description: "등급별 회원수·매출 표 (S046) — orders × customers join. methodology §S046"
+            params_required: [period]   # 코드(grade_revenue.py:41-42)가 period 강제 — drift 정합(슬라이스 1, 2026-06-12)
+            params_optional: []
+            produces: [table, total_members, total_member_revenue, silver_revenue, welcome_member_share]
+          - name: keyword_metrics_avg
+            status: implemented
+            description: "키워드 평균 ROAS + 운영 수 (K24)."
+            params_required: []
+            params_optional: []
+            produces: [avg_roas, keyword_count]
+          - name: keyword_top_roas
+            status: implemented
+            description: "키워드 ROI Top-N + 경쟁 Badge (T07)."
+            params_required: []
+            params_optional: []
+            produces: [rows, count]
+          - name: member_guest_stats
+            status: implemented
+            description: "회원/비회원 카운트·비율 통계 묶음 (정제 10) — orders.member_id IS NULL 라벨 후 집계. methodology_cleaning §정제 10"
+            params_required: []
+            params_optional: [period]
+            produces: [member_count, guest_count, total_active, member_share_pct, guest_share_pct]
+          - name: new_members_monthly
+            status: implemented
+            description: "월별 신규 회원 + 채널별 분포 (S069) — customers.signup_date 기준. methodology §S069"
+            params_required: [period]   # 코드(new_members_monthly.py:29-30)가 period 강제 — drift 정합(슬라이스 1, 2026-06-12)
+            params_optional: []
+            produces: [new_members_total, new_members_by_channel]
+          - name: promotion_revenue
+            status: implemented
+            description: "프로모션 매출 (S002) — orders 활성 + promotion_code 있는 행 SUM. methodology §S002"
+            params_required: [period]   # 코드(promotion_revenue.py:21-22)가 period 강제 — drift 정합(슬라이스 1, 2026-06-12)
+            params_optional: []
+            produces: [promotion_revenue, promotion_share_pct, promotion_orders_count, total_revenue]
+          - name: promotion_roas
+            status: implemented
+            description: "프로모션 ROAS (S005) — 프로모션매출 ÷ 총마케팅비. methodology §S005"
+            params_required: [period]   # 코드(promotion_roas.py:22-23)가 period 강제 — drift 정합(슬라이스 1, 2026-06-12)
+            params_optional: []
+            produces: [promotion_roas, promotion_revenue, total_marketing_cost]
+          - name: repurchase_rate_mom
+            status: implemented
+            description: "재구매율 MoM (S028) — is_first_order=0 회원 비율. methodology §S028"
+            params_required: [period]   # 코드(repurchase_rate_mom.py:32-33)가 period 강제 — drift 정합(슬라이스 1, 2026-06-12)
+            params_optional: []
+            produces: [repurchase_rate, total_buyers, existing_buyers, new_buyers]
+          - name: revenue_total
+            status: implemented
+            description: "총 매출 (S001) — SUM(orders.payment_amount) WHERE 활성주문 AND 기간. methodology_calculations §S001"
+            params_required: [period]   # 코드(revenue_total.py:36-37)가 period 강제 — drift 정합(2026-06-11). bind_temporal 바인딩 + detect_plan_gaps 사전탐지.
+            params_optional: []
+            produces: [revenue_total, active_orders_count]   # period 는 artifact 아님 — 스코프 param 은 쿼리에서만 (슬라이스 1, 헌법 D3·R2)
+          - name: roas_overall
+            status: implemented
+            description: "전체 ROAS (S004) — 총매출 / 총마케팅비 (단일 월). methodology §S004"
+            params_required: [period]   # 코드(roas_overall.py:21-23)가 period(YYYY-MM) 강제 — drift 정합(②)
+            params_optional: []
+            produces: [roas, total_revenue, total_marketing_cost]
+          - name: signup_conversion
+            status: implemented
+            description: "가입 전환율 (S067) — 신규회원 / 방문세션 × 100. methodology §S067"
+            params_required: [period]   # 코드(signup_conversion.py:34-35)가 period 강제 — drift 정합(슬라이스 1, 2026-06-12)
+            params_optional: []
+            produces: [signup_conversion_pct, signups, sessions]
+          - name: unknown_revenue_share
+            status: implemented
+            description: "알수없음 채널 매출 비중 (S054) — channel_attribution='unknown' 매출 / 총매출. methodology §S054"
+            params_required: [period]   # 코드(unknown_revenue_share.py:26-27)가 period 강제 — drift 정합(슬라이스 1, 2026-06-12)
+            params_optional: []
+            produces: [unknown_share_pct, unknown_revenue, total_revenue, unknown_orders]
+          # ⑰.C (2026-06-01) 완료: metrics 35 등재 — Q1 본질 67% 단일 해소.
+          # invisible 52 → 17 (잔존: comparison 7 + analysis 6 + normalization 4 = 작업 ⑳).
+
+      text_preprocessing_agent:
+        description: "자연어 텍스트 8 단계 정제 (D9 분리 — 언어 자원 측면)"
+        handles_tasks: [data_preprocessing]
+        tools:
+          - name: text_preprocessor
+            status: implemented
+            description: "한글 텍스트 정제·토큰화 (8 단계 통합 — emoji/HTML/MD5 dedup 등)"
+            params_required: []
+            consumes: [normalized_reviews]   # 코드 실측 find_in_previous("normalized_reviews") — review_normalizer 산출. (구 params_required:[raw_reviews] 오기 수정 2026-06-05)
+            produces: [cleaned_texts]
+          # (MVP 시 8 단계 분리 도입 예정 — emoji_handler / repeat_char_normalizer 등)
+
+      channel_normalizing_agent:
+        description: "데이터 채널 포맷 통일 정규화 (D9 분리 — 마케팅 도메인 측면). ADR-014 v2 적용 — Tool 단일 책임 분리"
+        handles_tasks: [data_preprocessing]
+        tools:
+          # format_normalizer 제거 (A-5.3, 2026-06-18): canonical_translator가 대체(광고 raw→정규화).
+          # 광고 지표는 지표 tool(ad_cost_total 등)이 canonical 내부 소비 → 별도 ads 정규화 step 불요.
+          - name: review_normalizer
+            status: implemented
+            description: "4 출처 리뷰 raw → 통일 review 스키마 (review.v1). ADR-014 v2 신규 — format_normalizer 에서 분리"
+            params_required: []
+            consumes: [raw_reviews]          # 코드 실측 find_in_previous("raw_reviews") — review_collector 산출
+            produces: [normalized_reviews]
+
+          # ─── ⑳ (2026-06-01) 신 등재: normalization 4 (UTM/KST/등급/채널) — handles_tasks: data_preprocessing ───
+          - name: channel_attribution_normalizer
+            status: implemented
+            description: "채널 정규화 + 그룹 매핑 (정제 4) — orders.channel_attribution 10채널 → 그룹 (Meta·Naver검색계·CRM·Direct·etc). methodology §정제 4"
+            params_required: []
+            params_optional: [period]
+            produces: [by_raw_channel, by_group, mapping]
+          - name: grade_system_unifier
+            status: implemented
+            description: "등급 체계 통일 (정제 8) — #06 표준 (WELCOME~VIP) + #10 customer_tier 매핑. methodology §정제 8"
+            params_required: []
+            params_optional: []
+            produces: [standard_grade_dist, tier_dist, consistency_check]
+          - name: kst_timezone_normalizer
+            status: implemented
+            description: "시간대 KST 통일 (정제 2) — GA4 event_timestamp(microsec UTC) → KST datetime. methodology §정제 2"
+            params_required: [source_id]
+            params_optional: [sample_size]
+            produces: [total_events, sample_converted, date_boundary_shifts]
+          - name: utm_normalizer
+            status: implemented
+            description: "UTM 정규화 (정제 9) — orders.utm_source/medium 의 (not set)·(none)·null·empty 통일. methodology §정제 9"
+            params_required: []
+            params_optional: [period]
+            produces: [source_dist, medium_dist, normalized_count]
+          # ⑳ (2026-06-01) 완료: normalization 4 등재. channel_normalizing_agent 2 → 6. invisible 4 → 0 (Q1 100% 해소).
+          # (Phase 1B 시 신규 — kpi_target_joiner / outlier_flagger / creative_history_tracker / external_variable_joiner)
+
+      analysis_agent:
+        description: "18 분석 모듈 — 감성/키워드/인사이트 (5 기존) + MoM/시계열/AB (comparison 7) + AI/리뷰 (analysis 6)"
+        handles_tasks:
+          - sentiment_analysis
+          - keyword_extraction
+          - trend_analysis
+          - competitor_comparison
+          - causal_analysis
+        # ⑳ (2026-06-01) 등재: comparison 7 + analysis 6 = 13 신. invisible 17 → 4 (잔존 normalization 4).
+        # description = per-tool yaml 단일 진실.
+        tools:
+          - name: sentiment_analyzer
+            status: implemented
+            description: "한국어 감성 분석 (POC: 규칙 / MVP: KoBERT 도입 검토)"
+            params_required: []
+            consumes: [cleaned_texts]        # 코드 실측 find_in_previous("cleaned_texts") — text_preprocessor 산출
+            produces: [sentiment_distribution]
+          - name: keyword_extractor
+            status: implemented
+            description: "키워드/빈도 추출 (TF-IDF, KR-WordRank)"
+            params_required: []
+            params_optional: [top_k]
+            consumes: [cleaned_texts]        # 코드 실측 find_in_previous("cleaned_texts") — text_preprocessor 산출
+            produces: [top_keywords]
+          - name: insight_extractor
+            status: implemented
+            description: "LLM 기반 인사이트 추출 (분석 결과 → 의미: 추세·기여·목표대비). 도메인 무관 — metric·리뷰 무차별."
+            params_required: []
+            # 도메인무관(2026-06-10 분석레이어 v2 '추론'): consumes 미선언 — previous_results 분석 산출 전반 수집(OR-입력).
+            # in-tool 빈입력 가드(LLMTool)가 silent-0 차단. 구 [sentiment_distribution, top_keywords] 리뷰 고정 = metric 인사이트 불가(CP#1 뿌리)였음.
+            produces: [insights]
+          - name: diagnoser
+            status: implemented
+            description: "LLM 인과 진단 ('왜' — 분석 결과의 원인 가설). 도메인 무관. (분석레이어 v2 '진단', diagnose 해소)"
+            params_required: []   # 도메인무관 — previous 분석 산출 수집(OR-입력, in-tool 가드)
+            produces: [diagnosis]
+          - name: forecaster
+            status: implemented
+            description: "LLM 예측 ('앞으로' — 추세 외삽 + 불확실성). 도메인 무관. (분석레이어 v2 '예측', forecast 해소)"
+            params_required: []   # 도메인무관 — previous 분석 산출 수집(OR-입력, in-tool 가드)
+            produces: [forecast]
+          # (2026-06-12 폐기, 오너 결정) trend_analyzer·competitor_comparator stub 2종 메뉴 제거
+          # — mock "되는 척" 대신 정직 degrade. ★도메인 정의 보존(재구현 시 기준):
+          #   trend_analyzer = 트렌드 분석 (forecaster '예측'과 다른 개념 — 중복 아님)
+          #   competitor_comparator = A/B 테스트 분석 (단일 tool 구현 어려움 → 폐기 후 재검토)
+          # 로드맵 박제 = spec 32 §5. 부수 효과: params_required 의 cleaned_texts 가
+          # subject-coherence 게이트 오분류(리뷰 tool 취급)를 유발하던 함정도 해소.
+
+          # ─── ⑳ (2026-06-01) 신 등재: comparison 7 (KPI MoM/시계열) — handles_tasks: competitor_comparison ───
+          - name: aov_mom
+            status: implemented
+            description: "객단가·구매자·주문 MoM 비교 (S048 MoM) — 두 월의 변화율"
+            params_required: [period_a, period_b]
+            params_optional: []
+            produces: [period_a_stats, period_b_stats, delta]
+          - name: channel_cac_compare
+            status: implemented
+            description: "채널별 CAC (S033) — 채널별 마케팅비 ÷ 신규회원. 명확 cost 채널만 CAC, 분리 어려운 매체는 unmatched 명시. methodology §S033"
+            params_required: [period]
+            params_optional: []
+            produces: [by_channel, weighted_avg_cac, unmatched_channels]
+          - name: grade_timeseries
+            status: implemented
+            description: "등급별 회원수 시계열 (S045) — #21 customer_grade_history 4시점. methodology §S045"
+            params_required: []
+            params_optional: []
+            produces: [timeline, latest_snapshot, growth_rates]
+          - name: inapp_ad_ab_compare
+            status: implemented
+            description: "인앱광고 A/B 비교 (S017~S021) — 인스타 캠페인 2개 비교. methodology: mock 에 명확한 A/B 없음 → 캠페인 선정 룰 정의 필요"
+            params_required: []
+            params_optional: [campaign_a_substr, campaign_b_substr]
+            produces: [a_meta, b_meta, status, data_gaps]
+          - name: mom_revenue
+            status: implemented
+            description: "매출 MoM (S001 MoM) — 두 월 revenue_total 비교 + 변화율"
+            params_required: [period_a, period_b]
+            params_optional: []
+            produces: [period_a_revenue, period_b_revenue, delta_pct]
+          - name: new_members_mom
+            status: implemented
+            description: "신규 가입 회원 MoM (S069 MoM) — customers.signup_date 두 월 비교"
+            params_required: [period_a, period_b]
+            params_optional: []
+            produces: [period_a_total, period_b_total, delta_pct, by_channel_a, by_channel_b]
+          - name: repurchase_mom
+            status: implemented
+            description: "재구매율 MoM 비교 (S028 MoM) — 두 월의 전체·기존·재구매율 변화율"
+            params_required: [period_a, period_b]
+            params_optional: []
+            produces: [period_a_stats, period_b_stats, delta]
+
+          # ─── ⑳ (2026-06-01) 신 등재: analysis 6 (ml_model 5 + sort 1) — handles_tasks: sentiment_analysis · keyword_extraction ───
+          - name: ai_recommendation
+            status: implemented
+            description: "AI 추천 카드 (O05, 베타 0.001) — ml_model.generate_recommendation (POC=Mock / MVP+=Llm)."
+            params_required: []
+            params_optional: [methodology]
+            produces: [rows, count]
+          - name: creative_ai_axes
+            status: implemented
+            description: "소재 AI 5축 평균 (C11 radar) — ml_model.score_ai_axes (POC=Mock)."
+            params_required: []
+            params_optional: []
+            produces: [ai_sales, ai_short, ai_clear, ai_visual, ai_benefit]
+          - name: creative_fatigue
+            status: implemented
+            description: "피로 소재 수 (K21) — ml_model.diagnose_fatigue (POC=Mock)."
+            params_required: []
+            params_optional: []
+            produces: [value]
+          - name: review_keywords
+            status: implemented
+            description: "리뷰 키워드 랭킹 Top-N (C12) — ml_model.extract_keywords (POC=Mock). sentiment_analyzer 와 별개 tool (review 전용)."
+            params_required: []
+            params_optional: [n]
+            produces: [rows, count]
+          - name: review_recent
+            status: implemented
+            description: "최근 리뷰 카드 N건 (O03) — 작성일 desc sort + slice. ml_model 호출 없음 (analysis 6 중 단순 sort)."
+            params_required: []
+            params_optional: [n]
+            produces: [rows, count]
+          - name: review_sentiment
+            status: implemented
+            description: "리뷰 감성 분포 (C08) — ml_model.analyze_sentiment (POC=Mock). sentiment_analyzer 와 별개 tool (review 전용, produces=dict)."
+            params_required: []
+            params_optional: []
+            produces: [positive, neutral, negative, total]
+          # ⑳ (2026-06-01) 완료: comparison 7 + analysis 6 등재. analysis_agent 5 → 18.
+
+      report_text_agent:
+        description: "분석 결과 종합 + LLM 보고서 텍스트 (D13 분리 — markdown 텍스트만)"
+        handles_tasks:
+          - insight_generation
+          - summary_generation
+          - report_generation
+        tools:
+          - name: report_writer
+            status: implemented
+            description: "마크다운 형식 상세 보고서 작성 (LLM 스토리 3단계)"
+            consumes: [insights]          # G3(silent-0, 2026-06-07): 코드가 읽는 키 → B2.1 게이트가 빈 입력 SKIP. analysis_results(생산자 0 orphan) 제거.
+            produces: [report_markdown]   # D5(2026-06-08): 코드 반환·다운스트림(pdf/ppt) 모두 report_markdown 으로 정합 완료(drift 0).
+          - name: summary_generator
+            status: implemented
+            description: "단순/짧은 답변 텍스트 서술 (D4 2026-06-08: response 가 표시할 한두 문장 — 단순 쿼리 답변. 빈입력 가드=LLMTool)"
+            produces: [summary]           # D4: 코드 반환(summary)과 정합(구 summary_text). orphan params_required(analysis_results) 제거.
+
+      pdf_agent:
+        description: "PDF 문서 출력물 (D13 — 텍스트 기반. 2026-06-12: Word/Excel 렌더 stub 폐기)"
+        handles_tasks: [report_generation]
+        tools:
+          - name: pdf_renderer
+            status: implemented          # Phase3(2026-06-09): reportlab 한국어 PDF 실구현
+            description: "마크다운 보고서를 PDF로 렌더링 (reportlab, 한국어 CID 폰트)"
+            params_required: [report_markdown]
+            consumes: [report_markdown]  # 게이트가 빈 입력 SKIP (report_writer 산출 소비)
+            produces: [pdf_file_path]
+          - name: chart_generator
+            status: implemented        # 2026-06-12 오너 결정: stub→실구현 (matplotlib·한국어 폰트·Warm Neutral)
+            description: "분석 산출(by_채널/분포·rows)을 차트 PNG로 렌더링 — 산출 형태 기반 결정론 차트 선택"
+            params_required: []        # 상류 COMPLETED 산출을 형태 기반으로 자동 선별 (구 analysis_results 는 stub 시절 허구 param)
+            params_optional: [output_dir]
+            produces: [chart_image_paths]
+          # (2026-06-12 폐기, 오너 결정) word_template_filler + excel_agent(excel_template_filler)
+          # stub 메뉴 제거 — 수요 미측정 렌더 확장. output_format=excel 요청은 텍스트로 정직 응답
+          # (stage2/3 프롬프트 동기 갱신). 재구현 시 헌법 19 §7 채용 3문항. 복원은 git 히스토리.
+          # (2026-06-12 폐기 3, 오너 결정) template_selector — 산출(template_choice)의 소비자가
+          # word/excel filler 였는데 둘 다 폐기되어 소비자 0 (pdf_renderer 는 template 미수용).
+          # 헌법 19 R6(소비자 없는 신호 금지) 정합. 재구현 = pdf_renderer 가 템플릿 수용하는 설계 + §7.
+
+      ppt_agent:
+        description: "PPT 슬라이드 + 시각 디자인 (D13 Y — 큰 별도 책임)"
+        handles_tasks: [report_generation]
+        tools:
+          - name: pptx_generator
+            status: implemented        # Phase3(2026-06-09): python-pptx 슬라이드 실구현
+            description: "PPT 파일 생성 (python-pptx) — # 타이틀 + ## 섹션별 불릿. chart 는 선택"
+            params_required: [report_markdown]
+            consumes: [report_markdown]  # 게이트가 빈 입력 SKIP. chart_image_paths 는 선택(stub 부재 허용)
+            produces: [pptx_file_path]
+          # (2026-06-12 폐기 4, 오너 결정 — stub 0 시대) chart_to_slide + slide_designer:
+          #  · chart_to_slide — 산출(chart_slides) 소비자 0 (헌법 R6) + 기능은 pptx_generator 의
+          #    chart_image_paths 선택 소비로 실구현·흡수 (별도 tool 불요 판정).
+          #  · slide_designer — 브랜드 디자인 자산(컬러·폰트 가이드, D10) 확보 전엔 구현 불가.
+          #    stub 으로 메뉴에 남기면 mock "디자인된 척" 경로가 남아 폐기 — 재채용 = D10 + 헌법 §7 3문항.
+          #  복원은 git 히스토리.
+
+  # ─────────────────────────────────────────────────────────────
+  # (2026-06-12 폐기, 오너 결정) 크리에이티브팀 전체 제거 — agent 4(image/video/copy/
+  # material) + stub tool 9. 외부 API·비용·제품 결정이 필요한 새 영역으로 POC 범위 외 확정.
+  # mock "되는 척" 대신 미선택 → 정직 degrade (stage1 프롬프트에 미지원 규칙 동기 갱신).
+  # TaskType(image_generation 등)은 언어 레이어(schemas)에 유지 — cognitive 가 의도를
+  # 인식해야 "미지원" 정직 응답이 가능. 재구현 시 헌법 19 §7 채용 3문항 + spec 32 §7.1.
+  # 복원은 git 히스토리.
+  # ─────────────────────────────────────────────────────────────
+
+  # ─────────────────────────────────────────────────────────────
+  # 질의응답팀 (QA Team) — 2026-06-10 신설 (질의응답_설계서_260610.md)
+  # 데이터 파이프가 아닌 지식·메타·대화 답변. planner 가 factual_lookup 을
+  # 결정론으로 qa_responder 단일 todo 로 라우팅(LLM 팀선택 우회, 설계서 §3).
+  # ─────────────────────────────────────────────────────────────
+  qa_team:
+    description: "질의응답 — 개념정의·시스템메타·대화를 지식·설명으로 답변 (데이터 파이프 우회)"
+    agents:
+
+      qa_agent:
+        description: "질의응답 단일 agent — qa_responder 로 LLM 직접 답변. RAG·종류분기는 추후(설계서 §5)."
+        handles_tasks: [factual_lookup]
+        tools:
+          - name: qa_responder
+            status: implemented
+            description: "질의응답 — 데이터 계산이 아닌 지식·메타·대화로 답변. 질문(tool_params 주입)+용어집+능력 → LLM. RAG hook 자리만."
+            params_required: []   # question 은 planner 가 tool_params 로 *주입*(데이터흐름 의존 아님). in-tool 가드가 빈질문 방어.
+            produces: [answer]
+
+  # ─────────────────────────────────────────────────────────────
+  # 의사결정팀 (Decision Team) — 2026-06-10 신설 (의사결정_설계서_260610.md)
+  # 데이터/분석 → 행동 제안(옵션→시뮬→추천→승인). 현: 단일 recommender(추천).
+  # recommender = ml_model.generate_recommendation(Mock) 재사용 — 상류 분석 없어도 작동(mock).
+  # ─────────────────────────────────────────────────────────────
+  decision_team:
+    description: "의사결정 — 데이터/분석을 바탕으로 행동(무엇을 할지) 제안. 현 단계=추천."
+    agents:
+
+      decision_agent:
+        description: "의사결정 단일 agent — recommender 로 행동 추천. 옵션·시뮬은 추후, 승인=stage3(설계서 §2)."
+        handles_tasks: [recommendation]
+        tools:
+          - name: recommender
+            status: implemented
+            description: "추천 — 데이터/분석 → 행동 제안(우선순위). ml_model.generate_recommendation(POC=Mock/MVP+=Llm). mock 은 상류 무시·fixture 반환."
+            params_required: []   # mock 은 context 무시(fixture). 실모델 swap 시 previous_results(분석 산출) 소비.
+            produces: [recommendations, count, recommendation_text]
+
+  # ─────────────────────────────────────────────────────────────
+  # 3팀 — 운영팀 (Operations Team) — MVP+
+  # ─────────────────────────────────────────────────────────────
+  # operations_team: (POC 범위 외)
+
+# ==============================================================
+# Task → Agent 기본 매핑 힌트 (LLM이 참조하는 가이드, 강제 아님)
+# 2026-05-18 D9 + D13 Y 반영 갱신:
+#   - data_preprocessing: 2 갈래 (text_preprocessing_agent / channel_normalizing_agent — LLM 선택)
+#   - insight/summary: report_text_agent
+#   - report_generation: 4 갈래 (report_text / pdf / excel / ppt — output_format 별 LLM 분기)
+# ==============================================================
+
+task_agent_hints:
+  data_collection:        collection_agent
+  data_preprocessing:     [text_preprocessing_agent, channel_normalizing_agent]   # ⭐ D9 두 갈래
+  sentiment_analysis:     analysis_agent
+  keyword_extraction:     analysis_agent
+  trend_analysis:         analysis_agent
+  competitor_comparison:  analysis_agent
+  causal_analysis:        analysis_agent
+  metric_calculation:     metrics_agent                                           # ⑰.C 신 (KPI 질의 페어)
+  insight_generation:     report_text_agent                                       # ⭐ D13 rename
+  report_generation:      [report_text_agent, pdf_agent, ppt_agent]  # (2026-06-12) excel_agent 폐기 → 3 갈래
+  summary_generation:     report_text_agent                                       # ⭐ D13 rename
+  # (2026-06-12) creative 계열 hint 5종(image_generation/image_editing/video_storyboard/
+  # copy_generation/material_variation) 제거 — creative_team 폐기. task type 은 언어
+  # 레이어(schemas TaskType)에 유지 — 인식은 하되 배정 agent 없음 = 정직 미지원.
+  factual_lookup:         qa_agent   # 질의응답 — qa_responder 결정론 라우팅(2026-06-10, 구: null=LLM직답 가정)
+  recommendation:         decision_agent   # 의사결정 — recommender (2026-06-10 의사결정 카테고리)
+
+# ==============================================================
+# 암묵적 선행 의존성 (Planning이 자동 삽입)
+# task type 은 유지 — data_preprocessing 한 task → 두 agent 중 LLM 선택
+# ==============================================================
+
+implicit_prerequisites:
+  # 분석 계열 task들은 전부 data_collection + data_preprocessing 선행 필요
+  # ⑰.C (2026-06-01): metric_calculation append (KPI = 정제 raw 필요, list-of-dicts 정합)
+  - tasks_requiring_data:
+      [sentiment_analysis, keyword_extraction, trend_analysis,
+       competitor_comparison, causal_analysis, insight_generation,
+       metric_calculation]
+    prerequisites: [data_collection, data_preprocessing]
+
+  # 보고서 생성은 최소 1개 분석 결과 선행 필요
+  - tasks_requiring_analysis:
+      [report_generation, summary_generation]
+    prerequisites_at_least_one:
+      [sentiment_analysis, keyword_extraction, insight_generation, trend_analysis]

@@ -1,0 +1,30 @@
+name: cost_pie_channel_share
+visualization_id: C09
+category: cost
+description: "채널 비중 도넛 — 4 채널 예산 합산 → share"
+methodology_id: M05
+priority: P0
+client: ${client}
+
+trigger:
+  type: manual
+
+steps:
+  - id: channel_share
+    tool: budget_channel_share
+    inputs:
+      client: ${client}
+
+validator:
+  schema: BudgetChannelShareOutput
+  expected:
+    rows_min: 1
+  fail_policy: alert
+
+cache:
+  layer: computed
+  key_template: "budget_by_channel.json"
+  ttl_seconds: null
+
+owner: developer
+tags: [cost, pie, channel]
