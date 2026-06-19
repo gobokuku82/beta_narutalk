@@ -1,7 +1,7 @@
 /**
  * 사용자 친화 에러 메시지 — backend error code → 한국어 안내.
  *
- * 진실 소스: backend/api_v2/error_codes.py
+ * 진실 소스: backend/api/error_codes.py
  * spec: 22_error_codes_v1.1.md / 63 §7
  *
  * Drift 방지: 백엔드 error_codes.py 추가 시 본 파일도 함께 update (PR 체크리스트).

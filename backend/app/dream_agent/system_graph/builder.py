@@ -5,7 +5,7 @@ Cognitive → Planning → Execution → Response, Command hand-off 기반.
 각 stage 함수는 해당 레이어 폴더의 `{layer}_stage.py`에 정의되어 있으며,
 본 파일은 그것들을 StateGraph로 조립하는 역할만 담당.
 
-프로덕션은 api_v2/main.py lifespan 이 AsyncPostgresSaver(PostgreSQL checkpointer)를
+프로덕션은 api/main.py lifespan 이 AsyncPostgresSaver(PostgreSQL checkpointer)를
 연결해 주입한다 (연결 실패 시 서버 기동 중단 — fail-fast). checkpointer=None 은
 테스트·진단 스크립트 전용. (2026-06-12 docstring 정정: 구 "in-memory, 향후 연결 예정"
 서술은 연결 완료 이전 세계의 doc drift.)

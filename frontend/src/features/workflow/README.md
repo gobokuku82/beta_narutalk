@@ -48,7 +48,7 @@ palette/ ──→ editing/store + ws.ts (W4)
 
 | 동작 | WS 메시지 | 백엔드 핸들러 |
 |------|----------|---------------|
-| 노드 삭제 | `todo_delete` | [`_handle_todo_delete`](../../../../backend/api_v2/ws_hitl.py) |
+| 노드 삭제 | `todo_delete` | [`_handle_todo_delete`](../../../../backend/api/ws_hitl.py) |
 | 노드 속성 수정 | `todo_modify` | `_handle_todo_modify` |
 | 노드 추가 | `todo_add` | `_handle_todo_add` |
 | 자연어 편집 (PauseBox) | `todo_edit_nl` | `_handle_todo_edit_nl` |

@@ -116,8 +116,8 @@ export type ResponseAttachment = z.infer<typeof ResponseAttachmentSchema>;
 // WebSocket Messages — spec 21 v1.4 정합
 //
 // 백엔드 emit 출처:
-// - /ws/agent : backend/api_v2/ws_agent.py (run_turn, _build_*, callback bridge)
-// - /ws/hitl  : backend/api_v2/ws_hitl.py
+// - /ws/agent : backend/api/ws_agent.py (run_turn, _build_*, callback bridge)
+// - /ws/hitl  : backend/api/ws_hitl.py
 // ─────────────────────────────────────────────────────────────────
 
 // /ws/agent — server → client

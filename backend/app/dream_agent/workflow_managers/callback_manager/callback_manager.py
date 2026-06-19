@@ -3,7 +3,7 @@
 Executor, Stage 등 내부 컴포넌트에서 발생하는 이벤트를
 WebSocket, 로그 등 외부 리스너에게 전달.
 
-EventBus(api_v2/event_bus.py)의 기능을 흡수 + 다중 리스너 지원.
+EventBus(api/event_bus.py)의 기능을 흡수 + 다중 리스너 지원.
 """
 
 from __future__ import annotations

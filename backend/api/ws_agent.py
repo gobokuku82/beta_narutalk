@@ -160,8 +160,8 @@ async def _graph_runner(
     run_turn의 _runner로 주입되는 함수.
     I10c 범위: 1차 astream만. Interrupt resume 루프는 I10d.
     """
-    from api_v2.connection_manager import conn_manager
-    from api_v2.thread_id import make_thread_id
+    from api.connection_manager import conn_manager
+    from api.thread_id import make_thread_id
     from app.dream_agent.states.agent_state import init_agent_state
 
     # state 빌드 (Sprint 13 필드 포함)
@@ -226,11 +226,11 @@ async def _graph_runner_with_resume(
       - reject 조기 종료
       - restore_progress (서버 재시작 대응)
     """
-    from api_v2.connection_manager import conn_manager
+    from api.connection_manager import conn_manager
     from app.dream_agent.system_graph.layer_inspector import (
         append_guard_log, inspect_layer_output, summarize_state,
     )
-    from api_v2.thread_id import make_thread_id
+    from api.thread_id import make_thread_id
     from app.dream_agent.states.agent_state import init_agent_state
     from app.dream_agent.workflow_managers.callback_manager import get_callback_manager
     from app.dream_agent.workflow_managers.hitl_manager import get_hitl_manager
@@ -508,7 +508,7 @@ async def run_turn(
         payload: user_input/language/history_limit 등
         _runner: 테스트용 DI. None이면 no-op (I10c 이후 graph 실행으로 교체)
     """
-    from api_v2.connection_manager import conn_manager
+    from api.connection_manager import conn_manager
     from app.dream_agent.workflow_managers.concurrency_manager import concurrency
     from app.dream_agent.workflow_managers.hitl_manager import get_hitl_manager
 
@@ -616,7 +616,7 @@ async def stream_endpoint(
       4. astream으로 노드별 `node_event`·`layer_start` 송신
       5. 종료 시 `complete`, 예외 시 `error`
     """
-    from api_v2.connection_manager import conn_manager
+    from api.connection_manager import conn_manager
 
     await websocket.accept()
     session_id = f"sess_{uuid.uuid4().hex[:8]}"

@@ -28,7 +28,7 @@ from typing import Any
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
-from api_v2.connection_manager import conn_manager
+from api.connection_manager import conn_manager
 from app.core.config import settings
 from app.core.logging import get_logger
 

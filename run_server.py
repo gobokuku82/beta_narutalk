@@ -1,10 +1,9 @@
-"""ADALLPIN v2 서버 실행 (Sandbox).
+"""DreamAgent 서버 실행.
 
-기존 run_server.py는 그대로 두고, 이 스크립트는 api_v2/를 port 8001로 띄움.
-Phase 3 Gate 통과 후 run_server.py로 rename + api_v2 → api 이관.
+api.main:app 을 port 8001 로 띄운다 (프론트 기본 연결 = 127.0.0.1:8001).
 
 사용법:
-    uv run python run_server_v2.py
+    uv run python run_server.py
 """
 
 import asyncio
@@ -27,16 +26,15 @@ import uvicorn
 
 from app.core.config import settings
 
-V2_PORT = settings.PORT + 1  # 8000 → 8001
+SERVER_PORT = settings.PORT + 1  # 8001 (프론트 기본 연결 포트)
 
 if __name__ == "__main__":
-    print(f"\n  ADALLPIN v2 server starting at http://localhost:{V2_PORT}")
-    print(f"  (Sandbox — 기존 api/ 와 동시 실행 가능)")
+    print(f"\n  {settings.APP_NAME} server starting at http://localhost:{SERVER_PORT}\n")
     print(f"  Backend path: {backend_path}\n")
     uvicorn.run(
-        "api_v2.main:app",
+        "api.main:app",
         host=settings.HOST,
-        port=V2_PORT,
+        port=SERVER_PORT,
         reload=settings.DEBUG,
         reload_dirs=[str(backend_path)] if settings.DEBUG else None,
         log_level="debug",

@@ -86,7 +86,7 @@ export async function deleteConversation(conversationId: string): Promise<void> 
  * 라이브 실행 상태 스냅샷 (세션연속성 ④) — 재접속 시 진행 중 turn 재연결용.
  * 백엔드 GET /turns/{id}/state — hitl_manager 싱글톤 조회(DB 아님). 실행 중이면 plan + 완료 todo 반환.
  * is_running=false 면 이미 끝남 → 프론트는 정적 복원에 위임.
- * shape = backend api_v2/routes/conversations.py build_turn_state 정합.
+ * shape = backend api/routes/conversations.py build_turn_state 정합.
  */
 export interface TurnState {
   turn_id: string;

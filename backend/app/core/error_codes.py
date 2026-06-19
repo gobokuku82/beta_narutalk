@@ -7,7 +7,7 @@ Sprint 13 I11-a에서 모든 error 이벤트에 `severity`/`layer` 필드 통일
 WS 포맷: docs/agent_specs/21_WEBSOCKET_PROTOCOL_v1.0.md §6
 
 사용:
-    from app.core.error_codes import ErrorCodes  # (2026-06-10 api_v2→core 이전: 전송·에이전트 공용 중립 계약)
+    from app.core.error_codes import ErrorCodes  # (2026-06-10 api→core 이전: 전송·에이전트 공용 중립 계약)
 
     await conn_manager.broadcast_to_user(user_id, "agent", {
         "type": "error",

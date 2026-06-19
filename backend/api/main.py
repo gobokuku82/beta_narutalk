@@ -9,13 +9,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api_v2.middleware import setup_error_handlers
-from api_v2.routes import (
+from api.middleware import setup_error_handlers
+from api.routes import (
     conversations_router,
     health_router,
 )
-from api_v2.ws_agent import router as ws_agent_router
-from api_v2.ws_hitl import router as ws_hitl_router
+from api.ws_agent import router as ws_agent_router
+from api.ws_hitl import router as ws_hitl_router
 from app.core.config import settings
 from app.core.logging import get_logger
 
