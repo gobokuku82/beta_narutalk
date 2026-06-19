@@ -8,12 +8,11 @@
 | 버전 | **v1.1** |
 | 최종 수정일 | 2026-05-31 |
 | 독자 | 에이전트/툴을 추가·교체·rename·폐기·재구성하려는 개발자 |
-| 관련 spec | [17 Functions → I/O 종단](17_functions_to_io_v1.0.md) · [32 v1.2 Tool 가이드](32_execution_agent_tools_v1.0.md) (카테고리 정의·BaseTool·데이터 흐름) · [33_tools_by_category/](33_tools_by_category/) (90 tool 인벤토리 진실 소스) · [ADR-022 amended](adr/ADR-022_data_source_workspace_layer_separation.md) (DataSource DI + helper-B) · [data/description/mock/ROADMAP](../../data/description/mock/ROADMAP.md) |
+| 관련 spec | [17 Functions → I/O 종단](17_functions_to_io_v1.0.md) · [30 Data Models](30_DATA_MODELS_v1.1.md) (ToolSpec·BaseTool·데이터 흐름) |
 
-> **v1.1 (2026-05-31) 갱신** (작업 ③·④·⑤·⑥·⑦·⑧ 정합 반영):
-> - §5.2 신규 — 박제 단일소스 9 곳 enumeration
-> - §8 관련 자료 link 갱신 (32 v1.2 + 33/* + ADR-022 + 30·API)
-> - §3.A 도입부에 33/* 카테고리별 인벤토리 안내 추가
+> **v1.1 (2026-05-31) 갱신**:
+> - §5.2 신규 — 박제 단일소스 enumeration
+> - §8 관련 자료 link 갱신
 
 ---
 
@@ -21,7 +20,7 @@
 
 > **에이전트OS 는 완성됐다. 그 위의 에이전트/툴/데이터만 바꾸려 할 때 무엇을 손대고 무엇을 안 손대나.**
 
-OctorAD 의 코드는 두 층:
+DreamAgent 의 코드는 두 층:
 - **OS 층** = 4-Layer + Manager Layer + base_tool 추상 + registry + helpers. **건드리면 안 됨**.
 - **콘텐츠 층** = Tool 구현 + YAML 카탈로그 + team_catalog + mock_tools fallback. **자유롭게 교체**.
 
@@ -52,7 +51,7 @@ backend/app/dream_agent/
 ├── tools/
 │   ├── base_tool.py            ← BaseTool 추상 계약 (모든 Tool 의 부모)
 │   ├── registry.py             ← YAML rglob 자동 로드 + import_tool 자동 추론
-│   └── shared/helpers.py       ← find_in_previous, load_mock_csv, normalize_channel
+│   └── shared/helpers.py       ← find_in_previous (범용 헬퍼)
 ├── models/                     ← Pydantic (ToolSpec, ExecutionContext, TodoResult)
 ├── schemas/                    ← structured_query, execution_result, response_payload
 ├── states/agent_state.py       ← AgentState TypedDict
@@ -71,8 +70,7 @@ backend/app/dream_agent/
 ├── planning/catalog/team_catalog.yaml   ← Planner 카탈로그 ⭐
 └── execution/mock_tools.py              ← stub Tool fallback
 
-data/mock/*.csv                          ← POC 데이터
-data/description/mock/                   ← 데이터 해설
+data/raw_data/*.csv                      ← POC 데이터
 ```
 
 → 위 3 코드 파일 + 데이터 = **전체 교체 가능 영역**. 본 문서의 변경 시나리오는 모두 이 영역.
@@ -89,8 +87,7 @@ data/description/mock/                   ← 데이터 해설
 | **tools/catalog/<cat>/*.yaml** | ✅ | A, B, E |
 | **planning/catalog/team_catalog.yaml** | ✅ | A, B, C, E |
 | **execution/mock_tools.py** | ✅ | A (stub 시), E |
-| **data/mock/*.csv** | ✅ | D |
-| **data/description/mock/** | ✅ | D (필수 동시) |
+| **data/raw_data/*.csv** | ✅ | D |
 
 ---
 
@@ -112,10 +109,12 @@ data/description/mock/                   ← 데이터 해설
 
 **의도**: 비전 (예: agent_design) 에 명시된 Tool 1개를 코드로 구현.
 
-> **진입 전 확인** (작업 ④·⑤ 박제):
-> - 카테고리 = [33_tools_by_category/](33_tools_by_category/) 8 문서 (진실 소스) 에서 어느 카테고리 결정 (collection/normalization/cleaning/preprocessing/metrics/comparison/analysis/report).
-> - BaseTool 패턴 = [ADR-022 amended](adr/ADR-022_data_source_workspace_layer_separation.md) §4 (helper-B `self.fetch(source_id, context)` 사용, client_id fail-fast).
-> - YAML status 필드 = 폐기됨 (작업 ⑤). status 박제는 33/* 의 status 컬럼만.
+> **진입 전 확인**:
+> - 카테고리 결정 (collection/normalization/cleaning/preprocessing/metrics/comparison/analysis/report — `ToolCategory` enum).
+> - BaseTool 패턴 = ADR-022 (helper-B `self.fetch(source_id, context)` 사용, client_id fail-fast).
+> - YAML status 필드 = 폐기됨.
+
+> ⚠️ **현 tool 카탈로그는 비어 있음** — `tools/catalog/` 는 `_schema.yaml` 만 있고 구체 tool 0개. 본 절차는 신규 tool 을 *추가*할 때의 표준 흐름 (생성할 도구의 카테고리·이름은 `<category>`/`<name>` placeholder).
 
 #### Step
 
@@ -125,8 +124,7 @@ data/description/mock/                   ← 데이터 해설
 | 2 | Tool .py 구현 (BaseTool 상속, `self.fetch()` helper-B) | `tools/<category>/<name>.py` |
 | 3 | team_catalog 등록 (해당 agent.tools 배열에 추가) | `planning/catalog/team_catalog.yaml` |
 | 4 | (선택) Planner Stage 3 프롬프트 보강 | `llm_manager/prompts/planning_stage3_todo.yaml` |
-| 5 | unit + integration 테스트 | `backend/tests/sprint*/` |
-| 6 | 33/* 카테고리별 문서에 tool 행 추가 (진실 소스 정합) | `docs/agent_specs/33_tools_by_category/33_<category>.md` |
+| 5 | unit + integration 테스트 | 테스트 디렉토리 |
 | 6 | DC-10 Status 마커 3중 정합 검증 | docstring + YAML status + team_catalog status |
 
 #### 핵심 룰
@@ -139,7 +137,7 @@ data/description/mock/                   ← 데이터 해설
 - [ ] Executor 가 import 해서 실행 성공
 - [ ] DC-10 contract test pass
 
-상세 = [17 §7 종단 체크리스트](17_functions_to_io_v1.0.md) + [32 §9 Step-by-Step](32_execution_agent_tools_v1.0.md).
+상세 = [17 §7 종단 체크리스트](17_functions_to_io_v1.0.md).
 
 ---
 
@@ -163,9 +161,9 @@ data/description/mock/                   ← 데이터 해설
 | 3. 의존 produces 키 일관성 확인 (rename 이 키 변경 동반?) | 다음 Tool 들 점검 |
 | 4. 옛 파일 삭제 | (B 폐기 절차 일부) |
 
-**예시** — `naver_collector` → `review_collector` 일반화 ([Drift D2](../_claude/tool/TOBE_MVP/03_drift_report.md)):
-- 입력 변경 — 출처 filter `naver_*` → 전체 (naver/oliveyoung/instagram 등)
-- produces 키는 그대로 (`raw_reviews`) → 의존 Tool (format_normalizer) 영향 0
+**예시** — `<collector>` → `<collector>` 일반화:
+- 입력 변경 — 출처 filter `source_a_*` → 전체 (여러 source)
+- produces 키는 그대로 (`raw_records`) → 의존 Tool (`<normalizer>`) 영향 0
 - → **rename + 입력 확장** 패턴
 
 ---
@@ -193,7 +191,7 @@ analysis_team:
 
 #### 분리 — 기존 에이전트 1개를 2개로
 
-**예시**: `preprocessing_agent` → `text_preprocessing_agent` + `channel_normalizing_agent` (D9 결정)
+**예시**: `preprocessing_agent` → `text_preprocessing_agent` + `record_normalizing_agent`
 
 | 단계 | 작업 |
 |---|---|
@@ -211,45 +209,43 @@ analysis_team:
 
 ### 3.D — 데이터 source 변경 (mock → 실 API)
 
-상세 = [data/description/mock/ROADMAP](../../data/description/mock/ROADMAP.md). 핵심만:
+핵심만:
 
 #### 원칙: API 표면 동결
-- `/api/mock/...` 12 endpoint = path / Query params / 응답 schema 동결
+- 데이터 API endpoint = path / Query params / 응답 schema 동결
 - 데이터 source 만 교체 — Frontend / Tool 코드 변경 0
 
 #### Phase 별 진화
 | Phase | source | 코드 변화 |
 |---|---|---|
-| POC (지금) | `data/mock/*.csv` | `mock_data.py` 가 pandas CSV 로드 |
-| MVP | 외부 광고 플랫폼 API (Meta/Naver/Kakao/Google + DataLab + 크롤러) | `mock_data.py` 분기 또는 교체 |
-| Production | 자체 DB (PostgreSQL/ClickHouse) | DB query + 캐싱 layer |
+| POC (지금) | `data/raw_data/*.csv` | CSV 로드 어댑터 |
+| MVP | 외부 데이터 API | source 어댑터 분기 또는 교체 |
+| Production | 자체 DB (PostgreSQL 등) | DB query + 캐싱 layer |
 
-#### 매체별 전환 절차
+#### source 별 전환 절차
 
 | 순 | 작업 | 파일 |
 |---|---|---|
-| 1 | 외부 API client 작성 (예: `meta_ads_client.py`) | `backend/app/integrations/` (신규) |
-| 2 | 환경 변수 추가 (`USE_MOCK_DATA`, `META_ACCESS_TOKEN` 등) | `.env` + `app/core/settings.py` |
+| 1 | 외부 API client 작성 (예: `<provider>_client.py`) | `backend/app/integrations/` (신규) |
+| 2 | 환경 변수 추가 (`USE_MOCK_DATA`, `<PROVIDER>_TOKEN` 등) | `.env` + `app/core/settings.py` |
 | 3 | 해당 collector Tool 내부 분기 (`if settings.USE_MOCK_DATA: ...`) | `tools/collection/<name>.py` |
-| 4 | mock vs real fixture 양쪽 회귀 테스트 | `backend/tests/sprint*/` |
-| 5 | `data/description/<kind>/` 신설 (예: `data/description/meta_real/`) | 신규 폴더 |
-| 6 | ROADMAP.md 갱신 — 해당 매체 "Phase 2 진입" 표기 | `data/description/mock/ROADMAP.md` |
-| 7 | rate limit / quota 관제 | `app/integrations/<provider>/limiter.py` |
+| 4 | mock vs real fixture 양쪽 회귀 테스트 | 테스트 디렉토리 |
+| 5 | rate limit / quota 관제 | `app/integrations/<provider>/limiter.py` |
 
 #### 전환 패턴 (collector 1개당)
 
 ```python
-class MetaCollector(BaseTool):
+class SomeCollector(BaseTool):
     async def execute(self, params, context):
         if settings.USE_MOCK_DATA:
-            df = load_mock_csv("mock_data_meta_raw_daily.csv")
+            df = load_data("source_a.csv")
         else:
-            df = await self._fetch_meta_api(params)
+            df = await self._fetch_api(params)
         # 이후 처리는 동일
         ...
 ```
 
-→ **API 표면 + Tool 인터페이스 = 그대로**. 내부만 교체. 따라서 의존 Tool (`format_normalizer` 등) 영향 0.
+→ **API 표면 + Tool 인터페이스 = 그대로**. 내부만 교체. 따라서 의존 Tool (`<normalizer>` 등) 영향 0.
 
 ---
 
@@ -266,7 +262,7 @@ class MetaCollector(BaseTool):
 | 회귀 자산 보존 가치 큼 | 회귀 자산 보존 어려움 |
 | 1~2 sprint | 2~3 sprint |
 
-→ **현재 OctorAD = A 적합**. 8 implemented 중 6 그대로 + 2 rename. B 는 정말 새 product 만들 때.
+→ B 는 정말 새 product 만들 때. 대부분의 경우 A(점진 교체)가 적합.
 
 #### B 절차
 
@@ -308,7 +304,7 @@ class MetaCollector(BaseTool):
 2. **YAML**: `status: deprecated`
 3. **team_catalog**: 해당 행에 `# DEPRECATED — replaced by v2/<new>` 주석
 
-### 4.3 [v1/v2 섞임 금지](C:/Users/gobok/.claude/projects/c--kdy-Projects-octormate-beta-v001/memory/feedback_no_mixed_codebases.md) 메모리
+### 4.3 v1/v2 섞임 금지 메모리
 
 > 사용자 메모리 원칙: 점진 추가 후 반드시 전환 Sprint. v1 격리 + v2 rename + 한 번에 정리.
 
@@ -326,7 +322,7 @@ class MetaCollector(BaseTool):
 | `tools/catalog/<cat>/<name>.yaml` | Planner 가 보는 메타. parameters / produces 변경 시 다음 Tool 영향 |
 | `planning/catalog/team_catalog.yaml` | Planner Stage 1/2 routing 결과 |
 | `execution/mock_tools.py` | stub Tool 응답 (POC 데모) |
-| `data/mock/*.csv` | 모든 Tool 의 입력. 컬럼 추가 = 안전, 삭제/rename = breaking |
+| `data/raw_data/*.csv` | 모든 Tool 의 입력. 컬럼 추가 = 안전, 삭제/rename = breaking |
 | `llm_manager/prompts/*.yaml` | LLM 결정 영향. Stage 별로 다름 |
 | `models/` (Pydantic) | **전 시스템 영향 — 건드리지 마** (OS 층) |
 | `base_tool.py` | **모든 Tool 영향 — 건드리지 마** (OS 층) |
@@ -340,25 +336,19 @@ class MetaCollector(BaseTool):
 | 🔴 **고비용** | Tool 의 produces 키 rename (의존 chain 영향), 컬럼 삭제, 응답 schema 변경 |
 | 🔴🔴 **메이저** | OS 층 변경, v1 → v2 clean slate |
 
-### 5.2 박제 단일소스 9 곳 (+ 메타 1) — 카테고리·구조 변경 시 동기 갱신 필수
+### 5.2 박제 단일소스 — 카테고리·구조 변경 시 동기 갱신 필수
 
-작업 ③·④·⑤·⑥·⑦·⑧ (2026-05-30~31) 정합 후 박제 단일소스:
+`ToolCategory` 등 카테고리 박제는 다음 위치에 분산:
 
 | # | 박제 위치 | 무엇 |
 |---|---|---|
-| 1 | [`enums.py:29-40`](../../backend/app/dream_agent/models/enums.py) | `ToolCategory` enum (8값) |
-| 2 | [`catalog/{8 폴더}/`](../../backend/app/dream_agent/tools/catalog/) | 90 yaml (폴더 = 카테고리 1:1) |
-| 3 | [`33_tools_by_category/*`](33_tools_by_category/) | 8 카테고리 인벤토리 + README (진실 소스) |
-| 4 | [`32 v1.2`](32_execution_agent_tools_v1.0.md) §2.5·§5·§6·§7·§8·§9·§11 | 카테고리 정의 + BaseTool + 데이터 흐름 |
-| 5 | [`_schema.yaml`](../../backend/app/dream_agent/tools/catalog/_schema.yaml) line 20 | catalog 진짜 schema |
-| 6 | [`ADR-022 amended §4·§5`](adr/ADR-022_data_source_workspace_layer_separation.md) | DataSource DI + helper-B + client_id fail-fast |
-| 7 | [`30_DATA_MODELS:409`](30_DATA_MODELS_v1.1.md) | ToolSpec.category 박제 |
-| 8 | [`API_SPEC:834`](../specs/API_SPEC.md) | catalog API filter |
-| 9 | [`frontend ToolPalette`](../../frontend/src/features/workflow/ToolPalette.tsx) | `tool.category` 직접 사용 |
-| (메타) | [`session_compact v3`](../reports/session_compact_recovery_2026-05-31_v3.md) | 박제 상태 자체 문서화 |
+| 1 | [`enums.py`](../../backend/app/dream_agent/models/enums.py) | `ToolCategory` enum (8값) |
+| 2 | [`catalog/`](../../backend/app/dream_agent/tools/catalog/) | tool yaml (폴더 = 카테고리 1:1, 현재 카탈로그 비어 있음) |
+| 3 | [`_schema.yaml`](../../backend/app/dream_agent/tools/catalog/_schema.yaml) | catalog 진짜 schema |
+| 4 | [`30_DATA_MODELS`](30_DATA_MODELS_v1.1.md) §6 | ToolSpec.category 박제 |
+| 5 | [`frontend ToolPalette`](../../frontend/src/features/workflow/ToolPalette.tsx) | `tool.category` 직접 사용 |
 
-→ 카테고리 추가·rename·폐기 = **9 위치 모두 동기 갱신**. 1 곳 누락 시 silent bug (frontend 와 backend enum mismatch 등).
-→ 실 사례 = [계획_작업⑤_32문서_§4-§9_정합](../reports/계획_작업⑤_32문서_§4-§9_정합_2026-05-31.md) (1·2·3차 적대적 검증 루프).
+→ 카테고리 추가·rename·폐기 = **위 위치 모두 동기 갱신**. 1 곳 누락 시 silent bug (frontend 와 backend enum mismatch 등).
 
 ---
 
@@ -374,11 +364,11 @@ class MetaCollector(BaseTool):
 
 **회귀 명령** (기본):
 ```bash
-pytest backend/tests/sprint13 backend/tests/sprint14 backend/tests/sprint15 -q
+pytest backend/ -q
 pnpm --filter frontend vitest run
 ```
 
-→ [테스트는 리소스/시간 제약 없이 충분히](C:/Users/gobok/.claude/projects/c--kdy-Projects-octormate-beta-v001/memory/feedback_test_no_resource_limit.md) 메모리 — 단축/skip 제안 X. 변경 모듈 + 인접 모듈 회귀 필수.
+→ 테스트는 리소스/시간 제약 없이 충분히 — 단축/skip 제안 X. 변경 모듈 + 인접 모듈 회귀 필수.
 
 ---
 
@@ -394,7 +384,7 @@ pnpm --filter frontend vitest run
 → §3.C 추가. team_catalog 만 갱신. 단 신규 에이전트의 Tool 들은 §3.A 별도 작성.
 
 ### Q4. "mock 데이터 다 폐기하고 실API 만 쓰려면?"
-→ §3.D. 단 mock 보존 권장 — 테스트 / demo / fallback 가치 큼 (ROADMAP §3.5).
+→ §3.D. 단 mock 보존 권장 — 테스트 / demo / fallback 가치 큼.
 
 ### Q5. "OS 코드를 손대야 하는 경우는 언제?"
 → BaseTool 계약 변경 / `_inject_prev_outputs` 룰 변경 / AgentState 스키마 변경. **이건 v3 수준 — 별도 ADR 필요**.
@@ -408,22 +398,11 @@ pnpm --filter frontend vitest run
 
 | 자료 | 본 문서와의 관계 |
 |---|---|
-| [41 Change Hub v1.1](41_agent_tool_change_hub_v1.0.md) | 본 문서의 진입점 (빠른 시작) — 5 시나리오 한 페이지 결정 + 박제 단일소스 9 곳 |
+| [41 Change Hub v1.1](41_agent_tool_change_hub_v1.0.md) | 본 문서의 진입점 (빠른 시작) — 5 시나리오 한 페이지 결정 + 박제 단일소스 |
 | [17 Functions → I/O 종단](17_functions_to_io_v1.0.md) | Tool 작성 시 5단계 룰 (§5 I/O 메커니즘) |
-| [31 Tool 요구사항](31_execution_agent_function_list_v0.6.md) | 신규 Tool 추가 시 비전 출처 |
-| [32 v1.2 Tool 가이드](32_execution_agent_tools_v1.0.md) ⭐ | §2.5 카테고리 8 정의 + §5 BaseTool ADR-022 + §6 YAML + §8 데이터 흐름 (파일명 v1.0 유지, 내용 = v1.2) |
-| [33_tools_by_category/](33_tools_by_category/) ⭐ | **현 90 tool 인벤토리 진실 소스** — 8 카테고리 문서 + README, 자주 변경 |
-| [ADR-022 amended §4·§5](adr/ADR-022_data_source_workspace_layer_separation.md) ⭐ | DataSource DI 패턴 + helper-B `self.fetch` + client_id fail-fast |
-| [30_DATA_MODELS:409](30_DATA_MODELS_v1.1.md) | ToolSpec.category 8 카테고리 박제 |
-| [API_SPEC:834](../specs/API_SPEC.md) | catalog API filter 8 카테고리 박제 |
-| [enums.py ToolCategory](../../backend/app/dream_agent/models/enums.py) | 8 enum 값 (단일소스 박제 1번) |
-| [frontend ToolPalette](../../frontend/src/features/workflow/ToolPalette.tsx) | `tool.category` 직접 사용 (classifyTool 폐기) |
-| [data/description/mock/INDEX](../../data/description/mock/INDEX.md) §5.2 | 데이터 변경 시나리오 5종 (본 문서 §3.D 의 깊이) |
-| [data/description/mock/ROADMAP](../../data/description/mock/ROADMAP.md) | Phase 별 데이터 source 진화 (§3.D) |
-| [tool/TOBE_MVP/01 매트릭스](../../docs/_claude/tool/TOBE_MVP/01_tool_data_matrix.md) | 현 Tool ↔ Data 매핑 (변경 영향 분석) |
-| [tool/03 Gap & Roadmap](../../docs/_claude/tool/03_gap_and_roadmap.md) | Phase 0~6 점진 로드맵 |
-| [adr/](adr/INDEX.md) | 결정 박제 — 영구 변경은 ADR 작성 |
-| [session_compact v3](../reports/session_compact_recovery_2026-05-31_v3.md) | 작업 ④·⑤·⑥·⑦·⑧ 자취 + 다음 세션 진입 |
+| [30_DATA_MODELS](30_DATA_MODELS_v1.1.md) §6 | ToolSpec.category 카테고리 박제 + BaseTool 계약 + DataSource ABC |
+| [enums.py ToolCategory](../../backend/app/dream_agent/models/enums.py) | 8 enum 값 (단일소스 박제) |
+| [frontend ToolPalette](../../frontend/src/features/workflow/ToolPalette.tsx) | `tool.category` 직접 사용 |
 
 ---
 
@@ -438,8 +417,6 @@ pnpm --filter frontend vitest run
 
 ---
 
-## 10. 변경 이력
+## 변경 이력
 
-| 버전 | 날짜 | 변경 |
-|------|------|------|
-| v1.0 | 2026-05-18 | 초안 — 40대 (Operations) 영역 첫 entry. 5 변경 시나리오 (Tool 추가/폐기/에이전트 재구성/데이터 source/v2 메이저) 표준 절차. OS vs 콘텐츠 경계 §1. 영향 분석 매트릭스 §5. 회귀 테스트 범위 §6. FAQ 6 항목 §7. 17/32/data ROADMAP 와 cross-link. |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

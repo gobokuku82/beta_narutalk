@@ -7,7 +7,7 @@
 | 진행상태 | **Active** (Sprint 13) |
 | 버전 | **v1.3** |
 | 최종 수정일 | 2026-04-27 |
-| **진실 소스** | WS 라우팅: `backend/api_v2/ws_agent.py` (`run_turn`, `_graph_runner_with_resume`). 실행 제어: `backend/app/dream_agent/execution/execution_stage.py` (phase 루프). HITL 신호: `workflow_managers/hitl_manager/manager.py` (Queue 기반 interrupt + `_active_turns` 레지스트리 + Phase 5 임시 progress) |
+| **진실 소스** | WS 라우팅: `backend/api/ws_agent.py` (`run_turn`, `_graph_runner_with_resume`). 실행 제어: `backend/app/dream_agent/execution/execution_stage.py` (phase 루프). HITL 신호: `workflow_managers/hitl_manager/manager.py` (Queue 기반 interrupt + `_active_turns` 레지스트리 + Phase 5 임시 progress) |
 | 관련 명세 | `10_system_architecture_v1.9.md`, `24_sequence_diagrams_v1.3.md`, `21_WEBSOCKET_PROTOCOL_v1.5.md`, `12_manager_layer_v1.4.md` |
 
 **v1.3 (2026-04-27) 변경점** — Sprint 14 A3 Phase 5:
@@ -170,7 +170,7 @@ concurrency.release + cleanup_turn (_active_turns + _paused + _resume_queues 정
 
 ### 4.2 ConnectionManager
 
-`backend/api_v2/connection_manager.py`:
+`backend/api/connection_manager.py`:
 - user당 MAX_WS_CONNECTIONS_PER_USER (=5) 탭 허용
 - `broadcast_to_user(user_id, event)` — fan-out (같은 user 모든 탭)
 - 이벤트에 `conversation_id/turn_id` 포함 → 다른 conv_id 이벤트는 클라 무시
@@ -227,9 +227,4 @@ concurrency.release + cleanup_turn (_active_turns + _paused + _resume_queues 정
 
 ## 변경 이력
 
-| 버전 | 날짜 | 내용 |
-|------|------|------|
-| v1.0 | 2026-04-21 | 초안 — Turn 상태 머신 10상태 + interrupt 2지점 + pause phase-boundary 설계 근거 + Sprint 14 개선 예정 |
-| v1.1 | 2026-04-21 | §5 Checkpoint 복원 확장 — `resume_query` 트리거 흐름, 대시보드 localStorage/onopen/onclose 동작, CallbackManager 중복 register 방지 패턴 명시 |
-| v1.2 | 2026-04-22 | Sprint 14 A1 HITL timeout 반영 — §3.3 재작성 (wait_for_resume timeout + intr_type 별 reject/cancel 주입 G-11 + T-1/T-2/T-3 시나리오 + `_active_turns` 레지스트리 + cleanup_turn 3구조 정리). 관련 명세 12_manager_layer v1.1 추가 |
-| **v1.3** | **2026-04-27** | **링크 갱신만** — 관련 명세를 10 v1.9 / 24 v1.3 / 21 v1.4 / 12 v1.3 로 갱신 (Sprint 14 A3 Phase 5 bump 따라). 본문 의미 변경 없음. ADR-001 (hitl=pause 통합) 의 Phase 5 임시 progress 는 Turn 상태머신에 직접 영향 없으므로 §1 변경 없음 |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

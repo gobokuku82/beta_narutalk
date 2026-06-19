@@ -261,9 +261,9 @@ function handleHitlMessage(msg: WSMessage) {
 
 ## 2. Routing — 15 라우트 (2026-06-01 v2 정합 갱신)
 
-> **Layout 결정 변경** (2026-05-13 v1.1): 사용자 통찰 "동료 화면 + 채팅 지시" 반영하여 **v1 GlobalLayout 패턴** 채택. Conversation-first → Dashboard + Side Chat 으로 전환. 상세: [`docs/reports/frontend_v1_analysis_for_v2_layout.md`](../reports/frontend_v1_analysis_for_v2_layout.md) / [66 spec](66_v1_to_v2_migration_map.md).
+> **Layout 결정 변경** (2026-05-13 v1.1): 사용자 통찰 "동료 화면 + 채팅 지시" 반영하여 **v1 GlobalLayout 패턴** 채택. Conversation-first → Dashboard + Side Chat 으로 전환.
 >
-> **2026-06-01 정합 갱신**: v1 `/analysis` (ChannelAnalysisPage, cross-client) 폐기 (commit `fba80fd`). 포트폴리오 4 → 3 라우트.
+> **2026-06-01 정합 갱신**: cross-client 분석 라우트 폐기 (commit `fba80fd`). 포트폴리오 4 → 3 라우트.
 
 ### 2.1 라우트 매트릭스 (포트폴리오 / 클라이언트 컨텍스트별)
 
@@ -275,20 +275,17 @@ function handleHitlMessage(msg: WSMessage) {
 | `/hitl` | HitlCenterPage | HITL pause/resume |
 | `/report` | ReportPage (placeholder) | — |
 
-#### 클라이언트 컨텍스트 (9 라우트 — v2 정합)
+#### 클라이언트 컨텍스트 (도메인 dashboard 라우트 — 예시)
+
+> ⚠️ 아래 dashboard 라우트의 데이터 source (`/api/dashboard1/*`, `/api/admin/pipelines/*`) 는 **deleted** — 도메인별 dashboard 페이지는 재정의 대상. 라우팅 패턴(클라이언트 컨텍스트 + GlobalLayout)만 framework.
 
 | 경로 | 화면 | 데이터 source |
 |------|------|--------------|
-| `/dashboard1` | Dashboard1Page (Sprint 16 기능 단위) | `/api/dashboard1/*` (20 endpoint) |
-| `/dashboard` | DashboardV1Page | `/api/admin/pipelines/category/dashboard_v1` (6 pipeline) |
-| `/channel` | ChannelPage | `/api/admin/pipelines/category/channel` (3 pipeline) |
-| `/trend` | TrendPage | `/api/admin/pipelines/category/trend` (7 pipeline) |
-| `/creatives` | CreativePage | `/api/admin/pipelines/category/creative` (8 pipeline) |
-| `/cost` | CostPage | `/api/admin/pipelines/category/cost` (7 pipeline) |
+| `/dashboard` (예시) | 도메인 dashboard 페이지 | (도메인 데이터 source — 재정의) |
 | `/agent` | AgentChatPage (전체화면 채팅) | ws_agent |
 | `/workflow` | WorkflowPage (React Flow) | (Plan/Todo) |
 | `/memory` + `/conversations` | (Sprint 15+ 예정) | (memory_entries) |
-| `/report` | Report | 5 | 통합 |
+| `/report` | ReportPage | 통합 |
 
 #### 신규 (Sprint 15+) — v2 vision
 
@@ -314,7 +311,7 @@ function handleHitlMessage(msg: WSMessage) {
 
 ### 2.3 GlobalLayout (v1 패턴 채택, 모든 라우트 공통)
 
-> **변경 (2026-05-13 v1.1)**: 사용자 통찰 "동료 화면 + 채팅 지시" 반영. v1 frontend_old 의 `GlobalLayout` 구조 그대로 채택.
+> **변경 (2026-05-13 v1.1)**: 사용자 통찰 "동료 화면 + 채팅 지시" 반영. v1 frontend 의 `GlobalLayout` 구조 그대로 채택.
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
@@ -324,13 +321,13 @@ function handleHitlMessage(msg: WSMessage) {
 │ Side │                                       │ ◀ Resizer            │
 │ bar  │  Outlet (선택된 페이지 = 대쉬보드)     │   (300~600px)        │
 │      │                                       │ ┌──────────────────┐ │
-│ w-20 │  - CampaignHome / ChannelAnalysis /  │ │ SideChatPanel    │ │
-│ 다크 │    TrendAnalysis / CreativeAnalysis / │ │ - Connected 표시 │ │
-│      │    CostOptimization / HitlCenter /   │ │ - ChatCore       │ │
-│ icon │    PortfolioView / Report /          │ │   compact 모드   │ │
-│ +    │    AgentChat (전체화면)              │ │ - 전체화면 버튼   │ │
-│ 라벨 │  - WorkflowCanvas / Memory /         │ │ - 닫기 버튼      │ │
-│      │    Templates / Conversations         │ │                  │ │
+│ w-20 │  - 도메인 dashboard 페이지 (예시) / │ │ SideChatPanel    │ │
+│ 다크 │    HitlCenter /                      │ │ - Connected 표시 │ │
+│      │    PortfolioView / Report /          │ │ - ChatCore       │ │
+│ icon │    AgentChat (전체화면)              │ │   compact 모드   │ │
+│ +    │  - WorkflowCanvas / Memory /         │ │ - 전체화면 버튼   │ │
+│ 라벨 │    Templates / Conversations         │ │ - 닫기 버튼      │ │
+│      │                                       │ │                  │ │
 │      │                                       │ │ 슬라이드 인/아웃  │ │
 │      │                                       │ │ (translate-x)    │ │
 │      │                                       │ └──────────────────┘ │
@@ -339,16 +336,16 @@ function handleHitlMessage(msg: WSMessage) {
 
 **핵심 패턴**:
 - TopBar = 컨텍스트 표시 + 채팅 토글 (💬 버튼)
-- Sidebar = 컨텍스트별 메뉴 자동 전환 (포트폴리오 4탭 ↔ 클라이언트 8+3탭)
+- Sidebar = 컨텍스트별 메뉴 자동 전환 (포트폴리오 ↔ 클라이언트)
 - Outlet = 메인 작업 영역 (대쉬보드 또는 신규 영역)
 - SideChatPanel = 우측 호출형 (toggle / 리사이즈 / 영속화)
 
 **컨텍스트별 Sidebar 메뉴**:
-- 포트폴리오: 포트폴리오 / 채널분석 / 사용자개입 / 리포트 (4탭)
-- 클라이언트 (v1 + 신규):
-  - v1: 대시보드 / 채널분석 / 트렌드분석 / 소재분석 / 비용최적화 / 사용자개입 / 에이전트 / 리포트 (8탭)
+- 포트폴리오: 포트폴리오 / 사용자개입 / 리포트
+- 클라이언트:
+  - 도메인 dashboard 페이지 (예시) / 사용자개입 / 에이전트 / 리포트
   - 신규 (Sprint 15+): 워크플로우 / 메모리 / 대화이력 (3탭)
-  - = 11탭 (그룹화 권장: "분석" / "AI" / "리뷰")
+  - (그룹화 권장: "분석" / "AI")
 
 ### 2.4 SideChatPanel — 호출형 채팅 (v1 패턴 + v2 확장)
 
@@ -364,7 +361,7 @@ function handleHitlMessage(msg: WSMessage) {
 │  - Clarification HITL            │
 ├──────────────────────────────────┤
 │ 컨텍스트 칩 (현재 보는 대쉬보드)   │
-│ "📊 CreativeAnalysis · CR-001"   │
+│ "📊 도메인 dashboard · ENT-001"  │
 ├──────────────────────────────────┤
 │ 자연어 입력창                     │
 │ [⚡ 적용]                         │
@@ -816,10 +813,6 @@ src/components/ui/button.stories.tsx
 
 ---
 
-## 10. 변경 이력
+## 변경 이력
 
-| 버전 | 날짜 | 내용 |
-|------|------|------|
-| v1.0 | 2026-05-13 | 초안 — State (Zustand 7 store + TanStack Query) / Routing (7 라우트 + GlobalLayout + Workspace) / Component Inventory (shadcn/ui 15+ + features 폴더 구조 + v1→v2 매핑) / Design System (색상 토큰 라이트+다크+의미적, Tailwind config, Pretendard, cn/cva 패턴). 옵션 A 기반 변환. `docs/_claude/new_frontend/` 04/05/06/08/09 5 문서 정제 |
-| v1.1 | 2026-05-13 | **§2 Routing + Layout 전면 갱신** — 사용자 통찰 "동료 화면 + 채팅 지시" 반영. ConversationWorkspace (3-Panel) 제거하고 **v1 GlobalLayout 패턴 (TopBar + Sidebar w-20 + Outlet + SideChatPanel)** 채택. 14 라우트 (포트폴리오 4 + 클라이언트 8 v1 + 신규 3). 컨텍스트별 Sidebar 메뉴 자동 전환. SideChatPanel v2 확장 (대화 dropdown / Plan review 인라인 / 컨텍스트 칩) |
-| v1.1 (검증 정정) | 2026-05-15 | **프론트 통합 전 문서↔백엔드 코드 다중 사이클 검증 (사이클 3).** §1.2 agent store — `streamingMessage`/`appendMessage` (백엔드 미발행 `agent_message` 의존) 제거, `appendUserMessage`/`finalizeFromComplete` 로 정정. §1.5 WS 통합 예시 — 단일 핸들러 → `/ws/agent`·`/ws/hitl` 채널별 분리, `agent_message` 케이스 제거, 실제 이벤트만 라우팅. **미정정 (별도 트랙)**: §1.2 store 경로 `src/stores/*` ↔ 실제 코드 `features/*/store.ts` 불일치 / §4 Design System 색상 토큰이 Warm Neutral 재설계(`a5c4fc3`) 이전 shadcn 기본값 — 둘 다 계약 아님(설계 문서), `globals.css`/`tailwind.config.ts` 가 진실 |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

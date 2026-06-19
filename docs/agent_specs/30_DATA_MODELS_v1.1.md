@@ -7,9 +7,7 @@
 | 진행상태 | **Active** (코드 직독 기반 정정판) |
 | 버전 | **v1.1** |
 | 최종 수정일 | 2026-05-15 |
-| 이전 버전 | [`legacy/30_DATA_MODELS_v1.0.md`](legacy/30_DATA_MODELS_v1.0.md) (archive — 정정 이전 원본 보존, 의도 참조용) |
 | 관련 명세 | `20_INTERFACE_CONTRACT_v1.1.md`, `21_WEBSOCKET_PROTOCOL_v1.5.md`, `22_error_codes_v1.1.md` |
-| 검증 출처 | [`docs/reports/agent_specs_verification_2026-05-15.md`](../reports/agent_specs_verification_2026-05-15.md) (사이클 2/3) |
 
 > **진실 소스 (Source of Truth)**: **코드** (`backend/app/dream_agent/schemas/*.py`, `planner.py`, `agent_state.py`, `models/*.py`). 본 문서는 코드를 읽어 정리한 참조 — 코드와 다르면 코드가 우선, 문서를 고친다.
 
@@ -17,28 +15,7 @@
 
 ## 0. 개요
 
-OctorAD Dream Agent V2 의 **Pydantic / dataclass / TypedDict** 모델 카탈로그.
-
-### v1.0 → v1.1 정정 요지 (2026-05-15)
-
-이전 v1.0 은 일부 필드명·enum 값이 실제 코드와 어긋나 있었다. 정정 항목:
-
-| # | 모델 | v1.0 (정정 전) | 실제 코드 |
-|---|------|---------------|-----------|
-| 1 | `Targets` | `brand, product, domain, additional` | `brand, product, competitors, source, period, keywords, extra_filters` |
-| 2 | `Goal.type` enum | `analysis\|generation\|factual\|mixed` | `answer\|metric\|insight\|report\|creative\|mixed` |
-| 3 | `OutputFormat` enum | `text\|markdown\|pdf\|image\|video` | `text\|pdf\|image\|chart\|video\|mixed` |
-| 4 | `Task` 필드 | `id, priority, rationale` | `id, priority, params_override` |
-| 5 | `QueryMeta` | `sources, period, language, ambiguities` | `confidence, ambiguity, missing, raw_input, language, original_domain` |
-| 6 | `TaskType` enum 17개 | `insight_extraction, pdf_rendering, image_creation, video_creation, storyboard_creation, slogan_writing, ambiguity_resolution, factual_answer, ...` | `insight_generation, report_generation, image_generation, image_editing, video_storyboard, material_variation, budget_optimization, factual_lookup, ...` |
-| 7 | `Plan` 필드 | `plan_id, intent_summary, dependency_graph, strategy, estimated_duration_sec, mermaid_diagram, visualization, plan_notes` | `teams_selected, todos, dag, plan_notes` |
-| 8 | `PlannedTodo` | `requires_approval` 필드 명시 | 실제로 없음 (`team` 필드 누락) |
-| 9 | `TodoStatus` (`schemas/`) | `success\|cancelled` 포함 | `pending\|in_progress\|completed\|failed\|skipped` (5개) |
-| 10 | `ExecutionResult.overall_status` | `"success"\|"failed"\|"partial"` 문자열 | `TodoStatus` enum |
-| 11 | `ResponseFormat` enum | `text\|markdown` | `text\|pdf\|image\|chart\|video\|mixed\|error` |
-| 12 | `ResponsePayload` | `meta`, `error` 필드 누락 | 두 필드 존재 |
-
-원본은 [`legacy/30_DATA_MODELS_v1.0.md`](legacy/30_DATA_MODELS_v1.0.md) 에 보존 — *의도* 가 옳고 코드가 드리프트한 가능성 대비.
+DreamAgent V2 의 **Pydantic / dataclass / TypedDict** 모델 카탈로그.
 
 ---
 
@@ -53,14 +30,14 @@ OctorAD Dream Agent V2 의 **Pydantic / dataclass / TypedDict** 모델 카탈로
 | ~~HITL 요청/응답~~ | ~~`HITLRequest`, `HITLResponse`~~ — **폐기(2026-06-11**, Sprint 12 event 트랙 잔재**)** | — |
 | **Tool 메타** | `ToolSpec`, `ToolParameter` | `models/tool.py` |
 | **Enums** | `ToolCategory`, `ToolParameterType` + `schemas/`내부 enum (`TodoStatus`, `GoalType` 등). ~~`HITLRequestType`~~ 폐기(2026-06-11) | `models/enums.py`, 각 schemas 내부 |
-| ~~도메인 모델 (Tool I/O)~~ | ~~`models/domain.py`~~ — **폐기(2026-06-12)**, 현행은 `app/schemas/outputs` 의 `*Output` | — |
+| ~~도메인 모델 (Tool I/O)~~ | ~~`models/domain.py`~~ — **폐기(2026-06-12)**, 현행은 `app/data_layer/schemas/outputs` 의 `*Output` | — |
 
 > ✅ **이름 충돌 해소됨 (2026-05-15 models/ cleanup A1~A7)**:
 > - `Plan`: **`planning/planner.py::Plan` 만 존재** (1곳). 옛 `models/plan.py::Plan` 삭제됨.
 > - `ExecutionResult`: **`schemas/execution_result.py::ExecutionResult` 만 존재** (1곳). 옛 `models/execution.py::ExecutionResult` (단일 Tool wrapper) 삭제됨.
 > - `TodoStatus`: **`schemas/execution_result.py::TodoStatus` (5값) 만 존재**. 옛 `models/enums.py::TodoStatus` (8값) 삭제됨.
 >
-> `from app.dream_agent.models import Plan` / `Intent` / `TodoItem` / `ExecutionResult` 는 이제 **ImportError**. 정리 상세 = [`docs/_claude/models_cleanup_plan_2026-05-15.md`](../_claude/models_cleanup_plan_2026-05-15.md).
+> `from app.dream_agent.models import Plan` / `Intent` / `TodoItem` / `ExecutionResult` 는 이제 **ImportError**.
 
 ---
 
@@ -72,24 +49,19 @@ OctorAD Dream Agent V2 의 **Pydantic / dataclass / TypedDict** 모델 카탈로
 
 ```python
 # ── Enums ──
-class TaskType(str, Enum):  # 17종 — Planning 의 Tool 매핑 키
+# ⚠️ TaskType / Source 는 이제 OPEN-VOCAB (자유 문자열) — 닫힌 enum 아님.
+#    아래는 *예시* 값 (도메인 무관 일반 작업). 실제 값은 카탈로그/도메인에 따라 자유.
+class TaskType(str, Enum):  # 예시 — Planning 의 Tool 매핑 키 (open-vocab)
     DATA_COLLECTION       = "data_collection"
-    DATA_PREPROCESSING    = "data_preprocessing"
-    SENTIMENT_ANALYSIS    = "sentiment_analysis"
-    KEYWORD_EXTRACTION    = "keyword_extraction"
-    TREND_ANALYSIS        = "trend_analysis"
-    COMPETITOR_COMPARISON = "competitor_comparison"
-    CAUSAL_ANALYSIS       = "causal_analysis"
+    METRIC_CALCULATION    = "metric_calculation"
+    ANALYSIS              = "analysis"
+    COMPARISON            = "comparison"
     INSIGHT_GENERATION    = "insight_generation"
-    REPORT_GENERATION     = "report_generation"
     SUMMARY_GENERATION    = "summary_generation"
-    IMAGE_GENERATION      = "image_generation"
-    IMAGE_EDITING         = "image_editing"
-    VIDEO_STORYBOARD      = "video_storyboard"
-    COPY_GENERATION       = "copy_generation"
-    MATERIAL_VARIATION    = "material_variation"
-    BUDGET_OPTIMIZATION   = "budget_optimization"
+    REPORT_GENERATION     = "report_generation"
+    RECOMMENDATION        = "recommendation"
     FACTUAL_LOOKUP        = "factual_lookup"
+    # ... (자유 확장 — 닫힌 enum 아님)
 
 class GoalType(str, Enum):
     ANSWER, METRIC, INSIGHT, REPORT, CREATIVE, MIXED    # = "answer"/"metric"/...
@@ -100,8 +72,8 @@ class OutputFormat(str, Enum):
 class Depth(str, Enum):
     BRIEF, STANDARD, DETAILED
 
-class Source(str, Enum):
-    NAVER, YOUTUBE, COUPANG, OLIVEYOUNG, TIKTOK, AMAZON, GOOGLE, MULTI, UNKNOWN
+class Source(str, Enum):  # 예시 — open-vocab (자유 문자열), 도메인별 source 식별자
+    SOURCE_A, SOURCE_B, MULTI, UNKNOWN
 
 # ── Sub-structures ──
 class Period(BaseModel):
@@ -109,9 +81,9 @@ class Period(BaseModel):
     start, end, window: str | None   # ISO date / "3months" 정규화
 
 class Targets(BaseModel):
-    brand:        str | None
-    product:      str | None
-    competitors:  list[str]
+    entity:       str | None
+    sub_entity:   str | None
+    related:      list[str]
     source:       Source = Source.UNKNOWN
     period:       Period | None
     keywords:     list[str]
@@ -150,7 +122,7 @@ class StructuredQuery(BaseModel):
     meta:    QueryMeta
 ```
 
-> ⚠️ `brand` 는 **`targets.brand` 중첩** — `structured_query["brand"]` 최상위 접근 아님. `layer_guard.py::inspect_layer_output` 의 `sq.get("brand")` 는 항상 None 반환 (검증 사이클 2 B1 발견 — 별도 트랙).
+> ⚠️ `entity` 는 **`targets.entity` 중첩** — `structured_query["entity"]` 최상위 접근 아님. `layer_guard.py::inspect_layer_output` 의 `sq.get("entity")` 는 항상 None 반환 (별도 트랙).
 
 **Writer**: `cognitive_stage` (LLM 기반, `llm_manager/prompts/cognitive.yaml`).
 **JSON dump**: `sq.model_dump(mode="json")` → `AgentState["structured_query"]`.
@@ -163,9 +135,9 @@ class StructuredQuery(BaseModel):
 class PlannedTodo(BaseModel):
     id:          str                # "todo_001"
     task_type:   str                # TaskType.value
-    team:        str | None         # "analysis_team" 등 — team_catalog 키
-    agent:       str | None         # "collection_agent" 등 — team_catalog 키
-    tool:        str | None         # "naver_collector" 등 — team_catalog 키
+    team:        str | None         # "<team>" 등 — team_catalog 키
+    agent:       str | None         # "<agent>" 등 — team_catalog 키
+    tool:        str | None         # "<tool>" 등 — team_catalog 키
     tool_params: dict               # Tool 에 넘길 인자
     depends_on:  list[str]          # DAG 의존성
     priority:    int = 1
@@ -317,12 +289,12 @@ class ExecutionContext(BaseModel):
 **전달 경로**: `execution_stage` → `executor._run_single_todo(todo, context, previous_results)` → `tool.execute(params, context)`.
 
 **`previous_results` 머지 패턴** (`executor._inject_prev_outputs`):
-- 이전 `TodoResult.data` 의 키(`raw_reviews`, `cleaned_text` 등)가 다음 Todo 의 `tool_params` 에 자동 머지됨 (key 가 `_` 로 시작하지 않으면). 같은 키 충돌 시 기존 `tool_params` 우선 (`setdefault`).
+- 이전 `TodoResult.data` 의 키(`raw_records`, `cleaned_text` 등)가 다음 Todo 의 `tool_params` 에 자동 머지됨 (key 가 `_` 로 시작하지 않으면). 같은 키 충돌 시 기존 `tool_params` 우선 (`setdefault`).
 
 **`client_id` 의 Sprint 16 의미** (ADR-022 박제):
 - frontend TopBar 드롭다운 → Zustand store → API `?client=` param → ExecutionContext.client_id → `DataSource.get(client_id, source_id)` 까지 *일관 흐름*.
-- tool 코드는 client 무관. 회사 추가 = `data/{new_client}/raw/` 디렉토리 + dropdown entry 만.
-- Default fallback = `"clumi"` (POC).
+- tool 코드는 client 무관. client 추가 = `data/{new_client}/raw/` 디렉토리 + dropdown entry 만.
+- Default fallback = `"default"` (POC).
 
 ---
 
@@ -408,15 +380,15 @@ class BaseTool(ABC):
 
 ## 7. ~~도메인 모델 (Tool I/O 공유 타입)~~ — **폐기 (2026-06-12 정리 전환 Sprint)**
 
-~~코드: `models/domain.py` (구 backend/app/dream_agent/ 하위)~~ → **삭제됨** (Review/NormalizedReview/CleanedText/Sentiment*/KeywordItem/Insight/ChannelPerformance/Creative/Importance 11종).
+~~코드: `models/domain.py` (구 backend/app/dream_agent/ 하위)~~ → **삭제됨** (구 POC 도메인 I/O 공유 타입 다수).
 
-폐기 사유: 이 모델들의 계약 대상이던 POC tool 체인(naver_collector→blooming)이 2026-05-28 폐기된 뒤 **소비처 0** (전수 grep 재검증). 현행 tool I/O 는 `app/schemas/outputs` 의 `*Output` 모델 사용 — `SentimentDistributionOutput` 등 **동명이인 주의**. 복원은 git 히스토리.
+폐기 사유: 이 모델들의 계약 대상이던 POC tool 체인이 폐기된 뒤 **소비처 0** (전수 grep 재검증). 현행 tool I/O 는 `app/data_layer/schemas/outputs` 의 `*Output` 모델 사용. 복원은 git 히스토리.
 
 → Tool 의 `execute()` 반환 dict 는 보통 이 모델들의 list/dict 를 포함. 다음 Todo 가 `previous_results` 로 받아 사용.
 
 ### 7.5 DataSource ABC (Sprint 16, ADR-022)
 
-코드: `backend/app/data_sources/base.py`
+코드: `backend/app/data_layer/data_sources/base.py`
 
 ```python
 class DataSource(ABC):
@@ -435,22 +407,21 @@ class DataSourceNotFound(DataSourceError): ...
 **Adapter** (POC): `FileDataSource` — `data/{client}/raw/{filename}` (csv/json/jsonl/sql).
 **Adapter** (MVP 예정): `PostgresDataSource` — 같은 ABC, default 교체. tool 변경 0.
 
-**source_id 카탈로그** (`DEFAULT_MAPPING` 21종):
+**source_id 카탈로그** (`DEFAULT_MAPPING` — 도메인별 N종):
 
 | source_id | filename |
 |---|---|
-| `meta_ads_performance` | meta_ads_performance.csv |
-| `naver_searchad` | naver_searchad.csv |
-| `orders` | orders.csv |
-| `customers` | customers.csv |
-| `ga4_traffic_source` | ga4_traffic_source.csv |
-| ... | (총 21 source — `file.py:DEFAULT_MAPPING`) |
+| `source_a` | source_a.csv |
+| `source_b` | source_b.csv |
+| `records` | records.csv |
+| `entities` | entities.csv |
+| ... | (도메인별 N source — `file.py:DEFAULT_MAPPING`) |
 
-→ tool 은 의미 단위 `source_id` 로 요청 (file 번호 X). 회사 변경 = `client` arg 만 변경.
+→ tool 은 의미 단위 `source_id` 로 요청 (file 번호 X). client 변경 = `client` arg 만 변경.
 
 ### 7.6 WorkspaceBackend ABC (Sprint 16, ADR-022)
 
-코드: `backend/app/workspace/base.py`
+코드: `backend/app/data_layer/workspace/base.py`
 
 ```python
 class WorkspaceBackend(ABC):
@@ -466,16 +437,16 @@ class WorkspaceBackend(ABC):
 
 # layer 매핑 (POC)
 LAYER_DIR = {
-    "raw":      "clumi/raw",
-    "cleaned":  "clumi/cleaned",
-    "computed": "clumi/computed",
+    "raw":      "default/raw",
+    "cleaned":  "default/cleaned",
+    "computed": "default/computed",
 }
 ```
 
 **Adapter** (POC): `FileWorkspace` — `data/{LAYER_DIR[layer]}/{key}.json`.
-**키 명명**: `ad_cost_total_2026-04.json`, `S001_revenue_total_2026-04.json` — 회사 이름 없음 (cache 자산 보존).
+**키 명명**: `count_total_2026-04.json`, `entity_total_2026-04.json` — client 이름 없음 (cache 자산 보존).
 
-→ tool 의 결과 산출물 영속화. `/api/dashboard1/*` 가 같은 Workspace 에서 cleaned/computed 직접 조회 (agent 우회 — frontend 빠른 응답).
+→ tool 의 결과 산출물 영속화. frontend 가 같은 Workspace 에서 cleaned/computed 직접 조회 (agent 우회 — 빠른 응답).
 
 ### 7.7 호환 layer (shim)
 
@@ -483,7 +454,7 @@ LAYER_DIR = {
 
 ```python
 # 옛 import 호환 — 점진 마이그레이션
-from app.workspace import (
+from app.data_layer.workspace import (
     get_default_workspace as get_storage,
     WorkspaceBackend as StorageBackend,
 )
@@ -509,7 +480,7 @@ class ToolParameterType(str, Enum):  # ToolParameter.type 의 타입
     STRING, INTEGER, FLOAT, BOOLEAN, ARRAY, OBJECT
 ```
 
-> **2026-05-15 정리** (models/ cleanup A5): `IntentDomain`/`IntentCategory`/`Layer`/`ExecutionStrategy`/`PlanStatus`/`TodoStatus`(8값)/`SessionStatus` 7개 enum 삭제 (활성 사용 0건 확인). `Intent`/`Entity` 도 함께 정리. 상세 = [`docs/_claude/models_cleanup_plan_2026-05-15.md`](../_claude/models_cleanup_plan_2026-05-15.md).
+> **2026-05-15 정리** (models/ cleanup A5): `IntentDomain`/`IntentCategory`/`Layer`/`ExecutionStrategy`/`PlanStatus`/`TodoStatus`(8값)/`SessionStatus` 7개 enum 삭제 (활성 사용 0건 확인). `Intent`/`Entity` 도 함께 정리.
 
 ---
 
@@ -527,10 +498,10 @@ class ToolParameterType(str, Enum):  # ToolParameter.type 의 타입
 | ~~`HITLRequest` / `HITLResponse` / `HITLRequestType`~~ | 폐기(2026-06-11) — 구 `models/hitl.py` + enums | 
 | `ExecutionContext` | `backend/app/dream_agent/models/execution.py` |
 | `ToolSpec` / `ToolParameter` | `backend/app/dream_agent/models/tool.py` |
-| ~~도메인 모델~~ (폐기 2026-06-12) | ~~`models/domain.py`~~ → `app/schemas/outputs` |
+| ~~도메인 모델~~ (폐기 2026-06-12) | ~~`models/domain.py`~~ → `app/data_layer/schemas/outputs` |
 | Team/Agent/Tool 카탈로그 | `backend/app/dream_agent/planning/catalog/team_catalog.yaml` |
-| **`DataSource` ABC + `FileDataSource`** (Sprint 16, ADR-022) | `backend/app/data_sources/base.py` + `file.py` |
-| **`WorkspaceBackend` ABC + `FileWorkspace`** (Sprint 16, ADR-022) | `backend/app/workspace/base.py` + `file.py` |
+| **`DataSource` ABC + `FileDataSource`** (Sprint 16, ADR-022) | `backend/app/data_layer/data_sources/base.py` + `file.py` |
+| **`WorkspaceBackend` ABC + `FileWorkspace`** (Sprint 16, ADR-022) | `backend/app/data_layer/workspace/base.py` + `file.py` |
 | **호환 shim** (`get_storage`/`StorageBackend` alias) | `backend/app/dream_agent/tools/shared/storage.py` |
 
 ---
@@ -566,15 +537,8 @@ class ToolParameterType(str, Enum):  # ToolParameter.type 의 타입
 
 **핵심 패턴**: 각 레이어는 Pydantic 모델 만들기 → `.model_dump(mode="json")` 로 dict 화 → `AgentState` 의 자기 칸에 저장 → 다음 레이어가 `.model_validate(state[...])` 로 복원. **양쪽이 같은 스키마 클래스를 봐야** 변환이 깨지지 않는다.
 
-상세 흐름: [`docs/_claude/folder_structure_and_data_flow.md`](../_claude/folder_structure_and_data_flow.md) §3 참조.
-
 ---
 
-## 11. 변경 이력
+## 변경 이력
 
-| 버전 | 날짜 | 내용 |
-|------|------|------|
-| v1.0 (archive) | 2026-04-21 | POC 격상판 — 보존: [`legacy/30_DATA_MODELS_v1.0.md`](legacy/30_DATA_MODELS_v1.0.md) |
-| **v1.1** | **2026-05-15** | **검증 정정판** — 코드 직독으로 v1.0 의 12 항목 정정 (Targets/Goal/Task/QueryMeta/TaskType enum/Plan 전체/PlannedTodo/TodoStatus/ResponseFormat/overall_status/ResponsePayload 필드). 이름 충돌 명시(`Plan`/`ExecutionResult`/`TodoStatus` 각각 2곳). 데이터 흐름 §10 추가. 검증 출처 = `agent_specs_verification_2026-05-15.md` 사이클 2/3 (spec 20·63 정정과 같은 계열) |
-| v1.1 (정리 반영) | 2026-05-15 | **models/ cleanup A1~A7 후속 갱신**. 이름 충돌 3건 모두 **해소** (Plan/ExecutionResult/TodoStatus 각 1곳만 존재). §1 "레거시(미사용)" 행 삭제, §8 enums.py 3개로 축소(`HITLRequestType`/`ToolCategory`/`ToolParameterType`), §9 코드 참조 매핑에서 deprecated 항목 제거. 정리 계획서 = `docs/_claude/models_cleanup_plan_2026-05-15.md` |
-| **v1.1 (Sprint 16 보강)** | **2026-05-27** | **ADR-022 박제**: §4 `ExecutionContext.client_id` 의 동적 분기 의미 명시 (TopBar → store → param → ExecutionContext → DataSource), §7.5 `DataSource` ABC + `FileDataSource` Adapter + 21 source_id 카탈로그, §7.6 `WorkspaceBackend` ABC + `FileWorkspace` + LAYER_DIR + cache 키 명명, §7.7 `storage.py` 호환 shim. §9 코드 참조 매핑에 신규 3 위치 추가. Sprint 16 13 commits (ba242c7 ~ f7de6c4) + G1·G2 누적. |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

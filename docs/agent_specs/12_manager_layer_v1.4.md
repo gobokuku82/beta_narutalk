@@ -9,7 +9,7 @@
 | 최종 수정일 | 2026-05-16 |
 | 이전 버전 | v1.3 (2026-04-24), v1.2 (2026-04-23), `legacy/12_manager_layer_v1.1.md` |
 | 선행 문서 | `10_system_architecture_v1.9.md` §4 (Manager 개요) |
-| 관련 명세 | `11_main_graph_state_v1.5.md`, `21_WEBSOCKET_PROTOCOL_v1.5.md`, `22_error_codes_v1.1.md`, `adr/ADR-011_connection_channel_separation.md` |
+| 관련 명세 | `11_main_graph_state_v1.5.md`, `21_WEBSOCKET_PROTOCOL_v1.5.md`, `22_error_codes_v1.1.md` |
 
 **v1.4 (2026-05-16) 변경점** — ADR-011 ConnectionManager 채널 분리:
 
@@ -32,14 +32,14 @@
 - `plan_editor.py` Y-a NL 편집 경로 (Phase 3) — parse_instruction / apply_edit (reorder 신구현) / validate_edit / `MAX_INSTRUCTION_LEN=500` + `_sanitize` prompt injection 방어 (D-13)
 - 12_manager_layer 은 본 bump 에서 Sprint 14 A3 가 도입한 API 만 요약. 상세는 코드 + 10_v1.9 §4.3 참조
 
-> **진실 소스**: 각 매니저 구현 파일 (`backend/app/...` / `backend/api_v2/...`).
+> **진실 소스**: 각 매니저 구현 파일 (`backend/app/...` / `backend/api/...`).
 > 이 문서는 매니저 간 관계 + 수명주기 + 등록/해제 주체를 통합 설명.
 
 ---
 
 ## 0. 개요
 
-OctorAD Dream Agent V2의 **Manager 계층** 단일 문서.
+DreamAgent V2의 **Manager 계층** 단일 문서.
 
 ### 0.1 왜 이 문서가 필요했나 (drift 사례)
 
@@ -53,7 +53,7 @@ Sprint 13 I11-a 초기 구현에서 **`run_turn`이 `callback_manager`에 등록
 
 | # | 매니저 | 카테고리 | Sprint | 코드 |
 |---|--------|----------|--------|------|
-| 1 | ConnectionManager | 전송(WS) | 13 T1 | `backend/api_v2/connection_manager.py` |
+| 1 | ConnectionManager | 전송(WS) | 13 T1 | `backend/api/connection_manager.py` |
 | 2 | ConcurrencyManager | 실행 제어 | 13 T2 | `backend/app/dream_agent/workflow_managers/concurrency_manager.py` |
 | 3 | CallbackManager | 내부 이벤트 라우팅 | 10~ | `backend/app/dream_agent/workflow_managers/callback_manager/callback_manager.py` |
 | 4 | HITLManager | PM + HITL | 12~ | `backend/app/dream_agent/workflow_managers/hitl_manager/manager.py` |
@@ -80,7 +80,7 @@ Plan 조작:         TodoManager               (DAG 분석, cascade 무효화)
 ### 1.2 싱글톤
 ```python
 # 싱글톤 (프로덕션)
-from api_v2.connection_manager import conn_manager, Channel
+from api.connection_manager import conn_manager, Channel
 ```
 
 ### 1.3 API (v1.4 — ADR-011)
@@ -111,11 +111,11 @@ class ConnectionManager:
 | `/ws/hitl` | `hitl_endpoint` 시작 시 동일 | 동일 | `"hitl"` |
 
 ### 1.5 테스트
-- `backend/tests/sprint13/test_connection_manager_unit.py` (10) — 단일 채널 회귀 (agent 기준).
-- `backend/tests/sprint13/test_connection_manager_integration.py` (4) — 실 ASGI WS 회귀.
-- `backend/tests/sprint13/test_connection_manager_channel.py` (16) — **신규 ADR-011 채널 분리 검증**.
-- `backend/tests/sprint13/test_dual_channel_dedup.py` (4) — **신규 dual-channel leak 방지 통합**.
-- `backend/tests/sprint13/test_spec21_channel_catalog.py` (14) — **신규 spec 21 §3.2 contract**.
+- 단일 채널 회귀 (agent 기준).
+- 실 ASGI WS 회귀.
+- ADR-011 채널 분리 검증.
+- dual-channel leak 방지 통합.
+- spec 21 §3.2 contract.
 - Fixture: `reset_conn_manager` (conftest.py)
 
 ---
@@ -418,16 +418,10 @@ Sprint 14+ 에서 매니저 추가 시:
 - [ ] §0.2 매니저 목록 표 갱신
 - [ ] §6 의존성 다이어그램 갱신
 - [ ] `10_system_architecture_v1.9.md` §4.2 Manager 목록 표 갱신
-- [ ] 테스트 fixture 추가 (`backend/tests/conftest.py`)
-- [ ] 관련 ADR 작성 (`adr/ADR-XXX_<name>.md`, Sprint 14+ 폴더 도입 후)
+- [ ] 테스트 fixture 추가 (`conftest.py`)
 
 ---
 
 ## 변경 이력
 
-| 버전 | 날짜 | 내용 |
-|------|------|------|
-| v1.0 | 2026-04-21 | 초안 — Sprint 13 Integration 반영. 5개 매니저(Connection/Concurrency/Callback/HITL/Todo) 통합. Callback bridge (I11-b2), HITL 이중 트랙, 의존성 다이어그램, 신규 매니저 추가 체크리스트 |
-| v1.1 | 2026-04-22 | Sprint 14 A1 HITL timeout 반영 — HITLManager §4.3 API 에 register_turn/is_turn_active 신규 + wait_for_resume(timeout=) 시그니처 확장 + cleanup_turn 확장 (_active_turns/_paused 추가). §4.4 공유상태에 _active_turns 추가. §4.5 테스트 목록에 sprint14 7개 파일 추가 |
-| **v1.2** | **2026-04-23** | **Sprint 14 A3 Y-a 반영** — HITLManager 에 `_get_lock(session_id) → asyncio.Lock` 추가 (D9 L1 per-session Lock). `_session_locks` 필드 + `cleanup_turn` 확장 (_session_locks.pop). `handle_todo_edit/delete/add` Status 마커 (partial → A3 Phase 2 에서 complete). Plan Editor (`plan_editor.py`) Y-a NL 편집 API — parse_instruction/apply_edit (reorder 신구현)/validate_edit + D-13 prompt injection 방어. 상세: `10_system_architecture_v1.9.md` §4.3.5 |
-| **v1.3** | **2026-04-24** | **Sprint 14 A3 Phase 5 편집 경로 통합** — `_progress` 수명주기가 `_graph_runner_with_resume` plan_review 분기까지 확장 (임시 progress 생성, status="paused"). `cleanup_turn` 에 `_progress.pop` 추가 (leak 방지). `_handle_hitl_response` approve + progress 존재 시 `{action:"modify", value:progress.plan}` 변환 전달 — planning_stage L88-92 modify 분기 활용. 사용자 5항목 요구사항 §4 "hitl=pause 같은 개념" 반영. 관련: `docs/_claude/sprint14_a3_edit_flow.md` v1.1, `sprint14_a3_implementation_plan.md` v1.0 |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

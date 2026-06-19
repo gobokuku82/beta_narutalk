@@ -128,7 +128,7 @@ v1.3 → v1.4는 **구현 검증을 통해 확정된 설계를 공식 문서화*
 
 ### 1.1 Dream Agent란
 
-Dream Agent는 광고대행사 퍼포먼스 마케터를 위한 **4-Layer + Manager 아키텍처** 기반의 AI 에이전트 시스템이다.
+Dream Agent는 도메인 작업 자동화를 위한 **4-Layer + Manager 아키텍처** 기반의 도메인 무관 AI 에이전트 프레임워크다.
 
 사용자의 자연어 입력을 **이해(Cognitive) → 계획(Planning) → 실행(Execution) → 시각화(Response)** 파이프라인으로 처리한다. 각 레이어는 **번역기**로서 사용자 언어 ↔ 기계 언어 변환의 연쇄를 이룬다.
 
@@ -154,7 +154,7 @@ Dream Agent는 광고대행사 퍼포먼스 마케터를 위한 **4-Layer + Mana
 |-------|------|------|--------------|
 | Cognitive | `gpt-5.4-mini` | 의도 분류 + StructuredQuery (복잡 쿼리 대응) | $0.75 |
 | Planning (3계층) | `gpt-5.4-mini` | 팀/Agent/Tool 매핑 + DAG | $0.75 |
-| Execution | `gpt-5.4-mini` | insight_extractor, report_writer 등 | $0.75 |
+| Execution | `gpt-5.4-mini` | LLM 기반 tool 등 | $0.75 |
 | Response | `gpt-5.4-nano` | 포맷팅 + 요약 (단순 태스크) | $0.20 |
 
 > 설정 파일: `backend/app/dream_agent/llm_manager/config.py` LAYER_CONFIGS
@@ -210,14 +210,10 @@ User Output (text / image / pdf / video / mixed)
 
 ```
 AgentPool (Eager Init, 서버 lifespan 1회)
-├── analysis_team (5 Agent)
-│   ├── collection_agent
-│   ├── preprocessing_agent
-│   ├── analysis_agent
-│   ├── report_agent
-│   └── pdf_agent
-├── (creative_team — 2026-06-12 폐기: agent 4 + stub 9. spec 32 §7.1 로드맵 보존)
-└── operations_team (MVP+)
+└── (team_catalog.yaml 기반 — 도메인 추출 후 빈 카탈로그. teams 0 / agents 0 로 부팅)
+    └── <team>
+        └── <agent>
+            └── <tool>
 ```
 
 Tool의 무거운 리소스(ML 모델, DB 커넥션)는 **Lazy Load** (첫 호출 시).
@@ -242,10 +238,10 @@ Tool의 무거운 리소스(ML 모델, DB 커넥션)는 **Lazy Load** (첫 호�
 #### 2.2.1 하는 것
 
 - 오타 교정 / 간접 표현 해석 / 업계 은어·비유 정규화
-- 퍼포먼스 마케팅 도메인 용어 인식 (ROAS, CTR 등)
-- 대상(targets) 추출 + 정규화 (브랜드/소스/기간 등)
+- 도메인 용어 인식 (도메인별 용어)
+- 대상(targets) 추출 + 정규화 (entity/source/기간 등)
 - 목적(goal) 판정 (type/output_format/depth/audience)
-- 작업(tasks) 분해 — `TaskType` 유한 enum 안에서
+- 작업(tasks) 분해 — `TaskType` (open-vocab 자유 문자열) 안에서
 - 모호성 탐지 → `meta.missing` + `meta.ambiguity`
 
 #### 2.2.2 하지 않는 것
@@ -294,24 +290,24 @@ StructuredQuery
 class StructuredQuery(BaseModel):
     # 대상 - "무엇에 대해"
     targets: Targets
-        brand: str | None
-        product: str | None
+        entity: str | None
+        sub_entity: str | None
         competitors: list[str]          # 비교 쿼리 대응
-        source: Source                  # enum: naver|youtube|coupang|oliveyoung|tiktok|amazon|google|multi|unknown
+        source: str                     # open-vocab 자유 문자열 (예: file|db|api|multi|unknown)
         period: Period | None           # {raw, start, end, window}
         keywords: list[str]
-        extra_filters: dict             # 채널/타겟/예산 등 유연 dict
+        extra_filters: dict             # category/region/필터 등 유연 dict
 
     # 목적 - "왜 / 어떤 결과"
     goal: Goal
-        type: GoalType                  # enum: answer|metric|insight|report|creative|mixed
+        type: GoalType                  # enum: answer|metric|insight|report|mixed
         output_format: OutputFormat     # enum: text|pdf|image|chart|video|mixed
         depth: Depth                    # enum: brief|standard|detailed  ← v1.3 대비 신규 1등급 필드
         audience: str | None
 
     # 작업 - "어떤 sub-intent"
     tasks: list[Task]
-        id: TaskType                    # 17종 enum (§2.2.6)
+        id: TaskType                    # open-vocab 자유 문자열 (§2.2.6)
         priority: int
         params_override: dict
 
@@ -322,31 +318,17 @@ class StructuredQuery(BaseModel):
         missing: list[str]              # 비어있는 필수 필드
         raw_input: str
         language: str
-        original_domain: str | None     # legacy 호환 (analysis/content/operation/inquiry)
+        original_domain: str | None     # legacy 호환 (자유 문자열)
 ```
 
-#### 2.2.6 TaskType Vocabulary (17종 유한 enum)
+#### 2.2.6 TaskType Vocabulary (open-vocab 자유 문자열)
+
+`TaskType` 은 닫힌 enum 이 아니라 **open-vocab 자유 문자열**이다. 도메인에 맞게 자유롭게 확장한다. 도메인 무관 예시 값:
 
 ```
-# 데이터
-DATA_COLLECTION, DATA_PREPROCESSING
-
-# 분석
-SENTIMENT_ANALYSIS, KEYWORD_EXTRACTION, TREND_ANALYSIS,
-COMPETITOR_COMPARISON, CAUSAL_ANALYSIS
-
-# 산출물
-INSIGHT_GENERATION, REPORT_GENERATION, SUMMARY_GENERATION
-
-# 크리에이티브
-IMAGE_GENERATION, IMAGE_EDITING, VIDEO_STORYBOARD,
-COPY_GENERATION, MATERIAL_VARIATION
-
-# 운영
-BUDGET_OPTIMIZATION
-
-# 조회형
-FACTUAL_LOOKUP
+data_collection, metric_calculation, analysis, comparison,
+insight_generation, summary_generation, report_generation,
+recommendation, factual_lookup
 ```
 
 #### 2.2.7 State I/O
@@ -408,7 +390,7 @@ StructuredQuery
     │   "Agent의 Tool로 Todo + DAG" — 실제 Plan 생성
     │   입력: StructuredQuery + 선택 Agent의 Tool 상세만
     │   출력: todos[] + dag + plan_notes
-    │   ★ preprocessing 체인: format_normalizer → text_preprocessor 필수
+    │   ★ 선행 의존 체인 (예: 수집 → 전처리)은 순서대로 포함
     │   프롬프트: planning_stage3_todo.yaml
     │
     ▼ validate_dag (코드 검증, LLM 아님)
@@ -431,17 +413,17 @@ Plan { teams_selected, todos, dag, plan_notes }
 ```python
 class PlannedTodo(BaseModel, frozen=True-like):
     id: str                         # "todo_001"
-    task_type: str                  # TaskType
-    team: str | None                # "analysis_team"
-    agent: str | None               # "collection_agent"
-    tool: str | None                # "naver_collector"
+    task_type: str                  # TaskType (open-vocab 자유 문자열)
+    team: str | None                # "<team>"
+    agent: str | None               # "<agent>"
+    tool: str | None                # "<tool>"
     tool_params: dict
     depends_on: list[str]
     priority: int
     rationale: str                  # LLM 설명 (디버깅/학습용)
 
 class Plan(BaseModel):
-    teams_selected: list[str]       # 예: ["analysis_team"] (creative_team 은 2026-06-12 폐기)
+    teams_selected: list[str]       # 예: ["<team>"]
     todos: list[PlannedTodo]
     dag: dict[str, list[str]]       # todo_id → depends_on (중복 표현, Execution 편의)
     plan_notes: str                 # LLM 요약 (1~2문장)
@@ -456,31 +438,21 @@ Team (팀)           — Planning 첫 번째 선택 단위
         └── Tool (도구) — Agent에 바인딩 (선택 불필요)
 ```
 
-**1팀: 분석팀 (Analysis Team) — 순차 파이프라인**
-| Agent | 담당 TaskType | Tools |
-|---|---|---|
-| collection_agent | data_collection | naver_collector / youtube / coupang / oliveyoung |
-| preprocessing_agent | data_preprocessing | format_normalizer → text_preprocessor (**필수 2단계**) |
-| analysis_agent | sentiment/keyword/trend/competitor/causal | sentiment_analyzer / keyword_extractor / diagnoser / forecaster / insight_extractor (~~trend_analyzer·competitor_comparator~~ stub 2종 폐기 2026-06-12 — spec 32 §5 로드맵 보존) |
-| report_agent | insight/report/summary | report_writer / insight_extractor / summary_generator |
-| pdf_agent | report(pdf) | pdf_renderer / chart_generator |
+**카탈로그 = `team_catalog.yaml`** (도메인 추출 후 `teams: {}` 빈 골격). 새 도메인은 아래 구조로 채운다:
 
-**2팀: 크리에이티브팀 (Creative Team) — 병렬/분기**
-| Agent | 담당 TaskType | Tools |
-|---|---|---|
-| ~~image_agent / video_agent / copy_agent / material_agent~~ | — | **creative_team 폐기 (2026-06-12)** — stub 9 메뉴 제거, 정직 미지원. 로드맵 = spec 32 §7.1 |
+```
+teams:
+  <team>:                       # Planning Stage 1 선택 단위
+    agents:
+      <agent>:                  # Planning Stage 2 선택 단위
+        handles_tasks: ["<task_type>", ...]   # open-vocab task 라우팅 키
+        tools:
+          - name: <tool>        # Agent에 바인딩 (status: implemented | stub)
+```
 
-**3팀: 운영팀 (Operations Team) — MVP+**
-| Agent | 담당 TaskType |
-|---|---|
-| budget_agent | budget_optimization |
-| targeting_agent | (MVP에서 정의) |
-| scheduling_agent | (MVP에서 정의) |
-
-**⚠ preprocessing 체인 필수 규칙 (Sprint 6)**:
-- 분석 계열 task가 있으면 `format_normalizer → text_preprocessor` 2단계 Tool을 **반드시 순서대로** 포함
-- `text_preprocessor`는 `format_normalizer.produces[normalized_reviews]`를 입력으로 받음
-- format_normalizer가 빠지면 데이터 체인 단절 → `text_preprocessor input=0`
+**⚠ 선행 의존 체인 규칙 (Sprint 6, 일반 원칙)**:
+- 후행 Tool 이 선행 Tool 의 산출물을 입력으로 받는 경우 (예: 수집 → 전처리), 두 단계를 **반드시 순서대로** 포함
+- 선행 Tool 이 빠지면 데이터 체인 단절 → 후행 Tool 의 `input=0`
 
 #### 2.3.6 Tool 스케일링 3-Tier 전략
 
@@ -560,15 +532,15 @@ ExecutionResult
 
 #### 2.4.5 Tool 실행 방식
 
-**실재 Tool (status=implemented, 8개)**:
-- `naver_collector`, `format_normalizer`, `text_preprocessor`
-- `sentiment_analyzer`, `keyword_extractor`, `insight_extractor`
-- `report_writer`, `summary_generator`
+**실재 Tool (status=implemented)**:
+- 카탈로그(`team_catalog.yaml`)에 `status: implemented` 로 등록된 `<tool>`
 → ToolRegistry로 import, 실제 데이터 처리
 
-**Stub Tool (status=stub, 19개)**:
-- `youtube_collector`, `pdf_renderer`, `image_generator` 등
+**Stub Tool (status=stub)**:
+- 카탈로그에 `status: stub` 로 등록된 `<tool>`
 → `mock_tools.mock_result(tool_name, params)` 반환 (체인 통과용)
+
+> 도메인 추출 후 카탈로그는 비어있음 (`teams: {}`). 위 두 분류는 카탈로그를 채울 때의 framework 규약.
 
 **Tool 결과 주입**:
 ```python
@@ -941,7 +913,7 @@ Sprint 13 Integration I10에서 **`type: "query"` 신 경로** 추가 (이중 �
   "type": "query",
   "conversation_id": "conv_xxx",
   "turn_id": "turn_yyy",
-  "user_input": "블루밍글로우 리뷰 감성 분석",
+  "user_input": "<entity> 데이터 분석",
   "language": "ko",
   "conversation_history": [],
   "history_limit": 3
@@ -1093,8 +1065,8 @@ ResponsePayload (Response 산출)
 
 | 분류 | 구현 | 설명 | 예시 |
 |------|------|------|------|
-| **tool** | Python 함수/클래스 | 단일 작업, 중간 상태 없음 | `sentiment_analyzer`, `keyword_extractor` |
-| **subgraph** | LangGraph subgraph | 복합 파이프라인, 중간 상태 있음 | (MVP+ 도입) 매체 API 수집 체인 |
+| **tool** | Python 함수/클래스 | 단일 작업, 중간 상태 없음 | `<tool>` (단일 기능) |
+| **subgraph** | LangGraph subgraph | 복합 파이프라인, 중간 상태 있음 | (MVP+ 도입) 외부 API 수집 체인 |
 
 ### 7.2 3-Level 계층 (v1.4 핵심)
 
@@ -1141,8 +1113,8 @@ registry = get_registry()  # 싱글톤
 ```python
 from app.dream_agent.execution.agent_pool import get_agent_pool
 pool = get_agent_pool()
-pool.list_teams()          # ["analysis_team", "qa_team", "decision_team"] (creative_team 2026-06-12 폐기)
-pool.list_agents()         # 9개 Agent 이름
+pool.list_teams()          # ["<team>", ...] (도메인 추출 후 빈 카탈로그 = [])
+pool.list_agents()         # Agent 이름 목록
 pool.get_agent(name)       # AgentSpec
 pool.is_tool_implemented(agent, tool)  # bool
 pool.get_real_tool(tool_name)          # Lazy Load 인스턴스
@@ -1150,17 +1122,17 @@ pool.get_real_tool(tool_name)          # Lazy Load 인스턴스
 
 **Lazy Load**:
 - Tool의 무거운 리소스(ML 모델, DB 커넥션)는 첫 호출 시 로드 + 캐시
-- 예: `sentiment_analyzer`의 MultilingualSentiment ML 모델은 첫 감성 분석 요청 시 로드
+- 예: ML 기반 `<tool>` 의 모델은 첫 호출 시 로드
 
 ### 7.6 Stub Tool 처리 (v1.4 신규)
 
-POC 단계에서 미구현 Tool(image_generator, pdf_renderer 등)은 `status: stub` 표시. Execution이 `mock_tools.mock_result()`로 더미 결과 반환.
+POC 단계에서 미구현 Tool(`<tool>` status: stub)은 `status: stub` 표시. Execution이 `mock_tools.mock_result()`로 더미 결과 반환.
 
 **목적**: Plan 체인 구조 검증이 목적이지 Tool 구현이 목적 아님. Sprint 3에서 검증 완료.
 
 ### 7.7 Data Layer Separation — DataSource / Workspace (Sprint 16+)
 
-> 결정 박제: [ADR-022](adr/ADR-022_data_source_workspace_layer_separation.md) (Accepted 2026-05-27)
+> 결정 박제: ADR-022 Data Source / Workspace Layer Separation (Accepted 2026-05-27)
 
 **Tool ↔ Data 사이 "관절" 신설**. tool 은 *순수 기능* 만, data 의 *어디서* 는 별도 Repository (Martin Fowler 1996). 사용자 P1·P2·P3 원칙 (memory `project_tool_data_agent_separation`) 의 구현.
 
@@ -1168,32 +1140,34 @@ POC 단계에서 미구현 Tool(image_generator, pdf_renderer 등)은 `status: s
 
 ```
 backend/app/
-├── data_sources/          ★ INPUT 관절 (Repository)
-│   ├── base.py            DataSource ABC (Port)
-│   └── file.py            FileDataSource (Adapter — POC)
-├── workspace/             ★ OUTPUT 관절 (Tool 결과 영속화)
-│   ├── base.py            WorkspaceBackend ABC
-│   └── file.py            FileWorkspace (Adapter)
+├── data_layer/
+│   ├── data_sources/      ★ INPUT 관절 (Repository)
+│   │   ├── base.py        DataSource ABC (Port)
+│   │   └── file.py        FileDataSource (Adapter — POC)
+│   └── workspace/         ★ OUTPUT 관절 (Tool 결과 영속화)
+│       ├── base.py        WorkspaceBackend ABC
+│       └── file.py        FileWorkspace (Adapter)
 ├── dream_agent/           Agent 작동 (DataSource 소비자)
-└── api_v2/                Direct API (Agent 우회 — DataSource 소비자)
+backend/
+└── api/                   Direct API (Agent 우회 — DataSource 소비자)
 ```
 
-→ `data_sources/` + `workspace/` = *agent + 직접 API* 둘 다 공유. `dream_agent/` 안에 두면 잘못된 의존 방향.
+→ `data_layer/data_sources/` + `data_layer/workspace/` = *agent + 직접 API* 둘 다 공유. `dream_agent/` 안에 두면 잘못된 의존 방향.
 
 #### 7.7.2 Tool DI 패턴
 
 ```python
-class ActiveOrdersFilter(BaseTool):
+class ExampleTool(BaseTool):
     def __init__(self, ds: DataSource | None = None):
         self.ds = ds or get_default_data_source()
 
     async def execute(self, params, state):
         merged = self.merge_params(params)
-        client = merged.get("client", "clumi")           # ← 동적
-        df = self.ds.get(client, "orders")               # ← 의미 단위 source_id
+        client = merged.get("client", "<client>")        # ← 동적
+        df = self.ds.get(client, "<source_id>")          # ← 의미 단위 source_id
 ```
 
-→ **46 tool 일괄 DI 전환** (25 metrics/cleaning/preprocessing/normalization/comparison + 21 collection. commit 4219f8b·1627699).
+→ **tool 일괄 DI 전환** — tool 코드는 *어디서* 를 모르고 DataSource 가 책임.
 
 #### 7.7.3 ExecutionContext.client_id (Sprint 16 신설)
 
@@ -1201,11 +1175,7 @@ Frontend TopBar 드롭다운 → Zustand store → API `?client=` param → `Exe
 
 #### 7.7.4 Direct API (Agent 우회)
 
-| 라우트 | 용도 |
-|---|---|
-| `/api/dashboard1/*` | 20 endpoint — frontend 가 cleaned/computed 값 직접 호출 (HTTP cache + DataSource 공유) |
-| `/api/admin/catalog` | 65 tool 메타 dump (ToolPalette UI) |
-| `/api/admin/clients` | `data/{client}/raw/` scan (TopBar 드롭다운 source) |
+frontend 가 cleaned/computed 값을 직접 호출하는 Direct API 라우트는 agent 를 우회하면서도 **같은 DataSource layer 를 공유**한다 (HTTP cache + DataSource 공유). 구체 라우트 목록은 `backend/api/` 구현을 진실 소스로 참조.
 
 → frontend 의 *raw·cleaned·computed 직접 조회* 와 agent 의 *동적 분석* 이 같은 DataSource layer 공유.
 
@@ -1221,70 +1191,70 @@ Frontend TopBar 드롭다운 → Zustand store → API `?client=` param → `Exe
 
 ## 8. 실행 흐름 예시 (v1.4 검증 케이스)
 
-### 8.1 Brief: "블루밍글로우 리뷰 감성 어때?"
+### 8.1 Brief: "<entity> 데이터 집계 어때?"
 
 ```
 1. User Input
 2. Cognitive:
    structured_query:
-     targets: {brand: "블루밍글로우", source: "naver"}
+     targets: {entity: "<entity>", source: "<source>"}
      goal:    {type: "answer", format: "text", depth: "brief"}
-     tasks:   [{id: "sentiment_analysis"}]
+     tasks:   [{id: "metric_calculation"}]
      meta:    {confidence: 0.92, missing: []}
 3. Planning:
-   teams: ["analysis_team"]
-   todos: 4 — collection, format_normalizer, text_preprocessor, sentiment_analyzer
+   teams: ["<team>"]
+   todos: 4 — collection, <normalizer>, <preprocessor>, <metric tool>
    dag: 선형 체인
 4. Execution:
-   Phase 1: naver_collector → 15 raw_reviews
-   Phase 2: format_normalizer → 15 normalized_reviews
-   Phase 3: text_preprocessor → 15 cleaned_texts
-   Phase 4: sentiment_analyzer → pos 60%, neu 20%, neg 20%
+   Phase 1: <collector> → 15 raw_records
+   Phase 2: <normalizer> → 15 normalized_records
+   Phase 3: <preprocessor> → 15 cleaned_records
+   Phase 4: <metric tool> → count 15, rate 60%
    ~2초
 5. Response:
    format: "text"
-   text: "블루밍글로우 리뷰 감성 분석 결과 — 긍정 60%, 중립 20%, 부정 20%"
+   text: "<entity> 집계 결과 — 총 15건, 비율 60%"
 ```
 
-### 8.2 Detailed: "블루밍글로우 네이버 리뷰 감성 분석하고 상세 보고서 PDF로 만들어줘"
+### 8.2 Detailed: "<entity> 데이터 분석하고 상세 보고서 PDF로 만들어줘"
 
 ```
 1. Cognitive:
    goal: {type: "report", format: "pdf", depth: "detailed"}
-   tasks: [sentiment_analysis, report_generation]
+   tasks: [analysis, report_generation]
 2. Planning:
-   todos: 8 — collection, format, text, sentiment, keyword, insight, report, pdf
+   todos: 8 — collection, normalize, preprocess, metric, category, insight, report, pdf
 3. Execution (7 phases, ~20초):
-   감성 + 키워드 공유 선행(text_preprocessor) 후 병렬
+   지표 + 카테고리 공유 선행(<preprocessor>) 후 병렬
 4. Response:
    format: "pdf"
-   text: "주요 발견 3가지: 긍정 72%, 핵심 키워드 수분/저자극/가성비, 부정 10% 향 이슈"
-   attachments: [{kind: "pdf", path: "/mock/블루밍글로우_report.pdf"}]
+   text: "주요 발견 3가지: 총량 증가, 핵심 카테고리 A/B/C, 이상치 10%"
+   attachments: [{kind: "pdf", path: "/mock/<entity>_report.pdf"}]
 ```
 
-### 8.3 Mixed: "블루밍글로우 리뷰 분석하고 그 결과로 광고 이미지도 만들어줘"
+### 8.3 Mixed: "<entity> 데이터 분석하고 그 결과로 요약 산출물도 만들어줘"
 
 ```
 1. Cognitive:
    goal: {type: "mixed", format: "mixed", depth: "detailed"}
-   tasks: [sentiment_analysis, insight_generation, image_generation]
+   tasks: [analysis, insight_generation, summary_generation]
 2. Planning:
-   teams: ["analysis_team"]  # (creative_team 2026-06-12 폐기)
-   todos: 6 — 분석팀 5 + 크리에이티브팀 1(image_generator)
-   팀 간 의존성: image_generation → insight_generation
+   teams: ["<team>"]
+   todos: 6 — 분석 5 + 산출물 1(<generator>)
+   task 간 의존성: summary_generation → insight_generation
 3. Execution (6 phases, ~15초):
-   분석팀 순차 → insight 완료 → image_generator 실행
+   분석 순차 → insight 완료 → <generator> 실행
 4. Response:
    format: "mixed"
-   text: "긍정 60%, 피부 개선 효과/세럼 키워드 반영한 광고 이미지 생성"
-   attachments: [pdf report + image]
+   text: "주요 카테고리/지표 반영한 요약 산출물 생성"
+   attachments: [pdf report + asset]
 ```
 
 ### 8.4 모호: "분석해줘"
 
 ```
 1. Cognitive:
-   targets: {brand: null}
+   targets: {entity: null}
    tasks: []
    meta: {confidence: 0.40, ambiguity: {is_ambiguous: true, severity: "high"},
           missing: ["target", "task_spec"]}
@@ -1292,11 +1262,11 @@ Frontend TopBar 드롭다운 → Zustand store → API `?client=` param → `Exe
 3. Execution: SKIP (empty plan)
 4. Response:
    format: "text"
-   text: "어떤 브랜드/제품을 어느 채널에서 분석할까요?"
+   text: "어떤 대상(entity)을 어느 source에서 분석할까요?"
    (clarification question)
 ```
 
-### 8.5 Factual: "ROAS가 뭐야?"
+### 8.5 Factual: "이 지표가 뭐야?"
 
 ```
 1. Cognitive:
@@ -1305,7 +1275,7 @@ Frontend TopBar 드롭다운 → Zustand store → API `?client=` param → `Exe
 3. Execution: SKIP
 4. Response:
    format: "text"
-   text: "ROAS (Return On Ad Spend)는 광고비 대비 매출 비율입니다. ..."
+   text: "<지표>는 <정의>입니다. ..."
    (LLM 직답)
 ```
 
@@ -1319,9 +1289,9 @@ v1.3 §9 내용 유지.
 
 | 단계 | 명칭 | 핵심 목표 | 데이터 | 실행 방식 |
 |------|------|----------|-------|----------|
-| **1차** | POC | "이렇게 작동합니다" 시연 | mock (블루밍글로우) | 모든 화면 + 분석 로직 + 분석/생성 |
-| **2차** | MVP | 진짜 성과 데이터로 분석 | 실제 매체 API 4개 | 실데이터 ML 정확도 향상 |
-| **3차** | 자동화 | 분석 → 판단 → 집행 전 과정 | 외부 트렌드 + 요서 | 영상 제작 + 매체 자동 집행 |
+| **1차** | POC | "이렇게 작동합니다" 시연 | mock 데이터 | 모든 화면 + 분석 로직 + 분석/생성 |
+| **2차** | MVP | 실제 데이터로 분석 | 실제 데이터 source | 실데이터 ML 정확도 향상 |
+| **3차** | 자동화 | 분석 → 판단 → 집행 전 과정 | 외부 데이터 통합 | 산출물 자동 생성 + 자동 실행 |
 
 ### 9.2 v1.4 기준 현재 상태
 
@@ -1334,10 +1304,10 @@ v1.3 §9 내용 유지.
 
 ### 9.3 POC 핵심 원칙 유지
 
-- 데이터: mock (블루밍글로우)
+- 데이터: mock 데이터
 - 실행: 에이전트 채팅 베이스
 - 자동화 범위: 분석·생성까지
-- HITL: 모든 결과 마케터 확인
+- HITL: 모든 결과 사용자 확인
 - 목표: 현업자에게 보여줄 프로토타입
 
 ### 9.4 단계별 핵심 변화
@@ -1345,11 +1315,11 @@ v1.3 §9 내용 유지.
 ```
 1차 (POC)                    2차 (MVP)                    3차 (자동화)
 ─────────                    ─────────                    ──────────────
-mock 데이터                → 실제 API 4채널            → 외부 트렌드 + 요서
+mock 데이터                → 실제 데이터 source        → 외부 데이터 통합
 LLM 많이 + 규칙 거의 없음  → 규칙/ML 비중 증가          → 인과분석 본격 도입
-스토리보드까지             → 영상 프레임 자동 생성      → 실제 영상 제작
-PDF 1종 출력               → PPT/Excel 추가            → 인터랙티브 리포트
-HITL 모든 결정 확인        → 패턴 학습으로 자동 추천    → 매체 자동 집행 + HITL 최소화
+기본 산출물까지            → 산출물 자동 생성 확대      → 복합 산출물 제작
+단일 포맷 출력             → 포맷 추가                 → 인터랙티브 리포트
+HITL 모든 결정 확인        → 패턴 학습으로 자동 추천    → 자동 실행 + HITL 최소화
 ```
 
 ### 9.5 학습 데이터 누적 계획 (v1.4 신규)
@@ -1369,40 +1339,20 @@ HITL 모든 결정 확인        → 패턴 학습으로 자동 추천    → �
 | 명세서 | 위치 | 설명 |
 |--------|------|------|
 | AgentState | `11_main_graph_state_v1.5.md` | LangGraph 전역 상태 + Reducer |
-| 실행 에이전트 | `31_execution_agent_function_list_v0.6.md` | collection/preprocessing/analysis/report/pdf 등 Agent별 기능 |
 | 데이터 모델 | `30_DATA_MODELS_v1.1.md` | Pydantic 모델 / Core Enum (POC 격상 + Sprint 10~13 반영) |
 | API 계약 | `20_INTERFACE_CONTRACT_v1.1.md` | REST + Layer I/O + AgentState Contract |
 | WS 프로토콜 | `21_WEBSOCKET_PROTOCOL_v1.5.md` | /ws/agent + /ws/hitl 전체 스펙 |
-| POC 아카이브 | `POC_legacy/` | 이력 보존 (DATA_MODELS_poc / INTERFACE_CONTRACT_poc / WEBSOCKET_PROTOCOL_poc) |
 
 ### 10.2 외부 문서 / 로그 / 코드
 
 | 명세서 | 위치 | 설명 |
 |--------|------|------|
-| Sprint 0~6 완료 보고서 | `docs/_claude/4layer_system/report_01_completion_summary_260416.md` | Sprint 0~6 결과 |
-| v1 vs v2 비교 | `docs/_claude/4layer_system/report_02_v1_vs_v2_architecture_260416.md` | 변경점 상세 |
-| 파일 매핑 | `docs/_claude/4layer_system/report_03_file_structure_mapping_260416.md` | 파일 이동/rename |
-| Sprint 실행 로그 | `docs/_claude/4layer_system/sprint*_result_*.md` | 라운드별 결과 |
 | Pydantic 코드 | `backend/app/dream_agent/schemas/` | 구현 진실 소스 (§6.2 참조) |
-| Team 카탈로그 | `backend/app/dream_agent/planning/catalog/team_catalog.yaml` | 3-level 계층 정의 |
+| Team 카탈로그 | `backend/app/dream_agent/planning/catalog/team_catalog.yaml` | 3-level 계층 정의 (도메인 추출 후 빈 골격) |
 | LLM 프롬프트 | `backend/app/dream_agent/llm_manager/prompts/*.yaml` | cognitive/planning/response |
 
 ---
 
-## 11. 변경 이력
+## 변경 이력
 
-| 버전 | 날짜 | 변경자 | 변경 내용 |
-|------|------|--------|----------|
-| v1.0 | 2026-03-31 | 도윤 | 초기 작성. 4-Layer + Manager 전체 구조 |
-| v1.02 | 2026-04-09 | 도윤 | data_analysis_agent 3분리 (collection/preprocessing/analysis) |
-| v1.03 | 2026-04-09 | 도윤 | pdf_agent 신설(7 Agent), POC/MVP/자동화 로드맵 흡수 |
-| v1.04 | 2026-04-10 | 도윤 | 논리 검증 전체 7 agent 순서, ToolRegistry 인터페이스 명세, SystemGraphConfig rename |
-| v1.05 | 2026-04-13 | 도윤 | v1.3 최종. Intent 모델 기반 |
-| v1.4 | 2026-04-16 | 도윤 + Sprint 0~6 | **대규모 업데이트 — v2 재설계 공식화**: StructuredQuery 도입, TaskType 17 enum, 3-Level Team/Agent/Tool 계층, AgentPool Eager Init, DAG 기반 병렬 실행 자동 추론, ExecutionStrategy enum 제거, Scheduler 레이어 미도입 결정, Planning 4-Step, Stub Tool mock 처리, 3-Tier 스케일링 전략, 정직성 원칙, 학습 데이터 축적 계획, preprocessing 체인 필수 규칙 (Sprint 6) |
-| v1.4.1 | 2026-04-16 | 도윤 + Sprint 7~8 | Sprint 7: 50 쿼리 E2E 회귀 76% 통과. Sprint 8: stage 파일 분리 + builder 축약. |
-| **v1.5** | **2026-04-17** | **도윤 + Sprint 9** | **Sprint 9-1**: LLM 모델 gpt-4o → GPT-5.4 mini/nano 레이어별 분기 (비용 77%↓, 속도 22%↑). 3모델 비교 테스트(gpt-5/5.4-mini/5.4-nano × 단순/복잡 10쿼리) 기반 선정. client.py에 `max_completion_tokens` GPT-5+ 호환 추가. <br>**Sprint 9-2**: Planning 3계층 프롬프트 도입 (단일 13KB → Stage1 팀/Stage2 Agent/Stage3 Todo 분리). 복잡 쿼리 통과율 4/5 → 5/5. 기존 planning.yaml → planning_legacy.yaml 보존. |
-| **v1.6** | **2026-04-19** | **도윤 + Sprint 10~12** | **Sprint 10~11**: AsyncPostgresSaver 연결 — Checkpointer 정식 사용, `thread_id`로 interrupt resume. <br>**Sprint 12**: HITL Manager를 **PM/HITL Layer**로 승격. Executor는 Phase 단위 실행자(`execute_phase`)로 단순화. `hitl.should_continue()` 루프, `ExecutionProgress` Checkpoint 영속화, Cascade 무효화(`todo_manager.calculate_cascade`), interrupt 분기(plan_review/execution_pause), 자동 우회(cognitive/planning 중 pause → plan_review 자동 approve), WebSocket 이중 채널(/ws/agent + /ws/hitl). `AgentState.execution_progress` 추가. <br>**Sprint 13~15 로드맵 추가**: 13(Session/Thread 재설계 ~6h), 14(HITL 고도화 ~13h), 15(Memory 채팅 저장/불러오기 ~15h). Feedback/Learning은 범위 밖. |
-| **v1.7** | **2026-04-21** | **도윤 + Sprint 13 Integration I6~I10f** | **Sprint 13 Foundation(T1~T5) + Integration(I6~I10f) 완료 반영** (102/102 non-live + 5/5 live 개별 pass). <br>**T1~T5 신규 인프라**: `ConnectionManager`(user_id fan-out), `ConcurrencyManager`(슬롯 제어), `thread_id` 헬퍼(`f"{conv}_{turn}"`), `history_injector`(Cognitive context 주입), Settings 7필드. <br>**I6~I10f 통합**: (I6) `AgentState` Sprint 13 필드 + `init_agent_state` 헬퍼. (I7) `hitl_manager.wait_for_resume/signal_resume/cleanup_turn` (asyncio.Queue FIFO — Event race 해결). (I8) `prepare_cognitive_prompt` + history 주입. (I9) `/ws/hitl` conn_manager + turn_id 라우팅 + cancel 타입. (I10a~f) `/ws/agent` `type: "query"` 신 경로 + `run_turn` task 분리 + `_graph_runner_with_resume` resume 루프 + 예외 처리 + finally cleanup + E2E live. <br>**Session/Thread 식별 체계 확정**: user_id/conversation_id/turn_id 분리, session_id는 deprecated alias. <br>**§4.2 Manager 목록 갱신**(ConnectionManager/ConcurrencyManager 추가), §4.5 WS 이중 채널에 Sprint 13 query 경로 섹션(§4.5.1~3) 추가, §5.2 AgentState 스키마 Sprint 13 필드 반영. <br>**Sprint 13 I11~I12 계획**: `docs/_claude/checkpointer/sprint13_i11_i12_plan.md` v1.2 — run_turn 이벤트 보강 + layer guard + dashboard 재작성 + Sprint 12 regression (추정 9.5~13h). <br>파일명 정리: `..._v1.5.md` → `..._v1.7.md` (내부 버전 일치). |
-| **v1.8** | **2026-04-22** | **도윤 + Sprint 13 I11~I12 + Sprint 14 A1** | **Sprint 13 Integration 완전 종료** (137/137 non-live + 6/6 live + Contract Test 5/5). I11-a run_turn 이벤트 보강 / layer guard / dashboard 재작성 / I11-b 재작성 / I12 regression + R-9~R-12 + Doc-Code Contract Test 도입. <br>**Sprint 14 A1 HITL resume timeout 완료** (2026-04-22, 175 pass + 브라우저 R-13/14/15 전수 pass + 실 Checkpoint 종결 증명 HTL-01/02). HITLManager `_active_turns`/`register_turn`/`is_turn_active` 신규 + `wait_for_resume(timeout=)` 확장 + `cleanup_turn` 3구조 정리 (CS-2). ws_hitl 4종 가드 (pause/resume/cancel/hitl_response). ws_agent register_turn + intr_type 별 reject/cancel 주입 (G-11) + structured log (G-12). Settings `HITL_RESUME_TIMEOUT_SEC=1800` + `.env` override. Dashboard UX-4/5 (한글 매핑 + hitl_ack 토스트). <br>**Sprint 14 A1~A4 라벨 재정의** (master plan 기준): A1 resume timeout(완료) / A2 phase 세밀 pause / A3 Todo 편집 / A4 requires_approval. v1.6 의 "자연어 Todo 수정" 등 구 라벨은 무효. <br>**관련 문서 6개 bump**: 01 v1.2 / 12 v1.1 / 13 v1.2 / 20 v1.1 / 21 v1.2 / 24 v1.2. 보고서: docs/reports/sprint14_a1_completion_report.md |
-| **v1.9** | **2026-04-23** | **도윤 + Sprint 14 A3 Phase 6** | **Sprint 14 A3 Y-a (Structured + NL 편집 HITL) 반영.** §4.3.3 `CascadeResult` D1=E drift 정리: `preserved_todos: list` → `preserved_results: dict`, `new_plan: dict` 필드 추가, `restart_from` 은 UX 라벨 전용 명시. §4.3.5 `Plan Editor` 신설 — LLM 기반 자연어 편집 (`parse_instruction`/`apply_edit (reorder 신구현)`/`validate_edit`) + D-13 prompt injection 방어 (`MAX_INSTRUCTION_LEN=500` + `_sanitize`). ws_hitl `_handle_todo_edit_nl` dict ↔ Pydantic Plan 변환 레이어 (Sprint 14 A3 Phase 3). 상세: docs/_claude/sprint14_a3_plan.md v0.4 |
-| **v1.9.1** | **2026-05-27** | **도윤 + Sprint 16 Data Layer Separation** | **ADR-022 Accepted 박제** (§7.7 신설). Tool ↔ Data 사이 "관절" — `backend/app/data_sources/` (DataSource Repository ABC + FileDataSource Adapter) + `backend/app/workspace/` (WorkspaceBackend ABC + FileWorkspace) 신설. dream_agent 형제 배치 (agent + 직접 API 둘 다 공유). 46 tool DataSource DI 일괄 전환 (25 cleaning/metrics/preprocessing/normalization/comparison + 21 collection). `ExecutionContext.client_id` 추가 (`?client=` param ↔ 동적 분기). `/api/dashboard1/*` (20 endpoint) + `/api/admin/{catalog, clients}` direct API 신설 — frontend 가 cleaned/computed 값 직접 호출 (agent 우회) 가능. 사용자 P1·P2·P3 원칙 (memory `project_tool_data_agent_separation`) 의 구현. 진화 경로 POC FileDataSource → MVP PostgresDataSource → Prod MultiSource 동일 ABC. Sprint 16 13 commits (ba242c7 ~ f7de6c4) + G1 cleaning tag 정리 (c450330) + G2 옛 보고서 outdated 마커 (38528a5) 누적. |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

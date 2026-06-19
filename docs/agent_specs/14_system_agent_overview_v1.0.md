@@ -8,9 +8,9 @@
 | 버전 | **v1.0** |
 | 최종 수정일 | 2026-04-24 |
 | 독자 | 실행 에이전트(Tool)를 확장·추가하려는 개발자, 시스템 동작을 한눈에 파악하고 싶은 신규 인입자 |
-| 관련 명세 | `10_system_architecture_v1.9.md`, `12_manager_layer_v1.4.md`, `21_WEBSOCKET_PROTOCOL_v1.5.md`, `32_execution_agent_tools_v1.0.md` |
+| 관련 명세 | `10_system_architecture_v1.9.md`, `12_manager_layer_v1.4.md`, `21_WEBSOCKET_PROTOCOL_v1.5.md` |
 
-**목적**: Cognitive / Planning / Execution / Response 4 레이어로 구성된 **시스템 에이전트(=OS 에이전트)** 가 어떻게 한 Turn을 처리하는지, 각 레이어의 책임·입출력·의존성·현재 구현 상태를 **단일 문서**로 설명한다. 실행 에이전트(Tool) 확장 문서([32_execution_agent_tools_v1.0.md](32_execution_agent_tools_v1.0.md))의 선행 문서.
+**목적**: Cognitive / Planning / Execution / Response 4 레이어로 구성된 **시스템 에이전트(=OS 에이전트)** 가 어떻게 한 Turn을 처리하는지, 각 레이어의 책임·입출력·의존성·현재 구현 상태를 **단일 문서**로 설명한다. 실행 에이전트(Tool) 확장의 선행 문서.
 
 ---
 
@@ -21,7 +21,7 @@
 | 용어 | 의미 | 구현 위치 |
 |------|------|-----------|
 | **시스템 에이전트** (= OS Agent) | 사용자 자연어 → 구조화 → 계획 → 실행 → 응답의 **전체 오케스트레이션**. LangGraph 4-Layer 파이프라인 + Manager Layer. | [backend/app/dream_agent/](../../backend/app/dream_agent/) 전체 |
-| **실행 에이전트** (= Tool) | 계획된 Todo 하나를 실제로 수행하는 **원자 단위 함수**. collector / preprocessor / analyzer / writer 등. | [backend/app/dream_agent/tools/](../../backend/app/dream_agent/tools/) |
+| **실행 에이전트** (= Tool) | 계획된 Todo 하나를 실제로 수행하는 **원자 단위 함수**. (도구 카탈로그는 현재 비어 있음 — `tools/{registry,base_tool,llm_tool}` 프레임워크만 존재.) | [backend/app/dream_agent/tools/](../../backend/app/dream_agent/tools/) |
 
 > **비유**: 시스템 에이전트 = OS 커널(스케줄링·자원·대화 주기 관리) / 실행 에이전트 = 프로세스(각자 계산만).
 >
@@ -97,11 +97,13 @@
 
 ```
 StructuredQuery
-├─ targets   : 누가/어느 브랜드/어느 제품/어느 기간
-├─ goal      : 왜 (type: ANSWER|METRIC|INSIGHT|REPORT|CREATIVE, depth, output_format)
-├─ tasks     : 무엇을 (TaskType enum × priority)
+├─ targets   : 누가/어느 대상/어느 기간 (brand/product/source 등)
+├─ goal      : 왜 (GoalType enum: answer|metric|insight|report|creative|mixed, depth, output_format)
+├─ tasks     : 무엇을 (TaskType id × priority)
 └─ meta      : 신뢰도, ambiguity, missing fields, 원문, 언어
 ```
+
+> **TaskType / Source 는 open-vocab(자유 문자열)** — 고정 enum 이 아니다. 예시 값: `data_collection`, `metric_calculation`, `analysis`, `comparison`, `insight_generation`, `summary_generation`, `report_generation`, `recommendation`, `factual_lookup`.
 
 > **MEMORY 상기**: *Cognitive = 자연어→정형쿼리 번역기*. Cognitive 출력 스키마가 시스템의 **핵심 계약**. 여기가 부실하면 뒤가 다 흔들림.
 
@@ -129,7 +131,7 @@ StructuredQuery
 **3-Stage 내부 흐름**:
 
 ```
-Stage 1: _select_teams()    팀 선택 LLM (analysis/qa/decision — creative_team 은 2026-06-12 폐기)
+Stage 1: _select_teams()    팀 선택 LLM (analysis/qa/decision 등)
 Stage 2: _select_agents()   선택된 Team 내 Agent 후보 선별
 Stage 3: _build_todos()     Todo 리스트 + DAG + 프롬프트 rationale
            ↓
@@ -148,7 +150,7 @@ Plan       : plan_id, todos[], dag{id→[deps]}, teams_selected, strategy, merma
 **Status**: ✅ **complete** (Sprint 9-2 hierarchical 설계 완료)
 
 **추가 구현 필요 — Sprint 14 A4**:
-- `requires_approval: bool` 필드는 이미 모델에 있으나, **Execution 단계의 pre-execution interrupt** 가 아직 미구현. A4에서 PDF/이미지/영상/외부 API 호출 Tool 에 대해 Phase 시작 전 승인 요구 interrupt 추가 예정.
+- `requires_approval: bool` 필드는 이미 모델에 있으나, **Execution 단계의 pre-execution interrupt** 가 아직 미구현. A4에서 고비용·외부 사이드이펙트 Tool 에 대해 Phase 시작 전 승인 요구 interrupt 추가 예정.
 
 ---
 
@@ -202,7 +204,7 @@ execution_stage(state)
 - ⏳ Phase-level pause 세분화 (Sprint 14 A2)
 - ⏳ `requires_approval` pre-exec interrupt (Sprint 14 A4)
 
-**디테일은 [32_execution_agent_tools_v1.0.md](32_execution_agent_tools_v1.0.md) 참조.**
+**디테일은 실행 에이전트(Tool) 확장 가이드 참조.**
 
 ---
 
@@ -235,7 +237,7 @@ ResponsePayload
 
 **Status**: ✅ **complete** (Sprint 4)
 
-**놓치기 쉬운 점**: `attachments[].path` 는 **서버 로컬 경로**, `url` 은 **배포 URL** 이다. PDF/이미지 Tool 확장 시 둘 다 채울지, 하나만 채울지 합의 필요.
+**놓치기 쉬운 점**: `attachments[].path` 는 **서버 로컬 경로**, `url` 은 **배포 URL** 이다. 파일 산출 Tool 확장 시 둘 다 채울지, 하나만 채울지 합의 필요.
 
 ---
 
@@ -295,7 +297,7 @@ LangGraph `interrupt()` 호출 시 checkpoint 저장 후 해당 노드에서 중
 
 | Manager | 책임 | 파일 | Status |
 |---------|------|------|--------|
-| **ConnectionManager** | WS 연결 등록, user 단위 fan-out broadcast, 죽은 WS 청소 (MAX 5/user) | `connection_manager.py` (api_v2 쪽) | ✅ |
+| **ConnectionManager** | WS 연결 등록, user 단위 fan-out broadcast, 죽은 WS 청소 (MAX 5/user) | `connection_manager.py` (api 쪽) | ✅ |
 | **ConcurrencyManager** | user 당 동시 Turn ≤ 3 슬롯 제한 (`try_acquire` / `release`) | [concurrency_manager.py](../../backend/app/dream_agent/workflow_managers/concurrency_manager.py) | ✅ |
 | **CallbackManager** | Executor → WS bridge. `register(turn_id, cb)` + `emit(event)` | [callback_manager/](../../backend/app/dream_agent/workflow_managers/callback_manager/) | ✅ |
 | **HITLManager** | 승인 대기 (`wait_for_resume`), 진행률 PM (`create_progress`), Todo 편집 (`handle_todo_*`), 타임아웃, per-session Lock | [hitl_manager/](../../backend/app/dream_agent/workflow_managers/hitl_manager/) | ✅ (Sprint 14 A1/A3) |
@@ -423,7 +425,7 @@ fatal → `complete(status="aborted", reason=<code>)`. warning → 최종 comple
 
 이전 본 문서는 `Plan` 이 [planning/planner.py](../../backend/app/dream_agent/planning/planner.py) 와 `models/plan.py` 두 곳에 존재함을 함정으로 지적하고 "Sprint 15 숙제" 로 남겼음. **2026-04-30 ADR-010 단일화 결정 + 2026-05-15 후속 정리 (models/ cleanup A3)** 로 `models/plan.py` 가 통째로 삭제되어 **`Plan` 은 `planner.py` 한 곳만 존재**.
 
-추가로 `TodoItem` (`models/todo.py`) 도 함께 제거됨 — 활성 todo 모델은 `planner.PlannedTodo` 단 1개. 상세 = [ADR-010](adr/ADR-010_plan_schema_unification.md) §"2026-05-15 후속 정리".
+추가로 `TodoItem` (`models/todo.py`) 도 함께 제거됨 — 활성 todo 모델은 `planner.PlannedTodo` 단 1개.
 
 ### 9.2 ~~`ExecutionResult` 스키마도 두 곳~~ — ✅ **해소 (2026-05-15)**
 
@@ -473,11 +475,11 @@ Stub Tool 은 `mock_result()` 가 "그럴듯한" 데이터를 반환해서 DAG �
 
 ## 10. 실행 에이전트 확장 시 되돌아볼 것들
 
-실행 에이전트(Tool) 추가는 [32_execution_agent_tools_v1.0.md](32_execution_agent_tools_v1.0.md) 의 checklist 를 따르되, 시스템 에이전트 관점에서 **특히** 확인할 사항:
+실행 에이전트(Tool) 추가는 실행 에이전트 확장 가이드의 checklist 를 따르되, 시스템 에이전트 관점에서 **특히** 확인할 사항:
 
 1. **Planning 카탈로그 등록** — `planning/catalog/team_catalog.yaml` 에 해당 Agent 의 tools 목록에 추가하지 않으면 Planner 가 절대 선택 못함. (Tool YAML 만 있어도 실행은 되지만, **계획되지 않음**.)
 2. **Status marker 일관성** — Tool YAML `status` == `.py` docstring `Status:` == AgentPool `is_tool_implemented()` 판별 결과 일치.
-3. **Produces 선언** — Tool YAML `produces` 키. 다음 Tool 이 `find_in_previous()` 로 꺼내 쓸 수 있어야 함. 네이밍 컨벤션 일치 중요 (e.g. `raw_reviews`, `normalized_reviews`, `cleaned_texts`, `sentiment_distribution`, `top_keywords`, `insights`, `report_text`).
+3. **Produces 선언** — Tool YAML `produces` 키. 다음 Tool 이 `find_in_previous()` 로 꺼내 쓸 수 있어야 함. 네이밍 컨벤션 일치 중요 (e.g. `raw_records`, `normalized_records`, `cleaned_items`, `count`, `total`, `rate`, `insights`, `report_text`).
 4. **requires_approval** — 고비용 / 외부 사이드이펙트 Tool 이면 `True`. Sprint 14 A4 이후 pre-exec interrupt 발동.
 5. **Mermaid & visualization** — Planning 이 출력하는 mermaid_diagram 은 대시보드 시각화에 쓰임. Tool 이름이 이상하면 diagram 이 지저분해짐.
 6. **Cancel/Pause safety** — Phase 내 asyncio.gather 는 중단 불가. 긴 작업 Tool 은 **Phase 단독 배치** 권장. (A2 가 세분화하기 전까진 이 제약 유지.)
@@ -500,14 +502,9 @@ Stub Tool 은 `mock_result()` 가 "그럴듯한" 데이터를 반환해서 DAG �
 | [22_error_codes_v1.1.md](22_error_codes_v1.1.md) | Error Codes | 11 code 카탈로그 |
 | [24_sequence_diagrams_v1.3.md](24_sequence_diagrams_v1.3.md) | Sequence Diagrams | 10 시나리오 |
 | [30_DATA_MODELS_v1.1.md](30_DATA_MODELS_v1.1.md) | Data Models | Pydantic schema 전수 |
-| [31_execution_agent_function_list_v0.6.md](31_execution_agent_function_list_v0.6.md) | Execution Agent Function List | 7 Agent × Tool 후보 목록 (요구사항) |
-| **32** ([execution_agent_tools_v1.0.md](32_execution_agent_tools_v1.0.md)) | **Execution Agent Tools** | **실행 에이전트 구현 현황 & 확장 가이드** |
 
 ---
 
 ## 변경 이력
 
-| 버전 | 날짜 | 변경 |
-|------|------|------|
-| v1.0 | 2026-04-24 | 최초 작성 — 32 문서와 짝으로, 4-Layer 전체 지도 정립 |
-| v1.0 (정리 반영) | 2026-05-15 | §9.1/9.2 함정 항목을 ✅ 해소로 갱신 — `Plan`/`ExecutionResult` 이름 충돌 해소 (ADR-010 + models/ cleanup A1~A7). `models/plan.py`/`todo.py`/`approval.py`/`intent.py`/`models/execution.py::ExecutionResult` + 7 enum + `_old_v1/` 삭제. 상세 = ADR-010 §"2026-05-15 후속 정리" |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

@@ -13,7 +13,7 @@
 
 ## 0. 본 문서의 역할
 
-OctorAD Frontend 의 **전체 그림** — Tech Stack 결정 / Vision UX 원칙 / Sprint 단위 Roadmap.
+DreamAgent Frontend 의 **전체 그림** — Tech Stack 결정 / Vision UX 원칙 / Sprint 단위 Roadmap.
 
 60대 다른 문서들 (61/62/63) 은 본 문서를 진입점으로 한다. 60 은 "**무엇을 / 왜 / 언제**", 다른 문서는 "**어떻게**".
 
@@ -61,7 +61,7 @@ OctorAD Frontend 의 **전체 그림** — Tech Stack 결정 / Vision UX 원칙 
 
 | 카테고리 | 선택 | 패키지 | 버전 |
 |---------|------|--------|------|
-| (2026-05-13 v1.1) | Layout 패턴 | v1 GlobalLayout (TopBar + Sidebar + Outlet + SideChatPanel 호출형) | [기존 frontend_old](../old/frontend_old/) 검증 |
+| (2026-05-13 v1.1) | Layout 패턴 | v1 GlobalLayout (TopBar + Sidebar + Outlet + SideChatPanel 호출형) | v1 frontend 검증 |
 | (2026-05-13 v1.1) | 데이터 source (POC) | mock CSV → 백엔드 mock API 서빙 | [data/description/mock/INDEX.md](../../data/description/mock/INDEX.md) |
 | **빌드** | Vite | `vite` | ^5 |
 | **프레임워크** | React 19 | `react`, `react-dom` | ^19 |
@@ -263,7 +263,7 @@ frontend/
 | 백엔드 (진실 소스) | Frontend 측 (계약 검증) |
 |-------------------|----------------------|
 | `backend/app/core/error_codes.py` | `frontend/src/api/error_codes.ts` (zod) |
-| `backend/api_v2/ws_*.py` 메시지 | `frontend/src/api/schemas.ts` (zod) |
+| `backend/api/ws_*.py` 메시지 | `frontend/src/api/schemas.ts` (zod) |
 | `21_WEBSOCKET_PROTOCOL_v1.5.md` | 63 Frontend Backend Contract (예정) |
 | `planner.Plan / PlannedTodo` | `frontend/src/api/schemas.ts` Plan/Todo zod |
 
@@ -310,10 +310,6 @@ frontend/
 
 ---
 
-## 10. 변경 이력
+## 변경 이력
 
-| 버전 | 날짜 | 내용 |
-|------|------|------|
-| v1.0 | 2026-05-12 | 초안 — vision H1~H4 매핑 + 5 UX 원칙 + Tech Stack 결정 (옵션 A 트렌드 적극) + 7 Sprint roadmap (W1~W4 Workflow Canvas Phase 매핑) + 학습 곡선 (~3주) + 보안 / 호환성 / Risk. 60대 진입점 역할. _claude/new_frontend/ 14 문서를 정제 |
-| v1.1 | 2026-05-13 | **Layout 패턴 변경** — v1 GlobalLayout (TopBar + Sidebar + Outlet + SideChatPanel 호출형) 채택. 기존 Conversation-first 에서 Dashboard + Side Chat 으로 정정. 사용자 통찰 "동료 화면 + 채팅 지시". **데이터 source 결정** — POC = data/mock/ 12 CSV → 백엔드 mock API. spec 66 신규 (v1→v2 migration map) 참조 |
-| v1.1 (검증 정정) | 2026-05-15 | **프론트 통합 전 문서↔실제 코드 검증 (사이클 3).** §2.1/§2.4 Tailwind 버전 정정 — 문서는 v4 라 했으나 `frontend/package.json` 실제 = `tailwindcss ^3.4.0`. 라우터는 `@tanstack/react-router ^1.45` 로 이미 결정됨 (문서의 "또는 React Router v7 — PoC 후 결정" 은 해소된 상태). 상세: `reports/agent_specs_verification_2026-05-15.md` §사이클3 |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

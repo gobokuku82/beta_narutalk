@@ -1,4 +1,4 @@
-# OctorAD Dream Agent V2 — Frontend
+# DreamAgent — Frontend
 
 Vite + React 19 + TypeScript strict + Tailwind v4 + shadcn/ui + Zustand + TanStack Query + React Flow.
 
@@ -15,7 +15,7 @@ pnpm dlx shadcn@latest init
 pnpm dlx shadcn@latest add button dialog dropdown-menu input select tabs tooltip toast resizable sheet form card badge separator scroll-area
 
 # 백엔드 서버 먼저 기동 (다른 터미널)
-cd ../backend && uv run python run_server_v2.py
+cd ../backend && uv run python run_server.py
 
 # Dev 서버
 pnpm dev

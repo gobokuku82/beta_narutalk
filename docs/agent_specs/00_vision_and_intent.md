@@ -1,4 +1,4 @@
-# OctorAD Dream Agent V2 — Vision & Intent
+# DreamAgent V2 — Vision & Intent
 
 | 항목 | 내용 |
 |------|------|
@@ -17,9 +17,7 @@
 다른 문서가 모호할 때 본 문서를 참조. 본 문서는 vision (최상위) 이라 자주 변경되지 않음. 변경 시 모든 하위 문서 영향 검토 필수.
 
 본 문서가 다루지 않는 것:
-- 세부 시스템 spec (→ `docs/agent_specs/01_~32_*.md`)
-- ADR (→ `docs/agent_specs/adr/`)
-- 검증 결과 / 결산 (→ `docs/reports/`)
+- 세부 시스템 spec (→ `docs/agent_specs/` 하위 번호 문서)
 
 ---
 
@@ -48,11 +46,11 @@
 > 사용자는 자기 의도를 처음부터 명확하게 표현하지 못한다. 의도는 대화를 통해 명확해진다.
 
 **측정 지표 후보**:
-- 첫 쿼리에 필수 정보 (brand / channel / 기간 등) 누락 비율
+- 첫 쿼리에 필수 정보 (entity / source / 기간 등) 누락 비율
 - 사용자가 시스템 응답을 보고 의도를 정정 / 보완하는 빈도
 - "내가 원한 건 이거야" 같은 사용자 자기 발견 신호
 
-**현 상태**: ✅ **R-8 첫 시도로 입증** — 사용자가 "리뷰 수집한 후..." 쿼리에 brand 누락 → naver_collector KeyError fatal. brand 명시한 쿼리로 재시도 시 성공. 즉 **사용자가 처음부터 brand 가 필요한지 인지 못함**.
+**현 상태**: ✅ **R-8 첫 시도로 입증** — 사용자가 "데이터 수집한 후..." 쿼리에 필수 entity 누락 → `<collector>` KeyError fatal. entity 명시한 쿼리로 재시도 시 성공. 즉 **사용자가 처음부터 필수 entity 가 필요한지 인지 못함**.
 
 → H0 = H1 의 **전제**. H0 가 참이라야 H1 (발견 가치) 의미 있음.
 
@@ -65,7 +63,7 @@
 - 사용자 편집 횟수 (편집 = 발견의 흔적)
 - "이걸 찾고 싶었어" 같은 사용자 만족 신호
 
-**현 상태**: 이번 R-5~R-7 검증으로 **부분 입증** — 사용자가 plan review 단계에서 의도 발견 (예: "format_normalizer 삭제하면 안 되는구나")
+**현 상태**: 이번 R-5~R-7 검증으로 **부분 입증** — 사용자가 plan review 단계에서 의도 발견 (예: "이 선행 단계는 삭제하면 안 되는구나")
 
 ### 가설 H2 — 학습 가설
 
@@ -73,7 +71,7 @@
 
 **측정 지표 후보**:
 - 학습 데이터 캡처율 (대화 / 편집 / 답변 기록 누락 0)
-- 패턴 추출 성공률 (예: "이 사용자는 항상 brand=블루밍글로우" 자동 학습)
+- 패턴 추출 성공률 (예: "이 사용자는 항상 entity=<특정 값>" 자동 학습)
 - 패턴 적용 후 사용자 만족 향상
 
 **현 상태**: 메모리 시스템 **미구현**. 학습 데이터 캡처 = 0%. CAP-001 으로 식별됨.
@@ -136,7 +134,7 @@ H0 의도 모호성 (전제)
 |---------------|------------|------------|
 | 4layer (cognitive-planning-execution-response) | `backend/app/dream_agent/{cognitive,planning,execution,response}/` | ✅ 일치 |
 | 시스템 에이전트 = 4layer + manager | 코드 구조 일치 | ✅ 일치 |
-| 실행 (기능) 에이전트 = tool | `tools/catalog/` (8 tool) | ✅ 일치 |
+| 실행 (기능) 에이전트 = tool | `tools/{registry,base_tool,llm_tool}` (카탈로그 비어있음) | ✅ 일치 |
 | Manager: hitl | `workflow_managers/hitl_manager/` | ✅ 구현됨 |
 | Manager: todo | `workflow_managers/todo_manager/` | ✅ 구현됨 |
 | Manager: memory | `workflow_managers/memory_manager/` | 🟡 폴더 + `__init__.py` 만 (placeholder) |
@@ -184,8 +182,6 @@ Sprint 14 A3 R-1~R-8 + R-16 검증 + 9 ISSUE 누적으로 측정된 **vision ↔
 ### 4.3 측정된 한계 (POC 1차의 진짜 산출물)
 
 > 사용자가 시스템 도메인 지식 (DAG / schema / tool catalog) 가져야만 직접 편집이 안전 — 비현실적 가정.
-
-상세: [`docs/reports/sprint14_a3_known_issues.md`](reports/sprint14_a3_known_issues.md) §종합 인사이트 + [`docs/reports/sprint14_a3_poc1_settlement.md`](reports/sprint14_a3_poc1_settlement.md) §4
 
 ---
 
@@ -253,23 +249,13 @@ H0~H4 가설을 어느 순서로 검증·구현할지.
 ```
 docs/agent_specs/00_vision_and_intent.md  ← 본 문서 (north star)
    │
-   ├─ docs/agent_specs/INDEX.md (spec 카탈로그)
-   │     ├─ 01_requirements (사용자 5항목 — 본 문서 §1 의 한 시점 표현)
-   │     ├─ 02_architecture
-   │     ├─ 12_manager_layer
-   │     ├─ 30_DATA_MODELS (Pydantic)
-   │     ├─ 35_DB_SCHEMA (DB ERD — Sprint 15 P0 baseline)
-   │     ├─ ...
-   │     └─ adr/INDEX.md
-   │           ├─ ADR-002 NL (vision 자유 대화)
-   │           ├─ ADR-010 schema (vision 도구)
-   │           └─ ADR-015 메모리 + 자유 대화 (vision 본격)
-   │
-   ├─ docs/reports/sprint14_a3_poc1_settlement.md (POC 1차 결산)
-   │     └─ §4 본질 패턴 = 본 문서 §4 와 일관
-   │
-   └─ docs/reports/sprint14_a3_poc1_deliverables.md (산출물 계획)
-         └─ Phase B/C/D = 본 문서 §6 의 우선순위 실행
+   └─ docs/agent_specs/ (spec 카탈로그)
+         ├─ 01_requirements (사용자 5항목 — 본 문서 §1 의 한 시점 표현)
+         ├─ 10_system_architecture
+         ├─ 12_manager_layer
+         ├─ 30_DATA_MODELS (Pydantic)
+         ├─ 35_DB_SCHEMA (DB ERD — Sprint 15 P0 baseline)
+         └─ ...
 ```
 
 **참조 규칙**:
@@ -301,9 +287,4 @@ docs/agent_specs/00_vision_and_intent.md  ← 본 문서 (north star)
 
 ## 변경 이력
 
-| 날짜 | 내용 |
-|------|------|
-| 2026-04-28 | 초안 — 사용자 §1 / §3 verbatim + Claude §2 (가설 H1~H4) / §4 (gap) / §7 (ADR 매핑). §5 / §6 사용자 검토 대기. POC 1차 결산 + 산출물 계획서와 일관 |
-| 2026-04-28 | 위치 변경: `docs/00_vision_and_intent.md` → `docs/agent_specs/00_vision_and_intent.md` (사용자 결정 — agent_specs 폴더 최상단으로) |
-| 2026-04-28 | **v1.0 lock** — 사용자 검토 통과 (1/3/6 ✅, 2 H0 추가, 4 확장성 추가, 5 권고대로). H0 의도 모호성 가설 추가 (§2). 확장성 비기능 요구 추가 (§5). H0 0순위 추가 (§6). §9 결과 박제 |
-| 2026-04-29 | §5 비기능 요구에 **"확장/변경 용이성"** 추가 (사용자 통찰 — schema 결정은 가설, 진화 쉬운 구조 우선). 35 spec §0.1 의 5 원칙으로 구체화 |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

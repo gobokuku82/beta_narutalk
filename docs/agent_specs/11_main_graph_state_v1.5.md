@@ -9,14 +9,14 @@
 | 최종 수정일 | 2026-04-22 |
 | State 클래스 | `AgentState` (TypedDict) |
 | 코드 위치 | `backend/app/dream_agent/states/agent_state.py` |
-| Reducer 위치 | **🔒 보류 (2026-04-22)** `backend/app/dream_agent/states/reducers.py` — Sprint 14 A1 Plan 수립 중 writer 전수 조사 결과 **실 다중 writer race 부재 확인**. Tool 확장 / LangGraph fan-out 실 관찰 시 재평가. 설계 자산은 `docs/_claude/sprint14_reducer_plan.md` 보존. 현재는 LangGraph 기본 동작(last-writer-wins) 사용 |
+| Reducer 위치 | **🔒 보류 (2026-04-22)** `backend/app/dream_agent/states/reducers.py` — Sprint 14 A1 Plan 수립 중 writer 전수 조사 결과 **실 다중 writer race 부재 확인**. Tool 확장 / LangGraph fan-out 실 관찰 시 재평가. 현재는 LangGraph 기본 동작(last-writer-wins) 사용 |
 | 이전 버전 | v1.4 (2026-04-21), v1.3 (2026-04-19) |
 
 > **v1.4 What's New** (Sprint 13 Integration I6~I10f 완료)
 > - Sprint 13 필드(`user_id`, `conversation_id`, `turn_id`, `conversation_history`, `history_limit`) **현역 필드로 전환** (Sprint 13 I6 구현 완료)
 > - `init_agent_state()` 헬퍼 함수 도입 — Settings fallback + `session_id = turn_id` alias 자동 동기화
 > - `session_id` **deprecated alias** 공식화 — 외부 계약은 `turn_id` 사용, 내부 변수만 alias로 유지
-> - LangGraph Checkpointer 키 = `thread_id = f"{conversation_id}_{turn_id}"` (헬퍼: `api_v2.thread_id.make_thread_id`)
+> - LangGraph Checkpointer 키 = `thread_id = f"{conversation_id}_{turn_id}"` (헬퍼: `api.thread_id.make_thread_id`)
 > - Reader/Writer 매트릭스에 Sprint 13 신규 필드 행 추가
 > - 초기 State 값을 `init_agent_state()` 기준으로 갱신
 >
@@ -79,7 +79,7 @@
 | `session_id` (deprecated) | = turn_id alias. 내부 변수만 유지 | (turn_id 값과 동일) | Sprint 12 코드 호환 |
 
 **헬퍼**:
-- `api_v2.thread_id.make_thread_id(conversation_id, turn_id)` → thread_id 조합
+- `api.thread_id.make_thread_id(conversation_id, turn_id)` → thread_id 조합
 - `app.dream_agent.states.agent_state.init_agent_state(...)` → state 초기화 (Settings fallback + alias 동기화)
 
 ### 2.0-b Deprecated 필드 (v1 잔재, v2 코드 미사용)
@@ -133,7 +133,7 @@
 plan: dict = {
     # 기존 (v1.0)
     "plan_id": str,                    # Plan UUID
-    "intent_summary": str,             # "블루밍글로우 네이버 리뷰 감성 분석"
+    "intent_summary": str,             # "<entity> 데이터 작업 요약"
     "todos": list[dict],               # TodoItem 리스트 (todos 필드와 동기화)
     "dependency_graph": dict[str, list[str]],  # todo_id → [depends_on_ids]
     "strategy": str,                   # "sequential" | "parallel" | ...
@@ -150,9 +150,9 @@ plan: dict = {
             {
                 "step": int,                   # 1-based
                 "label": str,                  # "데이터 수집"
-                "description": str,            # "네이버에서 블루밍글로우 리뷰 수집"
+                "description": str,            # "<source>에서 <entity> 데이터 수집"
                 "agent": str,                  # "수집 에이전트" (한국어 표시명)
-                "tool": str,                   # "naver_collector"
+                "tool": str,                   # "<collector>"
                 "depends_on_steps": list[int], # [1, 2] (step 번호 참조)
                 "requires_approval": bool,
             },
@@ -177,7 +177,7 @@ planning_result: dict = {
     "generation_trace": {
         "step1_macro_plan": {
             "input": str,           # Intent 요약
-            "output": list[str],    # ["데이터 수집", "전처리", "감성 분석"]
+            "output": list[str],    # ["데이터 수집", "전처리", "분석"]
             "duration_ms": int,
         },
         "step2_todo_decomposition": {
@@ -207,10 +207,10 @@ planning_result: dict = {
 # 예시
 {
     "id": "uuid",
-    "task": "네이버 리뷰 수집",
+    "task": "데이터 수집",
     "agent": "collection_agent",       # ← v1.1 추가
-    "tool": "naver_collector",
-    "tool_params": {"brand": "블루밍글로우", "period": "30d"},
+    "tool": "<collector>",
+    "tool_params": {"entity": "<entity>", "period": "30d"},
     "depends_on": [],
     "priority": 1,
     "status": "pending",
@@ -343,9 +343,9 @@ planning_result: dict = {
 {
     "hitl_type": "agent_trigger",
     "todo_id": "todo_005",           # 어떤 Todo에서 발생했는가
-    "trigger": "image_selection",    # 트리거 식별자
-    "question": "이미지 3장 중 선택해주세요",
-    "options": ["이미지A", "이미지B", "이미지C"],  # 선택지 (없을 수도 있음)
+    "trigger": "option_selection",   # 트리거 식별자
+    "question": "다음 중 선택해주세요",
+    "options": ["A", "B", "C"],      # 선택지 (없을 수도 있음)
     "data": { ... },                 # 사용자에게 보여줄 중간 결과
 }
 ```
@@ -560,11 +560,4 @@ def init_agent_state(
 
 ## 변경 이력
 
-| 버전 | 날짜 | 변경자 | 변경 내용 |
-|------|------|--------|----------|
-| v1.0 | 2026-04-01 | 도윤 | 초기 작성. 현재 코드 기반 AgentState 명세 |
-| v1.1 | 2026-04-10 | 도윤 | §2.1 신설: Planning 산출물 하위 구조 (plan.visualization, planning_result.generation_trace, planning_result.tool_selection_reason). TodoItem에 agent 필드 추가 명시 |
-| **v1.3** | **2026-04-19** | **도윤 + Sprint 12** | **v2 실사용 기준으로 §2 스키마 전면 갱신**. (1) `execution_progress` 필드 신규 — Sprint 12 HITL PM 구조의 핵심 영속화 필드(ExecutionProgress dataclass: phases, current_phase, completed_todos, status, paused_at_phase). (2) v2 코드 실사용 필드 정리(`structured_query`/`plan`/`execution_result`/`response` 단수형 4종). (3) v1 잔재 필드 deprecated 표시(`cognitive_result`/`planning_result`/`execution_results`/`todos`/`response_result`). (4) Sprint 13 예정 필드 명시(`user_id`/`conversation_id`/`turn_id`/`conversation_history`). (5) §3 Reader/Writer 매트릭스에 hitl_manager 컬럼 추가 — `plan`과 `execution_progress` Writer 갱신. |
-| **v1.4** | **2026-04-21** | **도윤 + Sprint 13 Integration** | **Sprint 13 I6~I10f 완료 반영**. (1) Sprint 13 식별 필드(`user_id`/`conversation_id`/`turn_id`/`conversation_history`/`history_limit`) 현역 전환. (2) `init_agent_state()` 헬퍼 도입 — Settings fallback + `session_id = turn_id` alias 자동 동기화. (3) `session_id` deprecated alias 공식화 — 외부 계약은 `turn_id` 사용. (4) §2.0-a Session/Thread 식별 체계 표 신설 — thread_id 조합 규칙 포함. (5) §3 Reader/Writer 매트릭스에 `ws_agent` 컬럼 추가 및 Sprint 13 신규 필드 6행 추가. (6) §8 초기 State — `create_initial_state` → `init_agent_state` 전환. (7) 파일명 정리: `..._v1.2.md` → `..._v1.4.md` (내부 버전 일치). |
-| v1.5 | 2026-04-22 | 도윤 + Sprint 14 A1 | Reducer 위치를 "예정" → "🔒 보류 (Tool 확장 이후 재평가)" 로 변경. Sprint 14 A1 Plan 수립 과정에서 AgentState writer 전수 조사 결과 — plan / execution_result / trace 모두 단일 writer 확인, 다중 writer race 부재. A3 (Todo 편집) 도 hitl_manager 내부 ExecutionProgress mutate 로 처리되어 AgentState reducer 불필요. 재착수 trigger: Tool 확장으로 parallel execution 실 관찰 / LangGraph fan-out 도입. 설계 자산 docs/_claude/sprint14_reducer_plan.md 에 보존 |
-| v1.5 (정정 노트) | 2026-05-15 | 도윤 + Claude | §"todos 필드 — agent 필드 추가" 에 정정 노트 추가: 본 spec 의 `plan` 구조와 `TodoItem` 참조는 deprecated `models.Plan/TodoItem` (2026-05-15 cleanup 으로 삭제됨) 기준. 활성은 `planner.Plan` + `planner.PlannedTodo` 4필드 구조. 30_DATA_MODELS_v1.1 참조. **v1.6 bump 로 §2 Planning 산출 전면 재작성 필요** (별도 트랙) |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

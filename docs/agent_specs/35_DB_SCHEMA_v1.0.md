@@ -241,7 +241,7 @@ UNIQUE (scope_type, scope_id, type, key)
 
 | type | 설명 | scope 권장 | TTL | 도입 |
 |------|------|---------|------|------|
-| `preference` | 사용자 선호 (brand 등) | user | 무한 | Sprint 15 P0 |
+| `preference` | 사용자 선호 (기본 entity 등) | user | 무한 | Sprint 15 P0 |
 | `conversation` | 개별 turn 데이터 | user | 90일 (POC = 무한) | Sprint 15 P0 (E2-1) |
 | `conversation_meta` | 대화 메타 (sidebar 표시) | user | 무한 | Sprint 15 P0 (E2-5) |
 | `plan` | plan 이력 | user | 무한 | Sprint 15 P0 |
@@ -257,7 +257,7 @@ UNIQUE (scope_type, scope_id, type, key)
 ### 5.1 `preference`
 ```json
 {
-  "value": "블루밍글로우",
+  "value": "<entity>",
   "from_clarification": true   // optional — clarification 답변에서 온 경우
 }
 ```
@@ -273,8 +273,8 @@ UNIQUE (scope_type, scope_id, type, key)
   "session_id": "turn_xyz",
   "messages": [                            // ← 원칙 #5 — append-only 배열
     {"role": "user", "content": "...", "ts": "..."},
-    {"role": "assistant", "type": "clarification", "content": "어떤 브랜드?", "ts": "..."},
-    {"role": "user", "content": "블루밍글로우", "ts": "..."},
+    {"role": "assistant", "type": "clarification", "content": "어떤 대상?", "ts": "..."},
+    {"role": "user", "content": "<entity>", "ts": "..."},
     {"role": "assistant", "type": "result", "content": "...", "attachments": [...], "ts": "..."}
     // 향후 새 role / 새 type 자유 추가 — schema_version bump 불필요
   ],
@@ -304,7 +304,7 @@ UNIQUE (scope_type, scope_id, type, key)
 ```json
 {
   "conversation_id": "conv_fa81d02",
-  "title": "블루밍글로우 네이버 리뷰 분석",
+  "title": "<entity> 도메인 작업",
   "started_at": "2026-04-28T13:30:00Z",
   "last_turn_at": "2026-04-28T13:31:17Z",
   "turn_count": 3
@@ -337,8 +337,8 @@ UNIQUE (scope_type, scope_id, type, key)
 ```json
 {
   "pattern_type": "default_value",
-  "field": "brand",
-  "value": "블루밍글로우",
+  "field": "entity",
+  "value": "<entity>",
   "sample_size": 10,
   "extracted_at": "..."
 }
@@ -347,7 +347,7 @@ UNIQUE (scope_type, scope_id, type, key)
 ### 5.7 `knowledge` (Sprint 16+)
 ```json
 {
-  "subject": "네이버 리뷰 수집",
+  "subject": "<도메인 작업>",
   "rules": ["..."],
   "user_taught_at": "..."
 }
@@ -356,7 +356,7 @@ UNIQUE (scope_type, scope_id, type, key)
 ### 5.8 `tool_cache` (Sprint 16+)
 ```json
 {
-  "tool": "naver_collector",
+  "tool": "<tool>",
   "input_hash": "sha256:...",
   "output": {...}
 }
@@ -464,18 +464,11 @@ memory content 의 semantic search 도입 시 → `pgvector` 확장 + embedding 
 
 - **north star**: [`00_vision_and_intent.md`](./00_vision_and_intent.md)
 - **자매 Pydantic spec**: [`30_DATA_MODELS_v1.1.md`](./30_DATA_MODELS_v1.1.md)
-- **Manager layer**: [`12_manager_layer_v1.4.md`](./12_manager_layer_v1.4.md) (Sprint 14 A3 v1.4 예정)
-- **ADR**:
-  - [`ADR-010`](./adr/ADR-010_plan_schema_unification.md) (Plan/Todo schema 통합 — Sprint 15 D)
-  - [`ADR-015`](./adr/ADR-015_memory_intent_communication.md) (메모리 + Clarification — Sprint 15 P0)
-- **사전 조사**: [`../reports/sprint14_a3_research_q3_memory.md`](../reports/sprint14_a3_research_q3_memory.md)
-- **구현 계획**: [`../reports/sprint15_phase_e1_memory_infrastructure.md`](../reports/sprint15_phase_e1_memory_infrastructure.md), [`../reports/sprint15_phase_e2_chat_memory.md`](../reports/sprint15_phase_e2_chat_memory.md)
+- **Manager layer**: [`12_manager_layer_v1.4.md`](./12_manager_layer_v1.4.md)
+- **ADR**: ADR-010 (Plan/Todo schema 통합), ADR-015 (메모리 + Clarification) — 결정 박제
 
 ---
 
 ## 변경 이력
 
-| 버전 | 날짜 | 내용 |
-|------|------|------|
-| v1.0 | 2026-04-28 | 초안 — 전체 ERD (LangGraph + memory_entries) + 의미적 관계 + 테이블 schema 상세 + memory type 8 + content JSONB schema 별 + scope_type 의미 + 자주 쓰는 query + 향후 확장 (patterns / tool_cache / pgvector). Sprint 15 P0 baseline + 추가 예정 표시 |
-| v1.0 | 2026-04-29 | **§0.1 설계 원칙 ⭐ 신규** (사용자 통찰 — 확장/변경 용이성). 5 보장 원칙 + 변경 비용 매트릭스 + 의도적 단순 v1 + 적용 범위. §5.2 conversation content schema 갱신 — `schema_version` + `messages` 배열 (append-only) + 의도적 미정 항목 명시. Clarification 통합 정책 (별도 row X, messages append) |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

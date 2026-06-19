@@ -10,12 +10,11 @@
 | 독자 | **실행 에이전트/툴 변경 작업을 시작하는 사람**. 첫 번째로 봐야 할 문서. |
 | 짝 문서 | [40 Lifecycle](40_agent_tool_lifecycle_v1.0.md) (상세 절차) ← 본 문서가 진입점, 40 이 깊이 |
 
-> **v1.1 (2026-05-31) 갱신** (작업 ③·④·⑤·⑥·⑦·⑧ 정합 반영):
-> - §2 박제 단일소스 = "4 파일 + 1 폴더" → **9 박제 위치 + 1 메타 문서** (frontend ToolPalette + _schema.yaml + 33/* + ADR-022 + 30·API 추가)
-> - §3 예시 시나리오 "(구 시나리오, 2026-05-18 박제 — 현 실제 = 8 카테고리 90 tool)" 표기
-> - §4 매트릭스에 spec 33·ADR-022·30_DATA_MODELS·API_SPEC 행 추가
-> - §5 Phase 2 계획서 위치 다중화 (옛 `docs/_claude/tool/TOBE_MVP/04_*.md` + 신 `docs/reports/계획_작업⑤_*.md`)
-> - §8 link 표에 33/* + ADR-022 amended + 30·API_SPEC 추가
+> **v1.1 (2026-05-31) 갱신**:
+> - §2 박제 단일소스 정리
+> - §3 예시 시나리오 표기
+> - §4 매트릭스에 spec 30_DATA_MODELS 행 추가
+> - §8 link 표 갱신
 
 ---
 
@@ -27,7 +26,7 @@
 
 ### 사용자 시나리오
 
-> "7 카테고리 50 툴 → 12 카테고리 33 툴로 재구성하려고 한다. 어디서 시작하지?" *(구 시나리오 예시, 2026-05-18 박제 — 현 실제 = 8 카테고리 90 tool)*
+> "카테고리/툴 구조를 재구성하려고 한다. 어디서 시작하지?" *(추상 시나리오 예시 — 현재 tool 카탈로그는 비어 있으며, 카테고리 8값 enum 만 존재)*
 
 → **본 문서 열기 → §3 변경 종류 결정 → §4 손대는 영역 표 → §5 표준 절차 → 작업**.
 
@@ -64,36 +63,31 @@ backend/app/dream_agent/
 
 ---
 
-## 2. ⭐ 손대는 영역 — 박제 단일소스 9 곳 (+ 메타 1)
+## 2. ⭐ 손대는 영역 — 박제 단일소스
 
-어떤 변경이든 다음 9 박제 위치 + 1 메타 문서만 손댐 (작업 ③·④·⑤·⑥·⑦·⑧ 정합 후, 2026-05-31):
+어떤 변경이든 다음 위치만 손댐:
 
 ### 2.1 기본 5 영역 (변경 시 거의 항상)
 
 | # | 영역 | 파일 / 폴더 | 무엇 |
 |---|---|---|---|
 | 1 | **Tool 코드** | [`backend/app/dream_agent/tools/<category>/<name>.py`](../../backend/app/dream_agent/tools/) | Tool 구현 (`class X(BaseTool)`) — BaseTool 부모가 `data_source` DI + `self.fetch(source_id, context)` helper-B 제공 (ADR-022) |
-| 2 | **Tool YAML 카탈로그** | [`backend/app/dream_agent/tools/catalog/<category>/<name>.yaml`](../../backend/app/dream_agent/tools/catalog/) | Tool 메타카드 (name·category·description·parameters·produces·timeout·has_cost). status 필드 폐기 (작업 ⑤). |
-| 3 | **Team Catalog** ⭐ | [`backend/app/dream_agent/planning/catalog/team_catalog.yaml`](../../backend/app/dream_agent/planning/catalog/team_catalog.yaml) | Planner 의 진실 소스 (team → agent → tool 계층). yaml 의 status 와 별 시스템 — team_catalog 에서는 status 박제 활성. |
+| 2 | **Tool YAML 카탈로그** | [`backend/app/dream_agent/tools/catalog/<category>/<name>.yaml`](../../backend/app/dream_agent/tools/catalog/) | Tool 메타카드 (name·category·description·parameters·produces·timeout·has_cost). 현재 카탈로그 비어 있음. |
+| 3 | **Team Catalog** ⭐ | [`backend/app/dream_agent/planning/catalog/team_catalog.yaml`](../../backend/app/dream_agent/planning/catalog/team_catalog.yaml) | Planner 의 진실 소스 (team → agent → tool 계층). |
 | 4 | **LLM Prompts** (3 yaml) | [`backend/app/dream_agent/llm_manager/prompts/`](../../backend/app/dream_agent/llm_manager/prompts/) | `planning_stage2_agent.yaml` + `planning_stage3_todo.yaml` + `response.yaml` |
-| 5 | **Tests** | [`backend/tests/sprint13~15/`](../../backend/tests/) | 회귀 테스트 |
+| 5 | **Tests** | 테스트 디렉토리 | 회귀 테스트 |
 
-### 2.2 카테고리·박제 단일소스 9 곳 (카테고리/구조 변경 시 추가)
+### 2.2 카테고리 박제 단일소스 (카테고리/구조 변경 시 추가)
 
 | # | 박제 위치 | 무엇 |
 |---|---|---|
-| 1 | [`enums.py:29-40`](../../backend/app/dream_agent/models/enums.py) | `ToolCategory` enum (8값: collection·normalization·cleaning·preprocessing·metrics·comparison·analysis·report) |
-| 2 | [`catalog/{8 폴더}/`](../../backend/app/dream_agent/tools/catalog/) | 90 yaml — 폴더 = 카테고리 1:1 (registry 자동 import) |
-| 3 | [`33_tools_by_category/*`](33_tools_by_category/) | 8 카테고리 인벤토리 문서 + README (자주 변경, 진실 소스) |
-| 4 | [`32 v1.2`](32_execution_agent_tools_v1.0.md) (§2.5·§5·§6·§7·§8·§9·§11) | 카테고리 정의 + BaseTool ADR-022 + YAML 스키마 + 데이터 흐름 (파일명은 v1.0 유지, 내용 = v1.2) |
-| 5 | [`_schema.yaml`](../../backend/app/dream_agent/tools/catalog/_schema.yaml) line 20 | catalog 진짜 schema — category 8값 |
-| 6 | [`ADR-022 amended §4·§5`](adr/ADR-022_data_source_workspace_layer_separation.md) | DataSource DI + helper-B + client_id fail-fast + 90 tool |
-| 7 | [`30_DATA_MODELS_v1.1.md:409`](30_DATA_MODELS_v1.1.md) | ToolSpec.category 주석 (8 카테고리) |
-| 8 | [`API_SPEC.md:834`](../specs/API_SPEC.md) | catalog API filter (8 카테고리) |
-| 9 | [`frontend ToolPalette`](../../frontend/src/features/workflow/ToolPalette.tsx) | `tool.category` 직접 사용 (classifyTool 폐기) |
-| (메타) | [`session_compact_recovery_2026-05-31_v3.md`](../reports/session_compact_recovery_2026-05-31_v3.md) | 박제 상태 자체를 문서화 (다음 세션 진입) |
+| 1 | [`enums.py`](../../backend/app/dream_agent/models/enums.py) | `ToolCategory` enum (8값: collection·normalization·cleaning·preprocessing·metrics·comparison·analysis·report) |
+| 2 | [`catalog/`](../../backend/app/dream_agent/tools/catalog/) | tool yaml — 폴더 = 카테고리 1:1 (registry 자동 import, 현재 카탈로그 비어 있음) |
+| 3 | [`_schema.yaml`](../../backend/app/dream_agent/tools/catalog/_schema.yaml) | catalog 진짜 schema — category 8값 |
+| 4 | [`30_DATA_MODELS_v1.1.md`](30_DATA_MODELS_v1.1.md) §6 | ToolSpec.category 주석 (8 카테고리) |
+| 5 | [`frontend ToolPalette`](../../frontend/src/features/workflow/ToolPalette.tsx) | `tool.category` 직접 사용 |
 
-> **수정 line 수가 가장 큰 영역 = 3 (team_catalog) + 4 (LLM Prompts)**. 카테고리 변경은 §2.2 의 9 곳 모두 동기 갱신 필수.
+> **수정 line 수가 가장 큰 영역 = 3 (team_catalog) + 4 (LLM Prompts)**. 카테고리 변경은 §2.2 의 위치 모두 동기 갱신 필수.
 
 ---
 
@@ -106,10 +100,10 @@ backend/app/dream_agent/
 | **A** | Tool 1개 추가 | 자주 | 0.5~1일 | [40 §3.A](40_agent_tool_lifecycle_v1.0.md) |
 | **B** | Tool 폐기/rename | 가끔 | 0.5일 | [40 §3.B](40_agent_tool_lifecycle_v1.0.md) |
 | **C** | 에이전트 추가/분리/합병 | 드물게 | 1일 | [40 §3.C](40_agent_tool_lifecycle_v1.0.md) |
-| **D** | 데이터 source 변경 (mock → 실API) | Sprint 6+ | 매체당 2~3일 | [40 §3.D](40_agent_tool_lifecycle_v1.0.md) + [data/description/mock/ROADMAP](../../data/description/mock/ROADMAP.md) |
-| **E** | 카테고리/에이전트/툴 대규모 재구성 (예: 7→12 카테고리) | 매우 드물게 | 1~2 sprint | [40 §3.E](40_agent_tool_lifecycle_v1.0.md) + 본 문서 §6 예시 |
+| **D** | 데이터 source 변경 (mock → 실API) | Sprint 6+ | source당 2~3일 | [40 §3.D](40_agent_tool_lifecycle_v1.0.md) |
+| **E** | 카테고리/에이전트/툴 대규모 재구성 | 매우 드물게 | 1~2 sprint | [40 §3.E](40_agent_tool_lifecycle_v1.0.md) + 본 문서 §6 예시 |
 
-> **사용자 표현 예시 — "7 카테고리 50 툴 → 12 카테고리 33 툴" = 시나리오 E** *(구 시나리오, 2026-05-18 박제)*. 실 = 작업 ③·④ 의 "(구) 7 카테고리 → (신) 8 카테고리 + 90 tool" 정합 완료. 본 문서 §6 참조.
+> **표현 예시 — "카테고리/툴 구조 대규모 재구성" = 시나리오 E** *(추상 시나리오)*. 본 문서 §6 참조.
 
 ---
 
@@ -124,18 +118,12 @@ backend/app/dream_agent/
 | 3. team_catalog ⭐ | ✅ 1행 추가 | ✅ 1행 갱신 | ✅ **다수** | — | ✅ **전면 재작성** |
 | 4. LLM Prompts (3 yaml) | △ Stage 3 보강 | ✅ 5+ line | ✅ **다수** | — | ✅ **다수** |
 | 5. Tests | ✅ 1 unit | ✅ rename | △ Planner test | ✅ fixture | ✅ 다수 |
-| spec 31/32 (Tool 카탈로그) | ✅ 행 추가 | ✅ 행 갱신 | — | — | ✅ 재작성 |
-| **spec 33** (33_tools_by_category/ 8 문서) ⭐ | ✅ 해당 카테고리 행 추가 | ✅ 해당 카테고리 행 갱신 | — | — | ✅ 카테고리 재배치 |
-| spec 17 (Functions→I/O) | — | — | △ §2.2 9 에이전트 | — | ✅ 갱신 |
-| **ADR-022** (DataSource DI + helper-B) | — | — | — | △ DataSource ABC 확장 | △ 패턴 변경 시 amend |
-| **30_DATA_MODELS:409** + **API_SPEC:834** (카테고리 enum 박제) | — | — | — | — | ✅ 8 카테고리 갱신 |
-| **frontend ToolPalette** | — | — | — | — | ✅ `tool.category` 자동 정합 (classifyTool 폐기됨) |
+| spec 17 (Functions→I/O) | — | — | △ 에이전트 구조 | — | ✅ 갱신 |
+| **30_DATA_MODELS** §6 (카테고리 enum 박제 + DataSource DI) | — | — | — | △ DataSource ABC 확장 | ✅ 8 카테고리 갱신 |
+| **frontend ToolPalette** | — | — | — | — | ✅ `tool.category` 자동 정합 |
 | **_schema.yaml** (catalog 진짜 schema) | — | — | — | — | ✅ category 행 갱신 |
-| TOBE_MVP/01 매트릭스 | ✅ 행 추가 | ✅ 행 갱신 | ✅ 재배치 | — | ✅ 재작성 |
-| data/description/mock | — | — | — | ✅ ROADMAP + SCHEMA | △ |
 
-→ **카테고리/에이전트 매핑 변경 (C, E)** 시 → **team_catalog + LLM Prompts 3 yaml + §2.2 박제 단일소스 9 곳** 동시 갱신이 핵심.
-→ 대규모 재구성 (E) 의 박제 정합 실 사례 = 작업 ④-L5 + 작업 ⑤·⑥·⑦·⑧ (commit `d517e9e` ~ `b534ec6`, 2026-05-31).
+→ **카테고리/에이전트 매핑 변경 (C, E)** 시 → **team_catalog + LLM Prompts 3 yaml + §2.2 박제 단일소스** 동시 갱신이 핵심.
 
 ---
 
@@ -144,7 +132,7 @@ backend/app/dream_agent/
 ```
 Phase 1. 영향 범위 측정 (grep)
    ↓
-Phase 2. 계획서 작성 (docs/_claude/tool/TOBE_MVP/04_*.md)
+Phase 2. 계획서 작성
    ↓
 Phase 3. 검증 (영향 분석 재검토)
    ↓
@@ -157,13 +145,13 @@ Phase 5. 회귀 + 자동 커밋
 
 ```bash
 # 변경 대상 (예: Tool 이름) 의 모든 사용처
-grep -rn "<old_name>\|<OldClassName>" backend/ docs/agent_specs/ data/description/ frontend/src/
+grep -rn "<old_name>\|<OldClassName>" backend/ docs/agent_specs/ frontend/src/
 
 # 매핑된 prompt 안 line 수
 grep -n "<old_name>" backend/app/dream_agent/llm_manager/prompts/*.yaml
 
 # 의존 테스트
-grep -rn "<old_name>" backend/tests/
+grep -rn "<old_name>" backend/
 ```
 
 → 결과를 다음 표에 정리:
@@ -172,18 +160,10 @@ grep -rn "<old_name>" backend/tests/
 |---|---|---|---|
 | ... | ... | ... | ... |
 
-### Phase 2 — 계획서 작성 위치 (다중화)
+### Phase 2 — 계획서 작성
 
-```
-# 옛 위치 (작업 ② 이전)
-docs/_claude/tool/TOBE_MVP/04_migration_plan_<YYYY-MM-DD>.md
+변경 계획서를 작성해 영향 파일·line·롤백 절차를 박제.
 
-# 신 위치 (작업 ②·③·④·⑤·⑥·⑦·⑧·⑨ 패턴, 2026-05-29+)
-docs/reports/계획_작업<번호>_<주제>_<YYYY-MM-DD>.md
-```
-
-→ 옛 예시 = [04_migration_plan_2026-05-18.md](../../docs/_claude/tool/TOBE_MVP/04_migration_plan_2026-05-18.md) (8 Tool → 9 에이전트 재구성).
-→ 신 예시 = [계획_작업⑤_32문서_§4-§9_정합_2026-05-31.md](../reports/계획_작업⑤_32문서_§4-§9_정합_2026-05-31.md) (32 §4~§9 정합, 1·2·3차 적대적 검증 루프 박제).
 → 큰 작업 (시나리오 E) = **계획서 → 1차 적대적 검증 (workflow) → 갱신 → 2차 검증 → 사용자 승인 → 진입** 패턴 권장.
 
 ### Phase 3 — 검증 체크리스트
@@ -210,29 +190,27 @@ docs/reports/계획_작업<번호>_<주제>_<YYYY-MM-DD>.md
 
 ```bash
 # 전체 회귀
-pytest backend/tests/sprint13 backend/tests/sprint14 backend/tests/sprint15 -q
+pytest backend/ -q
 pnpm --filter frontend vitest run
 
-# 자동 커밋 ([feedback_commit_auto_on_completion](C:/Users/gobok/.claude/projects/c--kdy-Projects-octormate-beta-v001/memory/feedback_commit_auto_on_completion.md) 메모리)
+# 자동 커밋
 git add <변경 파일>
 git commit -m "<적절한 메시지>"
 ```
 
-기대: **회귀 191+ pass + frontend vitest pass**.
+기대: **회귀 pass + frontend vitest pass**.
 
 ---
 
-## 6. 예시 시나리오 — "7 카테고리 50 툴 → 12 카테고리 33 툴" *(구 시나리오, 2026-05-18 박제 — 참고용)*
+## 6. 예시 시나리오 — 카테고리/툴 구조 대규모 재구성 *(추상 시나리오, 참고용)*
 
-> **실 사례 (2026-05-31)**: 작업 ③·④·⑤·⑥·⑦·⑧ = "(구) 7 카테고리 + 8 implemented tool → (신) 8 카테고리 + 90 tool" 완료. 본 §6 의 절차는 일반 시나리오 E 가이드, 실 사례는 [계획_작업⑤](../reports/계획_작업⑤_32문서_§4-§9_정합_2026-05-31.md) + [session_compact v3](../reports/session_compact_recovery_2026-05-31_v3.md) 참조.
-
-대규모 재구성 시나리오 (시나리오 E). 가장 자주 발생할 변경 유형.
+대규모 재구성 시나리오 (시나리오 E). 가장 큰 변경 유형.
 
 ### Step 1 — 변경 결정 박제
 
-- [`docs/_claude/tool/04_decisions.md`](../../docs/_claude/tool/04_decisions.md) 에 결정 신규 추가
-- 추가 정보: 옛 7 카테고리 → 신 12 카테고리 매핑 표
-- ADR 작성 권장 — [`docs/agent_specs/adr/ADR-XXX_<topic>.md`](adr/)
+- 결정 로그에 결정 신규 추가
+- 추가 정보: 옛 카테고리 → 신 카테고리 매핑 표
+- ADR 작성 권장
 
 ### Step 2 — 영향 범위 측정 (Phase 1)
 
@@ -240,15 +218,11 @@ git commit -m "<적절한 메시지>"
 # 각 옛 카테고리/툴 명 → grep
 for name in tool_old_1 tool_old_2 ...; do
   echo "=== $name ==="
-  grep -rn "$name" backend/ docs/agent_specs/ data/description/
+  grep -rn "$name" backend/ docs/agent_specs/
 done
 ```
 
 ### Step 3 — 계획서 작성 (Phase 2)
-
-```
-docs/_claude/tool/TOBE_MVP/04_migration_plan_<YYYY-MM-DD>.md
-```
 
 내용:
 - 옛 ↔ 신 카테고리/툴 매핑 표
@@ -261,25 +235,21 @@ docs/_claude/tool/TOBE_MVP/04_migration_plan_<YYYY-MM-DD>.md
 
 | 단계 | 파일 |
 |---|---|
-| 1. team_catalog 전면 재작성 (12 카테고리 + 33 툴 구조) | [team_catalog.yaml](../../backend/app/dream_agent/planning/catalog/team_catalog.yaml) |
+| 1. team_catalog 전면 재작성 (신 카테고리/툴 구조) | [team_catalog.yaml](../../backend/app/dream_agent/planning/catalog/team_catalog.yaml) |
 | 2. LLM Prompts 3 yaml 일괄 갱신 | [planning_stage2_agent.yaml](../../backend/app/dream_agent/llm_manager/prompts/planning_stage2_agent.yaml) + [planning_stage3_todo.yaml](../../backend/app/dream_agent/llm_manager/prompts/planning_stage3_todo.yaml) + [response.yaml](../../backend/app/dream_agent/llm_manager/prompts/response.yaml) |
 | 3. Tool 코드 rename/추가/폐기 (시나리오 A/B 절차 반복) | [tools/<cat>/<name>.py](../../backend/app/dream_agent/tools/) |
 | 4. Tool YAML 카탈로그 동기 | [tools/catalog/<cat>/<name>.yaml](../../backend/app/dream_agent/tools/catalog/) |
-| 5. spec 31 v0.x → v0.x+1 bump (요구사항) | [31_*](31_execution_agent_function_list_v0.6.md) |
-| 6. spec 32 v1.x → v1.x+1 bump (구현 현황) | [32_*](32_execution_agent_tools_v1.0.md) |
-| 7. spec 17 §2/§3 갱신 (9 에이전트 → N) | [17_*](17_functions_to_io_v1.0.md) |
-| 8. TOBE_MVP/01 매트릭스 재작성 | [01_tool_data_matrix](../../docs/_claude/tool/TOBE_MVP/01_tool_data_matrix.md) |
-| 9. TOBE_MVP/02 에이전트 카드 재작성 | [02_agent_cards](../../docs/_claude/tool/TOBE_MVP/02_agent_cards.md) |
-| 10. Tests 갱신 + 회귀 | [backend/tests/](../../backend/tests/) |
+| 5. spec 17 갱신 (에이전트 구조) | [17_*](17_functions_to_io_v1.0.md) |
+| 6. spec 30 §6 갱신 (ToolSpec.category 박제) | [30_DATA_MODELS](30_DATA_MODELS_v1.1.md) |
+| 7. Tests 갱신 + 회귀 | 테스트 디렉토리 |
 
 ### Step 5 — 회귀 + 자동 커밋 (Phase 5)
 
-5 commit 분리 권장:
-1. `feat(planning): 12 카테고리 33 툴 구조 — team_catalog + LLM Prompts 동기`
-2. `refactor(tools): 옛 7 카테고리 폐기 + 신규 12 카테고리 Tool 이전`
-3. `test(sprint*): 12 카테고리 회귀 갱신`
-4. `docs(spec): 31/32/17 v 다음 bump — 신 구조 반영`
-5. `docs(tool): TOBE_MVP 01-02 신 구조 재작성`
+commit 분리 권장:
+1. `feat(planning): 신 카테고리/툴 구조 — team_catalog + LLM Prompts 동기`
+2. `refactor(tools): 옛 카테고리 폐기 + 신규 카테고리 Tool 이전`
+3. `test: 신 카테고리 회귀 갱신`
+4. `docs(spec): 17/30 갱신 — 신 구조 반영`
 
 ---
 
@@ -305,7 +275,7 @@ grep -n "<old_name>" backend/app/dream_agent/llm_manager/prompts/*.yaml
 → 절대 `--no-verify` 또는 hook skip 안 함. 실패 원인 분석 → 의존 Tool 의 produces 키 불일치 가능성 (5%) / prompt 와 team_catalog mismatch (10%) / Tool 코드 자체 버그 (나머지).
 
 ### Q6. "옛 Tool/에이전트 잔재 자동 검출 도구?"
-→ 현재 없음. grep 으로 수동. 향후 DC-11 (가칭) Contract Test 도입 검토 — [32 §11.8](32_execution_agent_tools_v1.0.md).
+→ 현재 없음. grep 으로 수동. 향후 Contract Test 도입 검토.
 
 ---
 
@@ -315,19 +285,11 @@ grep -n "<old_name>" backend/app/dream_agent/llm_manager/prompts/*.yaml
 |---|---|
 | **변경 상세 절차** | [40 Lifecycle](40_agent_tool_lifecycle_v1.0.md) — 5 시나리오 step-by-step |
 | **현 에이전트 구조** | [17 Functions → I/O](17_functions_to_io_v1.0.md) §2.2 |
-| **현 Tool 인벤토리 (90 tool, 8 카테고리)** ⭐ | [33_tools_by_category/](33_tools_by_category/) — 8 문서 + README (진실 소스, 자주 변경) |
-| **카테고리 정의 + BaseTool 계약 + 데이터 흐름** | [32 v1.2](32_execution_agent_tools_v1.0.md) §2.5·§5·§6·§8 (파일명은 v1.0, 내용은 v1.2) |
 | **Tool 코드 위치 컨벤션** | [17 §5.1 BaseTool 계약](17_functions_to_io_v1.0.md) + [tools/registry.py](../../backend/app/dream_agent/tools/registry.py) + [base_tool.py](../../backend/app/dream_agent/tools/base_tool.py) (ADR-022 정합) |
-| **DataSource DI 패턴 (관절)** ⭐ | [ADR-022 amended](adr/ADR-022_data_source_workspace_layer_separation.md) §4·§5 — helper-B `self.fetch(source_id, context)` + client_id fail-fast |
+| **DataSource DI 패턴 (관절)** ⭐ | [30_DATA_MODELS](30_DATA_MODELS_v1.1.md) §7.5 — helper-B `self.fetch(source_id, context)` + client_id fail-fast (ADR-022) |
 | **Tool I/O 룰** (params/produces) | [17 §5.2~§5.4](17_functions_to_io_v1.0.md) |
-| **ToolCategory enum + 데이터 모델** | [enums.py:29-40](../../backend/app/dream_agent/models/enums.py) + [30_DATA_MODELS:409](30_DATA_MODELS_v1.1.md) + [API_SPEC:834](../specs/API_SPEC.md) |
+| **ToolCategory enum + 데이터 모델** | [enums.py](../../backend/app/dream_agent/models/enums.py) + [30_DATA_MODELS](30_DATA_MODELS_v1.1.md) §6 |
 | **frontend ToolPalette** | [features/workflow/ToolPalette.tsx](../../frontend/src/features/workflow/ToolPalette.tsx) (`tool.category` 직접 사용) |
-| **에이전트 카드** | [TOBE_MVP/02](../../docs/_claude/tool/TOBE_MVP/02_agent_cards.md) |
-| **Tool ↔ Data 매핑** | [TOBE_MVP/01](../../docs/_claude/tool/TOBE_MVP/01_tool_data_matrix.md) |
-| **Drift / 결정** | [TOBE_MVP/03](../../docs/_claude/tool/TOBE_MVP/03_drift_report.md) + [agent_specs/adr/](adr/) |
-| **데이터 source / API 표면** | [data/description/mock/ROADMAP](../../data/description/mock/ROADMAP.md) |
-| **POC → MVP 로드맵** | [tool/03_gap_and_roadmap](../../docs/_claude/tool/03_gap_and_roadmap.md) |
-| **세션 cold start 진입** | [session_compact v3](../reports/session_compact_recovery_2026-05-31_v3.md) (작업 ④·⑤·⑥·⑦·⑧ 자취) |
 
 ---
 
@@ -343,9 +305,6 @@ grep -n "<old_name>" backend/app/dream_agent/llm_manager/prompts/*.yaml
 
 ---
 
-## 10. 변경 이력
+## 변경 이력
 
-| 버전 | 날짜 | 변경 |
-|------|------|------|
-| v1.0 | 2026-05-18 | 초안 — 40 Lifecycle 의 진입점 / 빠른 시작 버전. §1 OS 층 (변경 X) + §2 손대는 영역 4 파일 + §3 5 시나리오 + §4 매트릭스 + §5 Phase 1~5 표준 절차 + §6 예시 (7→12 카테고리 재구성) + §7 FAQ 6 + §8 핵심 참조 link 10. 사용자 시나리오: "1 문서 + 참조 link 만 보고 변경 작업 진입". |
-| v1.1 | 2026-05-31 | 작업 ③·④·⑤·⑥·⑦·⑧ 정합 (commit `d517e9e` ~ `b534ec6` 후). §2 박제 단일소스 9 곳 + 메타 1 표 신규 (frontend ToolPalette + _schema.yaml + 33/* + ADR-022 + 30·API 추가). §3 "7→12" 구 시나리오 표기. §4 매트릭스에 spec 33·ADR-022·30·API_SPEC·frontend·_schema 행 추가. §5 Phase 2 계획서 위치 다중화 (옛 + 신 `docs/reports/계획_작업_*.md` 패턴). §6 예시 헤더 "구 시나리오, 참고용" 명시 + 실 사례 (작업 ⑤) 링크. §8 link 표에 33/* + ADR-022 amended + enum·30·API_SPEC + frontend ToolPalette + session_compact v3 추가. |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

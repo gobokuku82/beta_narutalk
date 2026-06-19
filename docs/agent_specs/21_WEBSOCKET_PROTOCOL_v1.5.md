@@ -7,8 +7,8 @@
 | 진행상태 | **Active** (ws_contract 브랜치 Stage 4 정식) |
 | 버전 | **v1.5** |
 | 최종 수정일 | 2026-05-16 |
-| 이전 버전 | v1.4 (2026-04-24), v1.3 (2026-04-23), v1.2 (2026-04-22), `POC_legacy/WEBSOCKET_PROTOCOL_poc.md` (v1.1, 2026-04-10) |
-| 관련 명세 | `20_INTERFACE_CONTRACT_v1.1.md`, `22_error_codes_v1.1.md`, `24_sequence_diagrams_v1.3.md`, `30_DATA_MODELS_v1.1.md`, `10_system_architecture_v1.9.md`, `12_manager_layer_v1.4.md`, `adr/ADR-011_connection_channel_separation.md` |
+| 이전 버전 | v1.4 (2026-04-24), v1.3 (2026-04-23), v1.2 (2026-04-22), v1.1 (2026-04-10) |
+| 관련 명세 | `20_INTERFACE_CONTRACT_v1.1.md`, `22_error_codes_v1.1.md`, `24_sequence_diagrams_v1.3.md`, `30_DATA_MODELS_v1.1.md`, `10_system_architecture_v1.9.md`, `12_manager_layer_v1.4.md` |
 
 **v1.5 (2026-05-15) 변경점** — ADR-011 ConnectionManager 채널 분리:
 
@@ -46,7 +46,7 @@
 
 ## 0. 개요
 
-OctorAD Dream Agent V2는 **WebSocket 이중 채널**로 클라이언트와 통신한다.
+DreamAgent V2는 **WebSocket 이중 채널**로 클라이언트와 통신한다.
 
 | 채널 | 경로 | 방향 | 용도 |
 |------|------|------|------|
@@ -90,7 +90,7 @@ async def disconnect(user_id: str, channel: Channel, ws) -> None
 async def broadcast_to_user(user_id: str, channel: Channel, message: dict) -> None
 ```
 
-상세: `10_system_architecture_v1.9.md` §4.2 (Connection Manager) / `12_manager_layer_v1.4.md` §3 (ConnectionManager) / [`adr/ADR-011_connection_channel_separation.md`](adr/ADR-011_connection_channel_separation.md).
+상세: `10_system_architecture_v1.9.md` §4.2 (Connection Manager) / `12_manager_layer_v1.4.md` §3 (ConnectionManager).
 
 **왜 채널 분리?** v1.4 이전: 한 `user_id` 의 모든 WS 에 broadcast → 같은 탭의 agent 채널 broadcast 가 hitl 소켓으로도 leak → 프론트 메시지 중복 처리 (특히 P1-6 자동 approve + complete). v1.5 = §3.2 카탈로그 계약 회복.
 
@@ -127,8 +127,8 @@ async def broadcast_to_user(user_id: str, channel: Channel, message: dict) -> No
   "type": "query",
   "conversation_id": "conv_a1b2c3d4",
   "turn_id": "turn_e5f6g7h8",
-  "user_input": "블루밍글로우 리뷰 분석",
-  "client_id": "clumi",
+  "user_input": "도메인 작업 요청",
+  "client_id": "<client>",
   "language": "ko",
   "conversation_history": [],
   "history_limit": 3
@@ -173,7 +173,7 @@ async def broadcast_to_user(user_id: str, channel: Channel, message: dict) -> No
 - 해당 thread_id에 pending interrupt 없음 → `INVALID_MESSAGE` fatal (fan-out)
 
 **대시보드 트리거**:
-- 쿼리 전송 시 `localStorage.set("octormate.last_turn_id", turn_id)`
+- 쿼리 전송 시 `localStorage.set("dreamagent.last_turn_id", turn_id)`
 - `complete` 이벤트 수신 시 `localStorage.remove(...)`
 - `ws.onopen` 에서 `last_turn_id` 존재 시 무조건 자동 전송 (agentRunning 조건 X — onclose 에서 이미 리셋됨)
 - `ws.onclose` 에서 `agentRunning=false`, UI idle로 내림 (`last_turn_id`는 보존)
@@ -183,7 +183,7 @@ async def broadcast_to_user(user_id: str, channel: Channel, message: dict) -> No
 #### `type: "start"` (Sprint 12 legacy, 유지)
 
 ```json
-{"type": "start", "message": "블루밍글로우 분석", "language": "ko"}
+{"type": "start", "message": "도메인 작업 요청", "language": "ko"}
 ```
 
 Sprint 14 regression 완료까지 유지. 신규 개발은 `"query"` 사용.
@@ -342,7 +342,7 @@ Execution 내부에서 `callback_manager.emit(session_id, ...)` 호출 → `run_
 {"type": "layer_start", "session_id": "turn_xxx", "timestamp": "...", "data": {"layer": "execution"}}
 
 // todo_start (개별 Todo 실행 시작)
-{"type": "todo_start", "session_id": "turn_xxx", "data": {"todo_id": "todo_001", "tool": "naver_collector", ...}}
+{"type": "todo_start", "session_id": "turn_xxx", "data": {"todo_id": "todo_001", "tool": "<tool>", ...}}
 
 // todo_complete (개별 Todo 종료)
 {"type": "todo_complete", "session_id": "turn_xxx", "data": {"todo_id": "todo_001", "status": "success", "duration_ms": 2341.5, "summary": "..."}}
@@ -602,26 +602,18 @@ direct-WS 송신 (sender only, 다른 탭 fan-out 없음).
 
 | 기능 | 파일 |
 |------|------|
-| `/ws/agent` 엔드포인트 | `backend/api_v2/ws_agent.py::stream_endpoint` |
-| `/ws/hitl` 엔드포인트 | `backend/api_v2/ws_hitl.py::hitl_endpoint` |
-| `run_turn` (신 경로) | `backend/api_v2/ws_agent.py::run_turn` |
-| `_graph_runner_with_resume` | `backend/api_v2/ws_agent.py` (I11-a) |
-| `ConnectionManager` | `backend/api_v2/connection_manager.py` (Sprint 13 T1) |
+| `/ws/agent` 엔드포인트 | `backend/api/ws_agent.py::stream_endpoint` |
+| `/ws/hitl` 엔드포인트 | `backend/api/ws_hitl.py::hitl_endpoint` |
+| `run_turn` (신 경로) | `backend/api/ws_agent.py::run_turn` |
+| `_graph_runner_with_resume` | `backend/api/ws_agent.py` (I11-a) |
+| `ConnectionManager` | `backend/api/connection_manager.py` (Sprint 13 T1) |
 | `ConcurrencyManager` | `backend/app/dream_agent/workflow_managers/concurrency_manager.py` (T2) |
 | `hitl_manager.wait_for_resume` / `signal_resume` | `backend/app/dream_agent/workflow_managers/hitl_manager/manager.py` (I7) |
 | Layer Guard | `backend/app/dream_agent/system_graph/layer_inspector.py` (I11-a) |
-| `_parse_query_message` | `backend/api_v2/ws_agent.py` (I10a) |
+| `_parse_query_message` | `backend/api/ws_agent.py` (I10a) |
 
 ---
 
 ## 변경 이력
 
-| 버전 | 날짜 | 내용 |
-|------|------|------|
-| v1.0 | 2026-04-21 | 초안 — Sprint 13 Integration I6~I11-a 전체 WS 스펙. `/ws/agent` 이중 경로(query/start), `/ws/hitl` Sprint 13 turn_id 라우팅, ConnectionManager fan-out, Error 이벤트 포맷 통일(severity/layer), layer guard 카탈로그, interrupt payload 스키마 |
-| v1.1 | 2026-04-21 | R-9 서버 재시작 복원 지원: `resume_query` 메시지 추가 (`/ws/agent` Client→Server). `/ws/hitl` pause/resume/cancel payload 에 `session_id`/`turn_id` 호환 명시. 대시보드 onopen/onclose 복원 트리거 동작 문서화 |
-| v1.2 | 2026-04-22 | Sprint 14 A1 HITL timeout 반영 — (1) `complete.data.reason` 에 `"hitl_timeout"` 값 추가 + reason 카탈로그 표 신설 (2) `hitl_ack` 이벤트에 `accepted:false, reason:"turn_not_active"` 케이스 추가 + reason 카탈로그 표 신설 (3) 관련 명세 링크 12_manager_layer v1.1, 20 v1.1, 24 v1.2 로 갱신 |
-| **v1.3** | **2026-04-23** | **Sprint 14 A3 Y-a 반영** — 신규 수신 메시지 `todo_edit_nl` (자연어 편집, Y-a). `hitl_ack` action 카탈로그 5종 완성 (`hitl_response`/`todo_modify`/`todo_delete`/`todo_add`/`todo_edit_nl`). `hitl_ack` 공통 필드 표준화 (`accepted`/`reason`/`code`/`plan`/`invalidated`/`restart_from`/`preserved`/`issues`/`nl_action`). D7=A- 3개 ErrorCode (TODO_EDIT_NOT_PAUSED / INVALID_DAG / NL_INTENT_UNCLEAR) 는 `code` 필드로, 나머지 4개는 free-form `reason`. `todo_modify/delete/add` payload 에 `turn_id` 권장 (FR-13c 8종 핸들러 가드). 관련 링크 22 v1.1, 12 v1.2, 10 v1.9 로 갱신 |
-| **v1.4** | **2026-04-24** | **Sprint 14 A3 Phase 5 편집 경로 통합.** 사용자 5항목 §4 "hitl/pause 같은 개념" 반영. (1) `hitl_request` (plan_review) 수신 직후 서버가 **임시 `_progress` 생성** (status="paused") — 편집 요청이 pause 단일 경로로 처리됨. 클라이언트 계약 변경 없음. (2) `hitl_response {action:"approve"}` 가 편집된 progress 존재 시 서버 내부에서 `{action:"modify", value:progress.plan}` 로 변환. 클라이언트는 여전히 `approve` 전송. (3) plan_review 에서도 cascade `invalidated` 에 downstream 포함 (🔴 tint + ⛓ 라벨 표시됨, `preserved` 는 빈 dict). 관련 링크 12 v1.3, 24 v1.3 로 갱신 |
-| v1.4 (검증 정정) | 2026-05-15 | **프론트 통합 전 문서↔코드 다중 사이클 검증 (사이클 1).** `ws_agent.py`/`ws_hitl.py` 실제 emit 대조로 문서 drift 4건 정정 — (1) `resumed.data.action` 카탈로그에 `modify` 추가 (Phase 5 approve→modify 내부 변환 결과). (2) `hitl_request.data` / `paused.data` 에 `turn_id`/`conversation_id` 복제 포함 명시 (Sprint 14 A3 Phase 4). (3) `/ws/hitl` `connected` 에 `channel:"hitl"` 필드 명시. (4) `/ws/hitl` `error` 이벤트 2종 포맷(평탄/중첩) + `pong` 명시. **스펙 본문 = 백엔드 코드와 정합 확인.** |
-| **v1.5 (초안)** | **2026-05-15** | **ADR-011 ConnectionManager 채널 분리** — Phase 1 통합 직후 "답변 중복" 버그의 본질 해결. (1) §1.2 fan-out 키가 `user_id` → `(user_id, channel)` 변경. multi-tab 동기화 보존, 다른 채널 leak 제거. (2) §1.3 MAX_WS_CONNECTIONS_PER_USER 가 (user, channel) 별 5 로 의미 변경. (3) §3.2 `/ws/hitl` Server→Client 카탈로그 엄격 적용 (`connected`/`pong`/`error`/`hitl_ack` 만). 클라이언트 영향 0 — 백엔드만 수정으로 자연 dedup. ws_contract 브랜치 Stage 0 초안 (Stage 5 통과 시 정식). 관련: ADR-011, spec 12 v1.4 (예정) |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

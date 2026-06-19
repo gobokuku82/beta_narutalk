@@ -27,7 +27,7 @@
 | 환경 | 백엔드 | Frontend |
 |------|--------|----------|
 | 로컬 | `http://localhost:8001` | `http://localhost:5173` (Vite dev) |
-| dev | `https://dev.octorad.com` | `https://app.dev.octorad.com` |
+| dev | `https://dev.dreamagent.com` | `https://app.dev.dreamagent.com` |
 | prod | (Sprint 6+) | (Sprint 6+) |
 
 `.env` :
@@ -59,7 +59,7 @@ POC 단계는 인증 없음. WS 는 `user_id="demo"` 고정 (URL query parameter
 
 ### 2.1 현재 구현 (Sprint 13 ~ 14)
 
-> ⚠️ **검증 정정 (2026-05-15, 사이클 3)**: 이전 버전이 적은 `/api/agent/stream`(POST)·`/api/agent/runs/{turn_id}`·`/api/agent/feedback` **3개 엔드포인트는 백엔드에 존재하지 않는다**. 쿼리 실행은 REST 가 아니라 **`/ws/agent` WebSocket 의 `{type:"query"}` 메시지**로 한다 (§3, [21 §2.1](21_WEBSOCKET_PROTOCOL_v1.5.md)). 진실 소스 = [20 §1.1](20_INTERFACE_CONTRACT_v1.1.md) — 백엔드 `api_v2/main.py` 등록 라우터.
+> ⚠️ **검증 정정 (2026-05-15, 사이클 3)**: 이전 버전이 적은 `/api/agent/stream`(POST)·`/api/agent/runs/{turn_id}`·`/api/agent/feedback` **3개 엔드포인트는 백엔드에 존재하지 않는다**. 쿼리 실행은 REST 가 아니라 **`/ws/agent` WebSocket 의 `{type:"query"}` 메시지**로 한다 (§3, [21 §2.1](21_WEBSOCKET_PROTOCOL_v1.5.md)). 진실 소스 = [20 §1.1](20_INTERFACE_CONTRACT_v1.1.md) — 백엔드 `api/main.py` 등록 라우터.
 
 실재하는 REST 엔드포인트:
 
@@ -67,9 +67,9 @@ POC 단계는 인증 없음. WS 는 `user_id="demo"` 고정 (URL query parameter
 |----------|--------|-------------------------------|------|
 | `/health/` | GET | `useHealth()` | health check |
 | `/health/detail` | GET | — | 4-Layer graph compile 검사 포함 |
-| `/api/dashboard1/*` | GET | `useDashboard1Data()` | Dashboard1 페이지 — 20 endpoint (KPI 9 + MoM 4 + Segment 7) |
-| `/api/admin/pipelines/category/{cat}` | GET | `useCategoryResults(cat, client, period)` | 5 v2 페이지 데이터 — 52 pipeline 카테고리별 실행 결과 |
-| `/api/admin/pipelines/run/{name}` | POST | `useRunCategory(cat).mutate()` | 명시적 pipeline 트리거 ("데이터 분석" 버튼) |
+| `/api/conversations` | GET | `useConversations()` | 대화 목록 (§2.2) |
+| ~~`/api/dashboard1/*`~~ | ~~GET~~ | ~~`useDashboard1Data()`~~ | ⚠️ **deleted** (도메인 dashboard route 폐기, §2.3.1 참조) |
+| ~~`/api/admin/pipelines/*`~~ | ~~GET/POST~~ | ~~`useCategoryResults()`~~ | ⚠️ **deleted** (admin/pipeline route 폐기, §2.3.3 참조) |
 | ~~`/api/mock/*`~~ | ~~GET~~ | ~~`useMock*()`~~ | ⚠️ **deprecated 2026-05-28** (mock layer 폐기, §2.3 참조) |
 
 쿼리 시작·turn 진행·완료는 전부 WS. turn 이력/상세 조회용 REST 는 **Sprint 15 P0+ 예정** (§2.2).
@@ -92,26 +92,14 @@ POC 단계는 인증 없음. WS 는 `user_id="demo"` 고정 (URL query parameter
 ### 2.3 ~~Mock 데이터 API~~ (deprecated 2026-05-28, 폐기) ⚠️
 
 > **2026-05-28 폐기 박제** ([memory project-mock-data-as-poc-source](../../memory/project_mock_data_as_poc_source.md))
-> - `backend/api_v2/routes/mock_data.py` 폐기 (source 삭제). `/api/mock/*` route 등록 X.
+> - `backend/api/routes/mock_data.py` 폐기 (source 삭제). `/api/mock/*` route 등록 X.
 > - `useMockCompany()` ~ `useMockReviews()` 12개 hook 폐기. v2 페이지 = `useCategoryResults` 로 전환.
 > - `data/mock/` 폴더 폐기. POC 데이터 = `data/{client}/raw/` (External collector + mock_api 보조).
 > - 본 §2.3 하단 표 = **historical reference only** (현 코드 미정합, MVP+ 시 ELT 참고 자료).
 > - 2026-06-01 정정 — `data/mock_api/` 폴더는 **외부 API 시뮬레이터** 로 살아있음 (mock data 와 별개). [memory project-collector-two-kinds](../../memory/project_collector_two_kinds.md)
 
-| Endpoint | 메서드 | Frontend Hook | 응답 데이터 | 쿼리 파라미터 |
-|----------|--------|--------------|------------|--------------|
-| `/api/mock/company` | GET | `useMockCompany()` | company_info (15 rows) | — |
-| `/api/mock/products` | GET | `useMockProducts()` | products (31 rows) | `?category=스킨케어` |
-| `/api/mock/campaigns` | GET | `useMockCampaigns()` | campaigns (21 rows) | `?status=진행중&type=BRP` |
-| `/api/mock/creatives` | GET | `useMockCreatives()` | creatives (47 rows) | `?campaign_id=BRP-001&channel=naver` |
-| `/api/mock/channel-performance` | GET | `useMockChannelPerformance()` | channel_performance (6 rows) | — |
-| `/api/mock/daily-performance` | GET | `useMockDailyPerformance()` | daily_performance (5,329 rows) | `?from=YYYY-MM-DD&to=YYYY-MM-DD&channel=naver` |
-| `/api/mock/conversion-funnel` | GET | `useMockConversionFunnel()` | conversion_funnel (21 rows) | `?channel=naver` |
-| `/api/mock/ab-tests` | GET | `useMockAbTests()` | ab_tests (9 rows) | `?campaign_id=BRP-001` |
-| `/api/mock/budget-allocation` | GET | `useMockBudgetAllocation()` | budget_allocation (9 rows) | — |
-| `/api/mock/keywords` | GET | `useMockKeywords()` | keyword_performance (21 rows) | `?channel=naver` |
-| `/api/mock/retention` | GET | `useMockRetention()` | retention (5 rows) | — |
-| `/api/mock/reviews` | GET | `useMockReviews()` | review_trends (36 rows) | `?sentiment=긍정&source=oliveyoung` |
+> (삭제됨 — 마케팅 도메인 mock 엔드포인트 12종 + `mock_data.py`. 프레임워크에서는 도메인별로 재정의.
+>  상세 표면은 git 히스토리. REST 패턴 자체(엔드포인트 → hook → 표준 응답 포맷)는 아래 포맷 참고.)
 
 **응답 포맷 (모두 동일)**:
 ```json
@@ -125,45 +113,24 @@ POC 단계는 인증 없음. WS 는 `user_id="demo"` 고정 (URL query parameter
 **zod schema**: `src/api/schemas.ts` 의 `MockResponseSchema` (T = 각 row schema).
 
 **MVP+ 마이그레이션**:
-- POC (Sprint 0~5): mock CSV → `backend/api_v2/mock_data.py` 가 pandas 로딩
-- MVP (Sprint 6+): 외부 API (네이버광고/메타광고/구글광고) 연동 — endpoint 표면 동일, frontend 변경 0
+- POC (Sprint 0~5): mock CSV → `backend/api/mock_data.py` 가 pandas 로딩
+- MVP (Sprint 6+): 외부 API (도메인 데이터 source) 연동 — endpoint 표면 동일, frontend 변경 0
 - Production (Sprint 11+): 자체 분석 DB 적재 + endpoint 동일
 
-### 2.3.1 Dashboard1 API (Sprint 16 신설) ⭐ multi-client
+### 2.3.1 ~~Dashboard1 API~~ (deleted) ⚠️
 
-> 결정 박제: [ADR-022](adr/ADR-022_data_source_workspace_layer_separation.md) — Agent 우회 Direct API.
-> 구현 위치: [`backend/api_v2/routes/dashboard1.py`](../../backend/api_v2/routes/dashboard1.py) (commit b17ec8a)
-> Frontend hook: [`frontend/src/api/hooks/useDashboard1Data.ts`](../../frontend/src/api/hooks/useDashboard1Data.ts)
+> ⚠️ **deleted**: `/api/dashboard1/*` route 및 `backend/api/routes/dashboard1.py` 폐기. 현재 등록 라우터 = `conversations` / `health` 만. 아래는 **historical reference only** (도메인 dashboard 예시 — 현 코드 미정합). Direct API 패턴 (Agent 우회 + DataSource/Workspace layer 공유) 자체는 프레임워크 설계로 유효하나, 구체 endpoint/Output 스키마는 도메인별 재정의.
 
 **역할**: tool 의 cleaned/computed 결과를 frontend 가 *직접* 조회 (agent 우회 = 빠른 응답). 같은 `DataSource` + `Workspace` layer 를 사용하므로 agent 실행 결과와 *항상 동기*.
 
 **Path prefix**: `/api/dashboard1/*` · **Tags**: `["Dashboard1"]`
 
 **공통 Query 파라미터** (모든 endpoint):
-- `?client=` (str, default `"clumi"`) — 회사 선택 (TopBar 드롭다운 → store → 여기)
+- `?client=` (str, default `"dreamagent"`) — 회사 선택 (TopBar 드롭다운 → store → 여기)
 - `?period=` (str, e.g. `"2026-04"`) — 분석 기간
 
-| Endpoint | Frontend Hook | 응답 (Pydantic Output) |
-|---|---|---|
-| `/api/dashboard1/kpi/revenue` | `useDashboard1Revenue(client, period)` | `S001RevenueTotal` |
-| `/api/dashboard1/kpi/ad-cost` | `useDashboard1AdCost(client, period)` | `AdCostTotal` |
-| `/api/dashboard1/kpi/roas` | `useDashboard1Roas(client, period)` | `S005Roas` |
-| `/api/dashboard1/kpi/cac` | `useDashboard1Cac(client, period)` | `S007Cac` |
-| `/api/dashboard1/kpi/aov` | `useDashboard1Aov(client, period)` | `S014Aov` |
-| `/api/dashboard1/kpi/new-members` | `useDashboard1NewMembers(client, period)` | `S028NewMembersMonthly` |
-| `/api/dashboard1/kpi/signup-conversion` | `useDashboard1SignupConversion(client, period)` | `S067SignupConversion` |
-| `/api/dashboard1/kpi/repurchase-rate` | `useDashboard1RepurchaseRate(client, period)` | `S012RepurchaseRateMom` |
-| `/api/dashboard1/kpi/unknown-revenue-share` | `useDashboard1UnknownRevenue(client, period)` | `S016UnknownRevenueShare` |
-| `/api/dashboard1/kpi/promotion-revenue` | ... | `S019PromotionRevenue` |
-| `/api/dashboard1/kpi/promotion-roas` | ... | `S020PromotionRoas` |
-| `/api/dashboard1/mom/revenue` | `useDashboard1MomRevenue(client)` | MoM 시계열 |
-| `/api/dashboard1/segment/grade-ratio` | `useDashboard1GradeRatio(client, period)` | 등급 분포 |
-| `/api/dashboard1/segment/age-bucket` | `useDashboard1AgeBucket(client, period)` | 연령대 분포 |
-| `/api/dashboard1/segment/category-dist` | `useDashboard1CategoryDist(client, period)` | 카테고리 분포 |
-| `/api/dashboard1/segment/channel-dist` | `useDashboard1ChannelDist(client, period)` | 채널 분포 |
-| `/api/dashboard1/segment/member-guest` | `useDashboard1MemberGuest(client, period)` | 회원/게스트 |
-| `/api/dashboard1/segment/grade-timeseries` | `useDashboard1GradeTimeseries(client)` | 등급 시계열 |
-| ... (총 20 endpoint) |  |  |
+> (삭제됨 — 마케팅 dashboard1 KPI/segment 엔드포인트 20종 + `routes/dashboard1.py`.
+>  프레임워크에서는 도메인별로 재정의. 상세 표면은 git 히스토리.)
 
 **Cache 패턴** (`_cached_or_run` 헬퍼):
 - 같은 `(client, period)` 요청 시 `Workspace.load("computed", key)` 우선 (HTTP cache + tool 결과 공유)
@@ -171,20 +138,19 @@ POC 단계는 인증 없음. WS 는 `user_id="demo"` 고정 (URL query parameter
 
 **zod schema**: `frontend/src/api/hooks/useDashboard1Data.ts` 의 각 hook 안에 inline (Pydantic Output 미러).
 
-### 2.3.2 Admin API (Sprint 16 신설)
+### 2.3.2 ~~Admin API~~ (deleted) ⚠️
 
-> 구현 위치: [`backend/api_v2/routes/admin.py`](../../backend/api_v2/routes/admin.py)
-> Frontend hook: [`frontend/src/api/hooks/useAdminCatalog.ts`](../../frontend/src/api/hooks/useAdminCatalog.ts)
+> ⚠️ **deleted**: `/api/admin/*` route 및 `backend/api/routes/admin.py` 폐기. 아래는 **historical reference only**. (tool catalog 은 현재 비어 있음 — surviving tool framework = `tools/{registry,base_tool,llm_tool}` 만, catalog empty.)
 
 **Path prefix**: `/api/admin/*` · **Tags**: `["Admin"]`
 
 | Endpoint | Frontend Hook | 응답 |
 |---|---|---|
-| `/api/admin/catalog` | `useAdminCatalog()` | 65 tool 메타 dump (name, category, description, status, parameters) |
+| `/api/admin/catalog` | `useAdminCatalog()` | tool 메타 dump (name, category, description, status, parameters) — *현재 catalog empty* |
 | `/api/admin/clients` | `useAdminClients()` | `data/{client}/raw/` 디렉토리 scan → `[{id, name, source_count}]` |
 
 **용도**:
-- `useAdminCatalog()` → ToolPalette UI ([`features/workflow/ToolPalette.tsx`](../../frontend/src/features/workflow/ToolPalette.tsx)) 의 65 tool 카탈로그
+- `useAdminCatalog()` → ToolPalette UI 의 tool 카탈로그 (현재 empty)
 - `useAdminClients()` → TopBar 클라이언트 드롭다운 ([`components/layout/TopBar.tsx`](../../frontend/src/components/layout/TopBar.tsx))
 
 **client 흐름** (전체):
@@ -205,12 +171,10 @@ DataSource.get(client, source_id) → data/{client}/raw/{filename}
 
 → tool 코드는 client 무관. 회사 추가 = `data/{new_client}/raw/` 디렉토리 + dropdown entry 만.
 
-### 2.3.3 Pipeline API (POC v1 — Phase 1 신설 예정) ⭐ Trigger 추상화
+### 2.3.3 ~~Pipeline API~~ (deleted route) ⚠️ Trigger 추상화
 
-> **결정 박제**: [ADR-023](adr/ADR-023_pipeline_5_actors_and_trigger_abstraction.md) — Pipeline 5 주체 (Agent · Direct API · Maker · Runner · Validator) + 6 Trigger 추상화 (button/upload/cron/webhook/agent).
-> **Pipeline 정의 진실 소스**: [68 spec](68_pipeline_catalog_v1.0.md) — 52 시각화 × 52 pipeline YAML 카탈로그 (Batch 1 = Dashboard1 21 완료).
-> **본 §의 책임**: *frontend 가 Runner 를 어떻게 호출하는가* — Pipeline 내부 구현 (Runner / Validator / YAML parser) 은 [10 §7.7](10_system_architecture_v1.9.md) + 추후 신규 spec 위임 (V5 영역 분리).
-> **구현 상태**: `backend/app/pipelines/` 부재 (2026-05-27). 본 §는 *Phase 1 신설 직전의 contract*. Frontend `useRunPipeline` hook 도 Phase 1 동반.
+> ⚠️ **deleted route**: `/api/admin/pipelines/*` route 폐기 (admin route 삭제). 아래 endpoint 표면은 **historical reference only**. (`backend/app/pipelines/` 모듈 자체는 존재하나 HTTP route 미등록.)
+> **본 §의 책임**: *frontend 가 Runner 를 어떻게 호출하는가* — Pipeline 내부 구현 (Runner / Validator / YAML parser) 은 [10 §7.7](10_system_architecture_v1.9.md) 위임.
 
 #### 2.3.3.1 §2.3.1 Direct API 와의 분리
 
@@ -250,7 +214,7 @@ import { z } from 'zod';
 
 // ── 요청 ──
 export const PipelineRunRequestSchema = z.object({
-  variables: z.record(z.string()).default({}),    // ${client}, ${period} 등 — 68 §3.3 변수
+  variables: z.record(z.string()).default({}),    // ${client}, ${period} 등 — pipeline 변수
   trigger: z.literal('manual').default('manual'), // POC v1 = manual 만
   // POC v1 미사용 (MVP+): force_refresh, override_cache
 });
@@ -268,7 +232,7 @@ export const PipelineRunCreatedSchema = z.object({
 
 // ── 응답: 상태 조회 ──
 export const PipelineStepStatusSchema = z.object({
-  id: z.string(),                                  // step id (68 §4.3 컨벤션)
+  id: z.string(),                                  // step id (pipeline step 컨벤션)
   status: z.enum(['pending', 'running', 'completed', 'failed', 'skipped']),
   started_at: z.string().nullable(),
   completed_at: z.string().nullable(),
@@ -314,9 +278,9 @@ export const PipelineRunStatusSchema = z.object({
 
 ```typescript
 export const PipelineCatalogEntrySchema = z.object({
-  name: z.string(),                                // dashboard1_kpi_revenue
+  name: z.string(),                                // <pipeline>_count_total
   visualization_id: z.string(),                    // K01
-  category: z.string(),                            // dashboard1 | dashboard_v1 | ...
+  category: z.string(),                            // <category> | ...
   description: z.string(),
   owner: z.enum(['developer', 'canvas', 'agent']),
   required_variables: z.array(z.string()),         // ["client", "period"]
@@ -330,7 +294,7 @@ export const PipelineCatalogSchema = z.object({
 });
 ```
 
-> **Pydantic Output 대응** = 68 spec §3 의 YAML 필드 1:1 매핑 (validator 가 schema 일치 보장). Pipeline 내부 구현이 결정 후 본 zod schema 도 *V1 코드 정합 사이클* 1회 더.
+> **Pydantic Output 대응** = pipeline YAML 필드 1:1 매핑 (validator 가 schema 일치 보장). Pipeline 내부 구현이 결정 후 본 zod schema 도 *V1 코드 정합 사이클* 1회 더.
 >
 > **Pydantic 모델 상태 (2026-05-28)**: `backend/app/pipelines/schemas.py` 부재. 본 zod schema = *frontend 의 contract 선언*. Phase 1 진입 commit 에 Pydantic 모델 동반 신설 + DC-FE-4 (zod 필수 필드 ↔ Pydantic required 일치) 검증.
 
@@ -421,7 +385,7 @@ useEffect(() => {
 
 → **Runner 내부 Lock** = `(pipeline_name, frozenset(variables.items()))` 기준 in-memory set (POC). MVP+ = Redis 또는 DB row lock.
 
-> 다른 `(name, variables)` 조합은 *병렬 실행 허용*. 예: `dashboard1_kpi_revenue?period=2026-04` 와 `=2026-03` 은 동시 가능.
+> 다른 `(name, variables)` 조합은 *병렬 실행 허용*. 예: `<pipeline>_count_total?period=2026-04` 와 `=2026-03` 은 동시 가능.
 
 #### 2.3.3.8 Frontend 사용 패턴 (Dashboard1 페이지)
 
@@ -432,7 +396,7 @@ function RefreshButton() {
   const [period] = usePeriod();
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
 
-  const runMutation = useRunPipeline('dashboard1_kpi_revenue');  // 또는 묶음
+  const runMutation = useRunPipeline('<pipeline>_count_total');  // 또는 묶음
   const { data: run } = usePipelineRun(activeRunId);
 
   const onClick = () => {
@@ -1030,8 +994,8 @@ C: 정상 흐름 재개
 
 ### 8.6 Pipeline Invocation — Trigger=button, POC v1 (§2.3.3) ⭐
 
-> **진실 소스**: [ADR-023 §3](adr/ADR-023_pipeline_5_actors_and_trigger_abstraction.md) Trigger 추상화 + [65 §13.3](65_dashboard_pages_v1.0.md) 5 주체 + [68 §6](68_pipeline_catalog_v1.0.md) Batch 1 YAML.
-> **본 §의 책임**: frontend ↔ backend Runner 의 *호출 시퀀스* + 상태 전이. Pipeline 내부 step 흐름은 [68 §3.4 step 의존성](68_pipeline_catalog_v1.0.md) 위임.
+> **진실 소스**: Trigger 추상화 + Pipeline 5 주체는 [10 §7.7](10_system_architecture_v1.9.md) 위임 (관련 ADR/카탈로그 spec 폐기).
+> **본 §의 책임**: frontend ↔ backend Runner 의 *호출 시퀀스* + 상태 전이. Pipeline 내부 step 흐름도 [10 §7.7](10_system_architecture_v1.9.md) 위임.
 
 #### 8.6.1 Sequence Diagram — Happy Path
 
@@ -1249,13 +1213,6 @@ Trigger 종류                       시퀀스 변경
 
 ---
 
-## 12. 변경 이력
+## 변경 이력
 
-| 버전 | 날짜 | 내용 |
-|------|------|------|
-| v1.0 | 2026-05-13 | 초안 — 호스트 / 식별 체계 / REST API 매핑 (현재 4 + Sprint 15 예정 9) + WebSocket 2 채널 / 메시지 카탈로그 (in 8 + out 8 + zod schema 예시) + Plan/Memory/WorkflowTemplate zod 매핑 (ADR-010 + 35 + 62 통합) + Error code 11 처리 + 시퀀스 5 케이스 + 구현 체크리스트 (Sprint 0~2) + DC-FE-1~5 Drift 방지. `docs/_claude/new_frontend/02_backend_contract.md` 정제 |
-| v1.1 | 2026-05-13 | **§2.3 Mock 데이터 API 12 endpoint 추가** — POC 데이터 source 결정 반영. `backend/api_v2/mock_data.py` (Sprint 1 신설) 가 `data/mock/` 12 CSV 서빙. `/api/mock/{company,products,campaigns,creatives,channel-performance,daily-performance,conversion-funnel,ab-tests,budget-allocation,keywords,retention,reviews}` + 응답 포맷 표준화 + MVP 마이그레이션 경로 |
-| v1.1 (검증 전면 정정) | 2026-05-15 | **프론트 통합 전 문서↔백엔드 다중 사이클 검증 (사이클 3).** 본 문서가 spec 21/20/22 와 광범위하게 어긋나 전면 정정 — (1) §1.2 `turn_id` 는 클라 생성 (REST 응답 아님), `thread_id` 행 추가. (2) §2.1 가공 REST 엔드포인트 `/api/agent/*` 3개 삭제 — 쿼리는 WS `{type:"query"}`. (3) §2.3 중복 번호 정정 (REST 클라 패턴 → 2.4, Error → 2.5). (4) §4 이벤트 카탈로그·zod 스키마 전면 재작성 — `agent_message*` 삭제(미발행), `node_event`/`hitl_request` 평탄 envelope, `paused`/`resumed`/`connected`/callback 4종 추가, `hitl_request` 채널을 `/ws/agent` 로 정정. **이것이 `safeParse` 전량 폐기의 근본 원인이었음.** (5) §7.1 에러코드 11개를 `error_codes.py` 실제값으로 교체 (가공 7개 삭제). (6) §8.1 시퀀스 WS query 기반으로 정정. §6 Plan zod 는 정합 확인 (정정 없음) |
-| v1.1 (검증 정정) | 2026-05-15 | **프론트 통합 전 문서↔백엔드 코드 다중 사이클 검증 (사이클 3).** 본 문서가 spec 21/20/22 와 광범위하게 어긋나 있어 — 프론트 `schemas.ts` 가 이 문서대로 작성되어 백엔드 응답을 `safeParse` 에서 전량 폐기하던 원인 — 4개 섹션 전면 정정: **§2.1** 존재하지 않는 `/api/agent/*` REST 3개 제거, 쿼리는 WS `query` 메시지임을 명시. **§4.1/4.2** WS 이벤트 카탈로그 — `agent_message*`(미발행) 제거, `hitl_request`/`paused`/`resumed` 가 `/ws/agent` 채널임을 정정, `connected`/`layer_start`/`todo_*`/`progress`/`pong` 추가. **§4.3** zod schema 전면 재작성 — 평탄 envelope, `node_event.data`=State dict, `hitl_request` 에서 `request_type` 제거. **§7.1** error code 11개 — 가공 7개 제거, 실제 7개 추가. **§8.1/8.2** 시퀀스 정정. §6 Plan zod 는 planner.py 와 정합 확인 (무수정). 상세: `reports/agent_specs_verification_2026-05-15.md` §사이클3 |
-| **v1.1 (Sprint 16 보강)** | **2026-05-27** | **ADR-022 박제** — Agent 우회 Direct API 신설. **§2.3.1 Dashboard1 API** (20 endpoint, `/api/dashboard1/*` + `?client=&period=`) + Pydantic Output 매핑 + `_cached_or_run` Workspace cache + hook 목록. **§2.3.2 Admin API** (`/api/admin/catalog` 65 tool dump + `/api/admin/clients` 디렉토리 scan) — ToolPalette + TopBar 드롭다운 source. **client 흐름** 전체 다이어그램 (TopBar → store → queryKey → ?client= → ExecutionContext → DataSource). 신규 frontend: `features/dashboard1/` 12 파일 + `useDashboard1Data` + `useAdminCatalog` + `useCurrentClient` store. Sprint 16 commits b17ec8a (route rename) + e88e362 (hook) + fee8a19 (ToolPalette) + ba242c7 (TopBar). |
-| **v1.2 (Phase 0.5 A — Pipeline Invocation Flow)** | **2026-05-28** | **ADR-023 박제** (Pipeline 5 주체 + Trigger 추상화) + **68 spec 연동** (Pipeline DSL 카탈로그). **§2.3.3 Pipeline API** (POC v1, Phase 1 신설 예정) — `/api/admin/pipelines/*` 4 endpoint + Pydantic↔zod schema (`PipelineRunRequest` / `PipelineRunCreated` / `PipelineRunStatus` / `PipelineStepStatus` / `PipelineCatalog`) + **진행 표시 UX 결정 (Polling 2s)** + 에러 처리 (신규 code 6개 — `PIPELINE_NOT_FOUND`/`_RUN_NOT_FOUND`/`_STEP_FAILED`/`_VALIDATOR_FAILED`/`_DUPLICATE_RUN`/`_DATA_SOURCE_MISSING`) + 동시성 (Lock: `(name, variables)` in-memory set, POC) + frontend 사용 패턴 (`useRunPipeline` + `usePipelineRun` + `RefreshButton` + cache invalidation) + POC→MVP 진화. **§7.1.1 신규 예정 — Pipeline 6 코드** 박제 (Phase 1 동반 신설). **§8.6 Pipeline Invocation 시퀀스** — Mermaid Sequence (사용자→Runner→Tool→DataSource→Workspace→Validator) + State Machine (`pending`→`running`→`validating`→`completed`/`failed`/`cancelled`) + Trigger 추상화 시퀀스 정합 + 실패 7 분기 + POC↔MVP 진화 영역. **V5 영역 분리**: 본 § = frontend 측 contract. Runner / Validator / YAML parser 내부 구현 = [10 §7.7](10_system_architecture_v1.9.md) + 추후 신규 spec 위임. **상태**: `backend/app/pipelines/` 부재 → Phase 1 신설 시 V1 코드 정합 사이클 1회 더. **ADR-024 V1·V2 사이클 검증 결과**: V1 코드 정합 9/9 PASS · V2 cross-ref 5/6 PASS + 1 WARN (정정 완료 — 68 spec §0 짝 spec link + 63 §7.1.1 신규 박제). V3 사용자 검토 게이트 대기 후 commit. |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

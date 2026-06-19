@@ -1,8 +1,8 @@
 # features/workflow/ — Workflow Canvas
 
-DreamAgent Dream Agent 의 시각적 워크플로우 편집기 (`/workflow` 라우트).
+DreamAgent 의 시각적 워크플로우 편집기 (`/workflow` 라우트).
 
-spec: [62](../../../../docs/agent_specs/62_workflow_canvas_design_v1.0.md) (디자인) / [ADR-012](../../../../docs/agent_specs/adr/ADR-012_workflow_canvas_w2_structure.md) (확장형 구조)
+spec: [62](../../../../docs/agent_specs/62_workflow_canvas_design_v1.0.md) (디자인)
 
 ## Layer 구성
 
@@ -40,7 +40,7 @@ palette/ ──→ editing/store + ws.ts (W4)
 | Phase | 폴더 | 상태 |
 |-------|------|------|
 | W1 read-only 시각화 | `canvas/` | ✅ Sprint 15 P0 완료 |
-| W2 시각적 편집 | `editing/` + `store/` | 🚧 Sprint 15 P1 진입 (ADR-012) |
+| W2 시각적 편집 | `editing/` + `store/` | 🚧 Sprint 15 P1 진입 |
 | W3 Save / Library | `library/` | ⏳ Sprint 15 P1 또는 16 |
 | W4 노드 팔레트 | `palette/` | ⏳ Sprint 16+ |
 
@@ -60,7 +60,6 @@ palette/ ──→ editing/store + ws.ts (W4)
 
 | 질문 | 위치 |
 |------|------|
-| 폴더 구조 결정 근거 | [ADR-012](../../../../docs/agent_specs/adr/ADR-012_workflow_canvas_w2_structure.md) |
 | 시각적 편집 동작 매핑 | spec 62 §5.1 |
 | W3 Save/Load schema | spec 62 §3.2 / §6 |
 | 새 노드 타입 추가 | `canvas/nodeTypes.ts` |

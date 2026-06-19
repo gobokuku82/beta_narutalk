@@ -1,4 +1,4 @@
-# End-to-End Flow — OctorAD Dream Agent V2
+# End-to-End Flow — DreamAgent V2
 
 | 항목 | 내용 |
 |------|------|
@@ -33,8 +33,8 @@ sequenceDiagram
     participant WSA as /ws/agent<br/>(FastAPI)
     participant WSH as /ws/hitl<br/>(FastAPI)
     participant AG as Agent (LangGraph)<br/>Cognitive→Planning→Execution→Response
-    participant Tool as Execution Tool<br/>(예: naver_collector)
-    participant Data as data/mock/*.csv
+    participant Tool as Execution Tool<br/>(예: &lt;tool&gt;)
+    participant Data as DataSource<br/>(data_layer)
 
     User->>FE: query 입력 (채팅창)
     FE->>WSA: query {conversation_id, turn_id, user_input}
@@ -53,7 +53,7 @@ sequenceDiagram
     AG->>AG: ③ Execution — Plan.todos 루프
     loop 각 todo
         AG->>Tool: tool 호출
-        Tool->>Data: load_mock_csv(...)
+        Tool->>Data: load_data(...)
         Data-->>Tool: DataFrame
         Tool-->>AG: TodoResult
         AG-->>FE: todo_start / todo_complete / progress<br/>(callback_manager bridge)
@@ -103,7 +103,7 @@ sequenceDiagram
 
 | 채널 | 경로 | 방향 | 용도 |
 |------|------|------|------|
-| **REST** | `/api/...`, `/api/mock/...` | 클라→서버 (req-res) | 대시보드 데이터 fetch, mock 12 endpoint |
+| **REST** | `/health`, `/conversations` | 클라→서버 (req-res) | 헬스체크 · 대화이력 조회 |
 | **WS Agent** | `/ws/agent?user_id=<id>` | **서버→클라 주(主)** + query/resume 입력 | 노드 이벤트, hitl_request, paused, todo_*, progress, complete, error |
 | **WS HITL** | `/ws/hitl?user_id=<id>` | **양방향** | 사용자 명령 (pause / resume / cancel / hitl_response / todo_edit_nl) + ack |
 
@@ -113,14 +113,11 @@ WS 가 *2 채널인 이유* — 이벤트 스트림과 사용자 명령의 backp
 
 ---
 
-## 4. 데이터 source — POC 단계
+## 4. 데이터 source
 
-- **에이전트 tool 의 입력**: `backend/app/dream_agent/tools/shared/helpers.py::load_mock_csv()` → `data/mock/*.csv` 직접 로드 (pandas).
-  - 예: `naver_collector.py` → `mock_data_review_trends.csv`
-- **대시보드 시각화의 입력**: `/api/mock/<name>` REST endpoint → 같은 CSV 를 JSON 으로 서빙 (`backend/api_v2/routes/mock_data.py`).
-  - 즉 두 경로가 *같은 CSV* 를 다른 인터페이스로 읽음. 에이전트와 대시보드는 데이터 source 만 공유, 동작은 독립.
-
-> POC = mock CSV 12종 (블루밍글로우 마케팅). MVP 부터 실 외부 API 로 교체 예정 (memory: [project_mock_data_as_poc_source](.)).
+- **데이터 레이어 추상**: `backend/app/data_layer/data_sources/` (입력 raw 읽기 — `DataSource` ABC + File/Postgres) + `workspace/` (출력 정제/계산 저장 — `WorkspaceBackend` ABC).
+- 프레임 추출 후 `SOURCE_REGISTRY` 는 **비어 있음** — 도메인이 source id → 파일/테이블 매핑을 등록한다 (미등록 조회 시 `DataSourceNotFound` = 빈-프레임 정상).
+- `DATA_BACKEND=postgres` 면 `dreamagent_data`(schema-per-client) 로 읽고 쓴다.
 
 ---
 
@@ -135,48 +132,43 @@ WS 가 *2 채널인 이유* — 이벤트 스트림과 사용자 명령의 backp
 | "Pydantic 모델 ↔ 실제 코드 매핑은?" | [30_DATA_MODELS_v1.1.md](30_DATA_MODELS_v1.1.md) |
 | "특정 시나리오 (pause / cancel / timeout) 의 시퀀스는?" | [24_sequence_diagrams_v1.3.md](24_sequence_diagrams_v1.3.md) |
 | "Error code 카탈로그는?" | [22_error_codes_v1.1.md](22_error_codes_v1.1.md) |
-| "왜 이렇게 설계했나 (큰 결정)" | [adr/](adr/INDEX.md) |
-| "DB schema 는?" | [35_DB_SCHEMA_v1.0.md](35_DB_SCHEMA_v1.0.md) |
-| "Frontend state / routing 은?" | [61_frontend_architecture_v1.0.md](61_frontend_architecture_v1.0.md) |
-| "Frontend ↔ Backend 계약 (zod / WS message)은?" | [63_frontend_backend_contract_v1.0.md](63_frontend_backend_contract_v1.0.md) |
-| "Tool 어떤 게 구현됐고 어떤 게 미구현?" | [32_execution_agent_tools_v1.0.md](32_execution_agent_tools_v1.0.md) |
+| "Tool 프레임워크 / 확장 방법은?" | 실행 에이전트 확장 가이드 (`tools/{registry,base_tool,llm_tool}`) |
 
 ---
 
 ## 6. 폴더 한 눈에
 
 ```
-beta_v001/
+beta_v0033/
 ├── backend/
-│   ├── api_v2/             # FastAPI — REST 라우트 + /ws/agent + /ws/hitl
+│   ├── api/                # FastAPI — REST 라우트 + /ws/agent + /ws/hitl
 │   │   ├── ws_agent.py     # run_turn, /ws/agent
 │   │   ├── ws_hitl.py      # pause/resume/cancel/hitl_response/todo_edit_nl 핸들러
-│   │   └── routes/mock_data.py  # /api/mock/* 12 endpoint
+│   │   └── routes/         # health.py, conversations.py
 │   ├── app/dream_agent/
-│   │   ├── main_graph.py        # 4-Layer LangGraph 조립
+│   │   ├── system_graph/        # builder.py — 4-Layer LangGraph 조립
 │   │   ├── cognitive/           # ① NL→SQ
 │   │   ├── planning/            # ② SQ→Plan
 │   │   ├── execution/           # ③ Plan→ExecutionResult
 │   │   ├── response/            # ④ ExecutionResult→텍스트
-│   │   ├── tools/               # naver_collector, format_normalizer, ... (POC 8개)
-│   │   ├── workflow_managers/   # HITL / Todo / Callback / Concurrency / LLM (5 Manager)
-│   │   └── models/              # Pydantic — StructuredQuery / Plan / ExecutionResult / ...
-│   └── tests/
+│   │   ├── tools/               # registry / base_tool / llm_tool (카탈로그 비어 있음)
+│   │   └── workflow_managers/   # HITL / Todo / Callback / Conversation / Recovery ... (Manager)
+│   ├── app/data_layer/          # data_sources / workspace / schemas (추상 골격)
+│   └── scripts/                 # setup_checkpointer, setup_data_db
 │
 ├── frontend/src/
 │   ├── api/                # ws.ts, schemas.ts (zod), hooks/
 │   ├── features/
 │   │   ├── agent/          # SideChatPanel, ChatTodoCard, PauseBox
 │   │   ├── execution/      # useExecution store (plan + runtime 결합)
-│   │   ├── hitl/           # useHitl store + PlanReviewModal(dormant)
+│   │   ├── hitl/           # useHitl store + PlanReviewModal
 │   │   ├── session/        # useSession (conversation/turn id)
+│   │   ├── conversations/  # 대화이력
 │   │   └── workflow/       # WorkflowPage + WorkflowCanvas (React Flow)
 │   └── routes/             # TanStack Router
 │
-├── data/mock/              # 12 CSV — 블루밍글로우 마케팅
 └── docs/
-    ├── agent_specs/        # ★ 이 문서가 있는 곳
-    └── _claude/            # 실험/탐색 자취 (gitignored 일부)
+    └── agent_specs/        # ★ 이 문서가 있는 곳
 ```
 
 ---
@@ -195,6 +187,4 @@ beta_v001/
 
 ## 변경 이력
 
-| 버전 | 날짜 | 내용 |
-|------|------|------|
-| v1.0 | 2026-05-15 | 초안 — Phase 1 통합 직후, 사용자 요청 "한 장으로 신규 입사자에게 던질 수 있는 그림". Mermaid sequence (full happy path + HITL + 5 PauseBox 액션) + 채널 카탈로그 + Reading Order 표 |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

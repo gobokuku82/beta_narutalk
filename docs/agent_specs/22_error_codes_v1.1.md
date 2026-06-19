@@ -97,7 +97,7 @@
 ## 2. 사용 예시 (진실 소스 = 코드)
 
 ```python
-from api_v2.error_codes import ErrorCodes
+from api.error_codes import ErrorCodes
 
 # CONCURRENT_LIMIT_EXCEEDED emit
 await conn_manager.broadcast_to_user(user_id, {
@@ -163,7 +163,7 @@ if node == "planning":
 파일: `logs/layer_guard.jsonl` (append-only, `.gitignore` 대상)
 
 ```jsonl
-{"ts":"2026-04-21T01:23:45Z","conv_id":"c1","turn_id":"t1","user_id":"demo","layer":"planning","code":"PLANNING_EMPTY_PLAN","severity":"fatal","message":"...","detail":{...},"state_summary":{"brand":"블루밍글로우","plan_todos":0,...}}
+{"ts":"2026-04-21T01:23:45Z","conv_id":"c1","turn_id":"t1","user_id":"demo","layer":"planning","code":"PLANNING_EMPTY_PLAN","severity":"fatal","message":"...","detail":{...},"state_summary":{"entity":"<entity>","plan_todos":0,...}}
 ```
 
 목적 (POC):
@@ -174,8 +174,4 @@ if node == "planning":
 
 ## 변경 이력
 
-| 버전 | 날짜 | 내용 |
-|------|------|------|
-| v1.0 | 2026-04-21 | 초안 — 8개 코드 카탈로그 (Sprint 13 I11-a 기준) + Layer Guard 동작 명시 + JSONL 로그 포맷 |
-| **v1.1** | **2026-04-23** | **Sprint 14 A3 D7=A- 반영** — 3개 enum 추가: `TODO_EDIT_NOT_PAUSED` (runtime warning), `INVALID_DAG` (planning warning), `NL_INTENT_UNCLEAR` (planning warning). 총 11개 enum. §1.4 에 D7=A- 에서 제외된 4개 (TODO_NOT_FOUND/CASCADE_FAILED/NL_LLM_UNAVAILABLE/REORDER_INVALID_DAG) 는 free-form reason 명시 + 향후 승격 조건. §3 D10 layer_guard 통합 반영. §2 hitl_ack 사용 예시 추가 |
-| v1.1 (검증 정정) | 2026-05-15 | **프론트 통합 전 문서↔코드 다중 사이클 검증 (사이클 2).** 카탈로그 11개 enum 이 `error_codes.py` 와 **완전 정합 확인**. layer_guard.py 도 §1.3 조건과 정합 (단 execution 검사의 `"success"` 문자열은 실제 enum `"completed"` 와 불일치 — layer_guard.py 버그, `reports/agent_specs_verification_2026-05-15.md` §사이클2). 헤더 21 링크 v1.2→v1.4 정정 |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

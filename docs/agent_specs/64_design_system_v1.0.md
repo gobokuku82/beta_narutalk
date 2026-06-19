@@ -118,7 +118,7 @@ E2  shadow-xl/2xl 큰 blur       (ELEVATION)
 | **2026-06-08 (9)** | RADIUS.md v1 (5 단계 위계) + `rounded` (no suffix) 폐기 30 변환 (Phase 3) | `47ea419` |
 | **2026-06-08 (10)** | MOTION.md v1 + ELEVATION.md v1 (룰만, 코드 변경 X) (Phase 5+6) | `a2b0dab` |
 | **2026-06-08 (11)** | Phase 7 Enforcement — `audit:tokens` grep script + Card text-2xl→base + tailwind ts→cjs | `a786c55` |
-| **2026-06-09 (12)** | 외부영역 정합 — Sidebar 다크→라이트 + collapsed/expanded + 채팅창 토큰 15건 + 사용자 메시지 strip + Brand 워드마크 (◈ OctorAD ·) + TopBar 톤다운 | `075ede6` |
+| **2026-06-09 (12)** | 외부영역 정합 — Sidebar 다크→라이트 + collapsed/expanded + 채팅창 토큰 15건 + 사용자 메시지 strip + Brand 워드마크 (◈ DreamAgent ·) + TopBar 톤다운 | `075ede6` |
 | **2026-06-09 (13)** | 페이지 재구성 — 라우트 17→15 (agent/hitl 폐기) + TopBar 라벨 + 5 페이지 이동 + SideChatPanel Maximize2 폐기 | `9a12c7a` + `c6c1bd9` |
 | **2026-06-09 (14)** | `audit:tabs` 신설 — Sidebar/Router 정합 자동 검증 + `pnpm audit:all` 통합 | `55f9e0c` |
 | **2026-06-10 (15)** | (b)/(c) 라벨 정합 + (d) 계획서 박제 | `acb4739` + `8d78475` |

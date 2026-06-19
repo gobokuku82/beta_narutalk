@@ -355,10 +355,4 @@ C   WA                     RT                G             HM                   
 
 ## 변경 이력
 
-| 버전 | 날짜 | 내용 |
-|------|------|------|
-| v1.0 | 2026-04-21 | 초안 — 7개 시나리오 (Happy / Reject / Pause-Resume / Restart / Concurrent / Guard / Multi-tab) |
-| v1.1 | 2026-04-21 | §4 Server Restart Recovery 확장 — `resume_query` + `resume_only=True` 흐름, 대시보드 localStorage/onopen/onclose, CallbackManager 중복 방지, 실패 케이스 (pending 없음 / 필드 누락) |
-| v1.2 | 2026-04-22 | Sprint 14 A1 HITL timeout 시퀀스 3건 신규 — §5a plan_review timeout (reject 주입, G-11), §5b execution_pause timeout (cancel 주입), §5c 늦은 hitl 요청 → turn_not_active ack (FR-13b/UX-5) |
-| **v1.3** | **2026-04-24** | **Sprint 14 A3 Phase 5 편집 경로 통합 시퀀스 §8 추가** — plan_review interrupt 직후 임시 `_progress` 생성 → ws_hitl pause 단일 경로 → approve 시 `modify+value` 변환 → planning_stage L88-92 modify 분기 → execution. 관련 링크 12 v1.3, 21 v1.4 로 갱신 |
-| v1.3 (검증 정정) | 2026-05-15 | **프론트 통합 전 문서↔코드 다중 사이클 검증 (사이클 2).** 시퀀스 8종 모두 `ws_agent.py`/`ws_hitl.py` 와 정합 확인. 정정 2건 — (1) §3 다이어그램 `paused / hitl_request(execution_pause)` → `paused` 만 (execution_pause 는 `paused` 단일 emit). (2) §3.1 payload 표 `paused` 필드 `{progress, reason}` → 실제 `_build_paused_data` 산출 `{request_id, completed, total, current_phase, progress}` (`reason` 없음) |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

@@ -7,14 +7,13 @@
 | 진행상태 | **Active** (Sprint 13 Integration 반영) |
 | 버전 | **v1.1** |
 | 최종 수정일 | 2026-04-22 |
-| 이전 버전 | `POC_legacy/INTERFACE_CONTRACT_poc.md` (v1.1, 2026-04-10) |
 | 관련 명세 | `21_WEBSOCKET_PROTOCOL_v1.5.md`, `30_DATA_MODELS_v1.1.md`, `11_main_graph_state_v1.5.md`, `12_manager_layer_v1.4.md` |
 
 ---
 
 ## 0. 개요
 
-OctorAD Dream Agent V2의 **API 계약** (Layer I/O + REST 엔드포인트 + AgentState + 에러 규약).
+DreamAgent V2의 **API 계약** (Layer I/O + REST 엔드포인트 + AgentState + 에러 규약).
 
 - **WebSocket 프로토콜** → `21_WEBSOCKET_PROTOCOL_v1.5.md`
 - **Pydantic / dataclass 모델** → `30_DATA_MODELS_v1.1.md`
@@ -98,18 +97,18 @@ Authorization: Bearer <jwt_token>
 {
     "targets": {                       # Targets
         "brand": str | None, "product": str | None,
-        "competitors": [str], "source": "naver|youtube|coupang|...|unknown",
+        "competitors": [str], "source": str,   # source = open-vocab 자유 문자열 (예: "unknown"|"multi")
         "period": {"raw": str, "start": str|None, "end": str|None, "window": str|None} | None,
         "keywords": [str], "extra_filters": {}
     },
     "goal": {                          # Goal
-        "type": "answer|metric|insight|report|creative|mixed",
+        "type": "answer|metric|insight|report|creative|mixed",   # GoalType enum
         "output_format": "text|pdf|image|chart|video|mixed",   # 필수
         "depth": "brief|standard|detailed",
         "audience": str | None
     },
     "tasks": [                         # list[Task]
-        {"id": "<TaskType enum>", "priority": int, "params_override": {}}
+        {"id": "<TaskType 자유 문자열>", "priority": int, "params_override": {}}
     ],
     "meta": {                          # QueryMeta
         "confidence": float, "ambiguity": {"is_ambiguous": bool, "severity": str, ...},
@@ -117,8 +116,9 @@ Authorization: Bearer <jwt_token>
     }
 }
 ```
+> ⚠️ **TaskType / Source 는 open-vocab(자유 문자열)** — 고정 enum 아님. 예시 값: `data_collection`, `metric_calculation`, `analysis`, `comparison`, `insight_generation`, `summary_generation`, `report_generation`, `recommendation`, `factual_lookup`.
 > ⚠️ `brand` 는 `targets.brand` 중첩 — `structured_query["brand"]` 최상위 접근 아님.
-> `layer_guard.py::inspect_layer_output` 의 `sq.get("brand")` 는 최상위 접근이라 항상 None → COGNITIVE_EMPTY_QUERY 는 실질적으로 `tasks` 비어있음만 검사 (검증 사이클 2 발견, `reports/agent_specs_verification_2026-05-15.md` 참조).
+> `layer_guard.py::inspect_layer_output` 의 `sq.get("brand")` 는 최상위 접근이라 항상 None → COGNITIVE_EMPTY_QUERY 는 실질적으로 `tasks` 비어있음만 검사 (검증 사이클 2 발견).
 
 ### 3.2 Planning
 
@@ -183,7 +183,7 @@ Authorization: Bearer <jwt_token>
 }
 ```
 > ⚠️ `status` / `overall_status` 값은 `TodoStatus` enum (`completed`/`failed`/...) — **`"success"` 값은 존재하지 않음**.
-> 🔴 **백엔드 버그 (검증 사이클 2 발견)**: `layer_guard.py::inspect_layer_output` 의 execution 검사가 `t.get("status") == "success"` 를 보는데, 실제 값은 `"completed"` → `succeeded` 리스트가 항상 비어 **부분 실패가 EXECUTION_ALL_FAILED(fatal) 로 오분류**됨. `agent_specs_verification_2026-05-15.md` §사이클2 참조 — 백엔드 수정 필요 (문서 작업 범위 밖, 사용자 결정 대기).
+> 🔴 **백엔드 버그 (검증 사이클 2 발견)**: `layer_guard.py::inspect_layer_output` 의 execution 검사가 `t.get("status") == "success"` 를 보는데, 실제 값은 `"completed"` → `succeeded` 리스트가 항상 비어 **부분 실패가 EXECUTION_ALL_FAILED(fatal) 로 오분류**됨. 백엔드 수정 필요 (문서 작업 범위 밖, 사용자 결정 대기).
 
 ### 3.4 Response
 
@@ -220,7 +220,7 @@ Authorization: Bearer <jwt_token>
 from app.dream_agent.states.agent_state import init_agent_state
 
 state = init_agent_state(
-    user_input="블루밍글로우 분석",
+    user_input="도메인 작업 요청",
     conversation_id="conv_xxx",
     turn_id="turn_yyy",
     user_id="demo",                 # Settings fallback
@@ -247,7 +247,7 @@ thread_id = f"{conversation_id}_{turn_id}"
 config = {"configurable": {"thread_id": thread_id}}
 ```
 
-헬퍼: `api_v2.thread_id.make_thread_id(conversation_id, turn_id)` (Sprint 13 T3).
+헬퍼: `api.thread_id.make_thread_id(conversation_id, turn_id)` (Sprint 13 T3).
 
 ---
 
@@ -333,15 +333,11 @@ Sprint 15 Memory 도입 시 DB로 이관 예정.
 | `ResponsePayload` | `backend/app/dream_agent/schemas/response_payload.py` |
 | `ExecutionProgress` | `backend/app/dream_agent/workflow_managers/hitl_manager/manager.py:20` (dataclass) |
 | `prepare_cognitive_prompt` | `backend/app/dream_agent/cognitive/cognitive_stage.py` |
-| `make_thread_id` | `backend/api_v2/thread_id.py` |
+| `make_thread_id` | `backend/api/thread_id.py` |
 | Layer Guard | `backend/app/dream_agent/system_graph/layer_inspector.py` |
 
 ---
 
 ## 변경 이력
 
-| 버전 | 날짜 | 내용 |
-|------|------|------|
-| v1.0 | 2026-04-21 | 초안 — Sprint 13 Integration 기준. §1.2 Sprint 15 REST API placeholder, §3 Layer Contract 4종, §4 AgentState + init_agent_state 계약, §5 Error Contract severity/layer 체계 + JSONL 로그, §6 Session/Thread 식별 체계 |
-| v1.1 | 2026-04-22 | Sprint 14 A1 HITL timeout — §0 개요에 Manager API 링크 (12_manager_layer v1.1) + Sprint 14 변경 블록 (wait_for_resume timeout / register_turn / is_turn_active / HITL_RESUME_TIMEOUT_SEC settings / complete.reason=hitl_timeout / hitl_ack turn_not_active) 추가 |
-| v1.1 (검증 정정) | 2026-05-15 | **프론트 통합 전 문서↔코드 다중 사이클 검증 (사이클 2).** §3 Layer Contract 4종 스키마를 실제 Pydantic 모델과 대조 정정 — (1) StructuredQuery: `targets`/`goal`/`meta` 중첩 구조 전개, `brand` 는 `targets.brand` 중첩 명시. (2) **Plan: 전면 재작성** — 실제 모델은 `teams_selected`/`todos`/`dag`/`plan_notes` 4필드. 이전 문서의 `plan_id`/`intent_summary`/`strategy`/`mermaid_diagram` 등은 실재 안 함. `todo.task_type`(≠`task`), `dag`(≠`dependency_graph`) 정정. (3) ExecutionResult: `overall_status` 값 `completed|failed` (≠`success|partial`), TodoResult 전체 필드, `halted_at`/`halt_reason` 추가. (4) ResponsePayload: `format` enum 에 `markdown` 없음 정정. §5.1 8개는 `error` 이벤트용 — 전체 11개는 spec 22. 21 링크 v1.2→v1.4. 🔴 layer_guard.py 2건(`sq.get("brand")` 무효 / execution `"success"` 오타) 발견 — 백엔드 버그, 사용자 결정 대기 |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

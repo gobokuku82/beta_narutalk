@@ -155,7 +155,7 @@ sequenceDiagram
     participant DB as memory_entries
     participant P as Planning
 
-    U->>W: 쿼리 ("리뷰 분석")
+    U->>W: 쿼리 ("데이터 분석")
     W->>C: cognitive_node(state)
 
     Note over C,M: Sprint 15 P0 — E2-3 Cognitive 직전 cascade
@@ -354,10 +354,11 @@ sequenceDiagram
 
 ```mermaid
 graph LR
-    Q1["1차 turn<br/>'리뷰 찾아줘'"] --> Clar1{"clarification?"}
-    Clar1 -->|memory miss| Ask1["💬 모달:<br/>'어떤 브랜드?'"]
-    Ask1 --> Ans1["사용자:<br/>'블루밍글로우'"]
-    Ans1 --> Mem1[("Memory.set<br/>preference.brand")]
+    Q1["1차 turn<br/>'데이터 찾아줘'"] --> Clar1{"clarification?"}
+    Clar1 -->|memory miss| Ask1["💬 모달:<br/>'어떤 대상?'"]
+    Ans1["사용자:<br/>'&lt;entity&gt;'"]
+    Ask1 --> Ans1
+    Ans1 --> Mem1[("Memory.set<br/>preference.entity")]
     Mem1 --> Plan1[Planning]
     Plan1 --> Exec1[Execution]
     Exec1 --> Resp1[Response]
@@ -365,8 +366,8 @@ graph LR
 
     PT1 -.학습 누적.-> Q2
 
-    Q2["2차 turn<br/>'리뷰 찾아줘'<br/>(brand 또 누락)"] --> Clar2{"clarification?"}
-    Clar2 -->|memory hit ⭐| AutoResolve["✅ 자동 해결:<br/>brand=블루밍글로우<br/>(질문 안 함)"]
+    Q2["2차 turn<br/>'데이터 찾아줘'<br/>(entity 또 누락)"] --> Clar2{"clarification?"}
+    Clar2 -->|memory hit ⭐| AutoResolve["✅ 자동 해결:<br/>entity=&lt;entity&gt;<br/>(질문 안 함)"]
     AutoResolve --> Plan2[Planning]
     Plan2 --> Exec2[Execution]
     Exec2 --> Resp2[Response]
@@ -455,16 +456,10 @@ Mermaid = 스타일/레이아웃 제한적. 본격 도식 (drawio / Figma) 필�
 - **정식 spec**: [`35_DB_SCHEMA_v1.0.md`](./35_DB_SCHEMA_v1.0.md) — 컬럼 / 제약 / query 패턴
 - **Pydantic models**: [`30_DATA_MODELS_v1.1.md`](./30_DATA_MODELS_v1.1.md)
 - **north star**: [`00_vision_and_intent.md`](./00_vision_and_intent.md)
-- **ADR**:
-  - [`adr/ADR-010_plan_schema_unification.md`](./adr/ADR-010_plan_schema_unification.md) (예정)
-  - [`adr/ADR-015_memory_intent_communication.md`](./adr/ADR-015_memory_intent_communication.md) (예정)
-- **사전 조사**: [`../reports/sprint14_a3_research_q3_memory.md`](../reports/sprint14_a3_research_q3_memory.md)
-- **구현 계획**: [`../reports/sprint15_phase_e1_memory_infrastructure.md`](../reports/sprint15_phase_e1_memory_infrastructure.md), [`../reports/sprint15_phase_e2_chat_memory.md`](../reports/sprint15_phase_e2_chat_memory.md)
+- **ADR**: ADR-010 (Plan/Todo schema 통합), ADR-015 (메모리 + Clarification) — 결정 박제
 
 ---
 
 ## 변경 이력
 
-| 날짜 | 내용 |
-|------|------|
-| 2026-04-29 | 초안 — 7 view (Database ERD / 의미적 hierarchy / 데이터 흐름 read·write·clarification / Memory type 분류 / Sprint 진화 timeline / E2-5 sidebar / 자유 대화 H0 자동 해결). Mermaid 형식. 35 정식 spec 의 시각화 보조 |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

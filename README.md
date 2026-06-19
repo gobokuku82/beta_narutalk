@@ -8,7 +8,7 @@
 
 ```
 backend/
-├── api_v2/                    # FastAPI + WebSocket 엔트리
+├── api/                       # FastAPI + WebSocket 엔트리
 │   ├── main.py               # create_app + lifespan(Checkpointer/Graph)
 │   ├── ws_agent.py / ws_hitl.py
 │   └── routes/               # health, conversations
@@ -61,7 +61,7 @@ cd backend && uv run python -m scripts.setup_checkpointer   # dreamagent_system 
 cd backend && uv run python -m scripts.setup_data_db        # dreamagent_data (schema-per-client)
 
 # 서버 (port 8001)
-uv run python run_server_v2.py
+uv run python run_server.py
 
 # 프론트엔드
 cd frontend && pnpm install && pnpm dev

@@ -42,7 +42,7 @@ ADR-012 의 W2 (시각적 편집) 단계 구현. spec 본문에 다음을 박제
 
 ## 0. 본 문서의 역할
 
-OctorAD 의 핵심 vision (사용자 ↔ AI 파트너쉽 + 학습 + **맞춤형 에이전트**) 을 UI 로 구현하는 **Workflow Canvas** 의 정식 spec.
+DreamAgent 의 핵심 vision (사용자 ↔ AI 파트너쉽 + 학습 + **맞춤형 에이전트**) 을 UI 로 구현하는 **Workflow Canvas** 의 정식 spec.
 
 n8n / Zapier / Make 같은 노드-엣지 workflow 빌더의 **AI-first 진화 형태**:
 - **시작**: 빈 캔버스 X. 사용자 자연어 → AI 자동 생성된 workflow 표시
@@ -79,7 +79,7 @@ n8n / Zapier / Make 같은 노드-엣지 workflow 빌더의 **AI-first 진화 �
 | **H1** 발견 | AI 와 대화 중 의도 명확화 | 시각화로 누락 발견 + 시각적 편집 |
 | **H2** 학습 | 사용자 패턴 누적 | save 기능 — 반복 작업 template 화 |
 | **H3** 패턴화 | 시스템이 사용자 패턴 추출 | "이 사용자는 분석 시 항상 X 패턴" — 자동 제안 |
-| **H4** **맞춤화** ⭐ | 사용자별 맞춤형 에이전트 | "신상품 launch" 한 마디로 저장된 패턴 자동 호출 |
+| **H4** **맞춤화** ⭐ | 사용자별 맞춤형 에이전트 | "도메인 작업" 한 마디로 저장된 패턴 자동 호출 |
 
 → **Workflow Canvas = H4 맞춤화의 핵심 manifestation**.
 
@@ -258,35 +258,35 @@ class PlannedTodo(BaseModel):
 ```json
 {
   "schema_version": "v1",
-  "name": "마케팅 분석 패턴",
-  "description": "신상품 launch 후 review 분석",
+  "name": "도메인 분석 패턴",
+  "description": "엔티티 수집 후 집계 분석",
   "todos": [
     {
       "id": "todo_001",
       "task_type": "data_collection",
       "agent": "collection_agent",
-      "tool": "naver_collector",
-      "tool_params": {"brand": "{{brand}}"},
+      "tool": "<collector>",
+      "tool_params": {"entity": "{{entity}}"},
       "depends_on": [],
       "priority": 1,
-      "rationale": "네이버 리뷰 수집",
+      "rationale": "엔티티 데이터 수집",
       "position": {"x": 100, "y": 100},
       "node_type": "task"
     }
   ],
   "dag": {"todo_002": ["todo_001"]},
   "param_slots": [
-    {"name": "brand", "type": "string", "required": true, "description": "분석할 브랜드명"}
+    {"name": "entity", "type": "string", "required": true, "description": "분석할 엔티티명"}
   ],
   "usage_count": 0,
   "last_used_at": null,
-  "tags": ["analysis", "review"]
+  "tags": ["analysis"]
 }
 ```
 
 **핵심 — `param_slots`**:
 - 다음 호출 시 채울 변수. `{{brand}}` placeholder.
-- 사용자: "마케팅 분석 패턴 써줘, 브랜드는 블루밍글로우" → 시스템: template + slot 채움 → 즉시 실행 가능 plan 생성
+- 사용자: "도메인 분석 패턴 써줘, 엔티티는 <entity>" → 시스템: template + slot 채움 → 즉시 실행 가능 plan 생성
 - = **vision H4 맞춤화의 구체적 메커니즘**
 
 ### 3.3 백엔드 변경 영향 — 최소
@@ -386,7 +386,7 @@ type NodeType = "task" | "branch" | "join" | "start" | "end";
 
 ### 5.4 paused 게이트 (v1.1 — ADR-012)
 
-백엔드 [`ws_hitl._handle_todo_modify/delete/add`](../../backend/api_v2/ws_hitl.py) 는 모두 `progress.status == "paused"` 시점에만 허용 (Sprint 14 A3 정책). 비-paused 상태에서 편집 요청 시 `hitl_ack accepted:false, code:"TODO_EDIT_NOT_PAUSED"` 거부.
+백엔드 [`ws_hitl._handle_todo_modify/delete/add`](../../backend/api/ws_hitl.py) 는 모두 `progress.status == "paused"` 시점에만 허용 (Sprint 14 A3 정책). 비-paused 상태에서 편집 요청 시 `hitl_ack accepted:false, code:"TODO_EDIT_NOT_PAUSED"` 거부.
 
 → 프론트는 **사전 차단** — `useExecution.computeCanEdit(isPaused, turnId)` 가 false 면 우클릭/더블클릭/toolbar/엣지 drag/노드 drag 모두 비활성:
 
@@ -596,7 +596,7 @@ useEffect(() => () => useEditingStore.getState().reset(), [turnId]);
 ### 6.1 사용자 흐름
 
 ```
-1. 자연어: "블루밍글로우 네이버 리뷰 분석"
+1. 자연어: "<entity> 데이터 집계 분석"
    → AI 자동 plan 생성 (5 노드)
    → 캔버스에 자동 배치
 
@@ -605,7 +605,7 @@ useEffect(() => () => useEditingStore.getState().reset(), [turnId]);
    → 모달: 이름 / 설명 / 태그 / param_slots (자동 추출 + 수정)
 
 3. 다음에:
-   "마케팅 분석 패턴 써줘, 브랜드는 무지개셔벗"
+   "도메인 분석 패턴 써줘, 엔티티는 <entity>"
    → 시스템: 저장된 template 검색 (memory search) → param 채움 → plan 생성
 
 4. 누적되면:
@@ -614,13 +614,13 @@ useEffect(() => () => useEditingStore.getState().reset(), [turnId]);
 
 ### 6.2 param_slots 자동 추출
 
-저장 시 시스템이 todos 의 `tool_params` 안에서 specific value (`"블루밍글로우"`) 를 감지 → **placeholder 변환 제안**:
+저장 시 시스템이 todos 의 `tool_params` 안에서 specific value (`"<entity>"`) 를 감지 → **placeholder 변환 제안**:
 
 ```
-tool_params: {"brand": "블루밍글로우"}
+tool_params: {"entity": "<entity>"}
    ↓ 사용자 확인
-tool_params: {"brand": "{{brand}}"}
-param_slots: [{"name": "brand", "type": "string", "required": true}]
+tool_params: {"entity": "{{entity}}"}
+param_slots: [{"name": "entity", "type": "string", "required": true}]
 ```
 
 ### 6.3 API 영역 (간략)
@@ -795,7 +795,7 @@ async def list_workflow_templates(user_id: str, query: str = "") -> list[dict]
 ### W3 (Sprint 15 P1 또는 16)
 - [ ] [💾 저장] → memory_entries 에 `workflow_template` 저장
 - [ ] param_slots 자동 추출 (LLM)
-- [ ] "마케팅 분석 패턴 써줘" → template 호출 → plan 생성
+- [ ] "도메인 분석 패턴 써줘" → template 호출 → plan 생성
 
 ### W4 (Sprint 16+)
 - [ ] 좌측 노드 라이브러리
@@ -810,10 +810,6 @@ async def list_workflow_templates(user_id: str, query: str = "") -> list[dict]
 
 ---
 
-## 13. 변경 이력
+## 변경 이력
 
-| 버전 | 날짜 | 내용 |
-|------|------|------|
-| v1.0 | 2026-05-12 | 초안 — React Flow / dagre / 3-panel / 노드 schema (PlannedTodo Optional 3 필드) / Save/Load (memory_entries.type=workflow_template) / 4 Phase W1~W4 / 학습 곡선 / 테스트 전략. vision H4 맞춤화의 UI 구체화. backend 변경 ~60 LoC (사용자 5 원칙 부합) |
-| v1.1 | 2026-05-13~16 | §2.3 Layout 정정 (3-Panel 제거, GlobalLayout 채택). §2.5 확장형 폴더 구조 + §5.4 paused 게이트 + §5.5 W2 컴포넌트 카탈로그 + §5.6 자연 동기화 + §7 W2 ✅ 박제 (ADR-012). |
-| **v1.2** | **2026-05-17** | **W2′ 구현 완료 (ADR-013, 8 Stage TDD). §4.1 batched 시각화 / §5.1 엣지/드래그 매핑 / §5.2 시각 vs NL 책임 분리 (TodoManager vs plan_editor) audit 정정 / §5.5 BatchedToolbar 추가 / §5.7~§5.10 W2′ 신규 절 (엣지/드래그, cycleGuard, issues UX, batched) / §7 Phase 표 W2′+W5 추가 / §7.2 W2′ Acceptance / §10.2 ADR-013 추가 / §11 Risk 3건 추가 (batched atomicity, stale 큐, tool_params merge) / §12 W2′ Acceptance 박제. 백엔드 변경 = 0 (TodoManager 가 이미 모든 필드 통과).** |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.

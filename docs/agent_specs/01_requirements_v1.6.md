@@ -7,7 +7,7 @@
 | 진행상태 | **Active** — POC / Sprint 13 완료 + Sprint 14 A1 완료 + A3 Phase 5 편집 경로 통합 완료 (브라우저 수동 대기) |
 | 버전 | **v1.6** |
 | 최종 수정일 | 2026-04-24 |
-| 관련 명세 | `10_system_architecture_v1.9.md`, `12_manager_layer_v1.4.md`, `13_lifecycle_v1.3.md`, `21_WEBSOCKET_PROTOCOL_v1.5.md`, `22_error_codes_v1.1.md`, `24_sequence_diagrams_v1.3.md`, `docs/_claude/sprint14_a3_plan.md` v0.4, `docs/_claude/sprint14_a3_edit_flow.md` v1.1, `docs/_claude/sprint14_a3_implementation_plan.md` v1.0 |
+| 관련 명세 | `10_system_architecture_v1.9.md`, `12_manager_layer_v1.4.md`, `13_lifecycle_v1.3.md`, `21_WEBSOCKET_PROTOCOL_v1.5.md`, `22_error_codes_v1.1.md`, `24_sequence_diagrams_v1.3.md` |
 
 > 이 문서는 "무엇을 만들고 있는가 / 왜 이 범위인가"의 단일 기준.  
 > **기능 세부는 설계 문서(10~30번대) 참조.** 여긴 "요구사항" 수준만.
@@ -16,17 +16,17 @@
 
 ## 1. 비즈니스 목표
 
-**OctorAD Dream Agent V2** — 퍼포먼스 마케팅 운영 업무 자동화 AI 에이전트.
+**DreamAgent V2** — 도메인 작업 자동화 AI 에이전트 프레임워크.
 
-- **핵심 가치**: 광고 운영자가 자연어로 쿼리하면, Agent 가 의도 분석 → 계획 수립 → 승인 후 실행 → 결과 요약. **계획은 사용자가 자연어 또는 UI 로 수정 가능** (Todo 편집 = 앱의 핵심 상호작용).
-- **POC 목표 (~Sprint 17)**: LLM 기반 4-Layer 파이프라인 + HITL + Checkpoint 복원 + Todo 편집 (구조화 + NL) 검증. 특정 브랜드 운영(블루밍글로우)에 국한.
-- **MVP 기준**: Sprint 17+ — 인증 / 멀티 브랜드 / 실시간 대시보드 / PII.
+- **핵심 가치**: 사용자가 자연어로 쿼리하면, Agent 가 의도 분석 → 계획 수립 → 승인 후 실행 → 결과 요약. **계획은 사용자가 자연어 또는 UI 로 수정 가능** (Todo 편집 = 앱의 핵심 상호작용).
+- **POC 목표 (~Sprint 17)**: LLM 기반 4-Layer 파이프라인 + HITL + Checkpoint 복원 + Todo 편집 (구조화 + NL) 검증. 단일 도메인 운영에 국한.
+- **MVP 기준**: Sprint 17+ — 인증 / 멀티 테넌트 / 실시간 대시보드 / PII.
 
 ## 2. 이해관계자 / 페르소나
 
 | 역할 | 설명 | 주 사용 기능 |
 |------|------|--------------|
-| **마케터(Operator)** | 광고 운영 실무자. 자연어로 쿼리 입력 | 쿼리 입력, Plan 승인/거부, 실행 중 pause, **Todo 편집 (NL)** |
+| **운영자(Operator)** | 도메인 작업 실무자. 자연어로 쿼리 입력 | 쿼리 입력, Plan 승인/거부, 실행 중 pause, **Todo 편집 (NL)** |
 | **PM(Project Manager)** | 플랜 검토 / 실행 감시 | Plan 승인, **Todo 편집 (구조화 UI + NL, Sprint 14 A3)**, Pause/Resume |
 | **개발팀** | 프롬프트 / 규칙 / Agent 튜닝 | `logs/layer_guard.jsonl`, Checkpoint 조회 |
 
@@ -110,7 +110,7 @@ POC 단계에서 위 3역할은 사실상 **동일 사용자** (개발자 본인
 ## 5. 제약 / 범위
 
 ### In Scope (Sprint 13)
-- 단일 브랜드 (블루밍글로우) 고정
+- 단일 도메인 고정
 - 단일 사용자 (`demo`)
 - 로컬 PostgreSQL Checkpointer
 - Plan 승인/거부 + Execution Pause/Resume 만
@@ -122,10 +122,10 @@ POC 단계에서 위 3역할은 사실상 **동일 사용자** (개발자 본인
 - ⏳ **A3 Todo 편집 HITL** (FR-12 전체, Y-a: structured + NL 단회, D1=E / D2=C-dual / D3=B) — 2026-04-23 착수
 - ⏳ A4 `team_catalog.yaml` `requires_approval` 확장
 - ⏳ agent_specs 문서 확장 (Glossary / Runbook / Event Catalog 등)
-- 🔒 **AgentState Reducer — 보류** (Tool 확장 이후 재평가. Plan 수립 중 writer 전수 조사 결과 실 다중 writer race 부재. 자산: `docs/_claude/sprint14_reducer_plan.md`)
+- 🔒 **AgentState Reducer — 보류** (Tool 확장 이후 재평가. Plan 수립 중 writer 전수 조사 결과 실 다중 writer race 부재.)
 
 ### Out of Scope (Sprint 13~14)
-- 인증/인가, PII, 멀티 브랜드/테넌트
+- 인증/인가, PII, 멀티 테넌트
 - Prometheus/Grafana observability
 - Memory / 대화 이력 DB 저장 (Sprint 15)
 - timeout 이후 재개 UI — **Sprint 15 Memory 범위** (UX-6)
@@ -169,7 +169,7 @@ Sprint 14 A3 브라우저 수동 검증 대기 (⏳ 2026-04-23~):
 
 **실행 환경**:
 ```bash
-uv run python run_server_v2.py
+uv run python run_server.py
 # → http://localhost:8001/dashboard 접속
 ```
 
@@ -234,7 +234,7 @@ uv run python run_server_v2.py
 
 **추가 측정 (선택, OpenAI API key 필요)**:
 
-- [ ] **D-14 NL 성공률 100회 측정**: `uv run python backend/scripts/a3_nl_success_rate.py 10`
+- [ ] **D-14 NL 성공률 100회 측정** (측정 스크립트로 반복 실행)
   - 결과 파일: `logs/a3_nl_success_rate_<ts>.jsonl` + `.summary.json`
   - 판정:
     - 실패율 < 3%: ✅ Y-a 유지
@@ -280,16 +280,7 @@ Sprint 14 A2/A4 대기 (⏳):
 - API 계약 → `20_INTERFACE_CONTRACT_v1.1.md`, `21_WEBSOCKET_PROTOCOL_v1.5.md` (→ v1.3 A3 완료 시 todo_edit_nl 스키마)
 - Error 카탈로그 → `22_error_codes_v1.1.md` (→ v1.1 A3 완료 시 TODO_* + NL_INTENT_UNCLEAR 추가)
 - Manager API → `12_manager_layer_v1.4.md` (→ v1.2 A3 완료 시 handle_todo_* 상세)
-- Sprint 14 계획 → `docs/_claude/sprint14_master_plan.md`, `sprint14_a1_hitl_timeout_plan.md`, `sprint14_a3_plan.md`, `sprint14_a3_decisions.md`, `sprint14_a3_scope_investigation.md`, `sprint14_a3_nl_edit_investigation.md`, `sprint14_reducer_plan.md` (보류)
 
 ## 변경 이력
 
-| 버전 | 날짜 | 내용 |
-|------|------|------|
-| v1.0 | 2026-04-21 | 초안 — FR 14, NFR 8, Sprint 13 완료 기준 + Sprint 14~15 확장 |
-| v1.1 | 2026-04-21 | R-9 서버 재시작 복원 live 검증 완료. 테스트 누적 121 → 137 (RO/WQ resume_query 경로 16개 추가). Acceptance 목록 갱신 |
-| v1.2 | 2026-04-22 | Sprint 14 착수 — FR-13 을 13/13a/13b 로 확장 (HITL timeout 상세화), §3.5 UX 섹션 신설 (UX-1~6), NFR-9/10 추가 (timeout 기본값·설정 방식), §5 In Scope 에 Sprint 14 블록 신설, §6 Acceptance 에 Sprint 14 추가 기준·R-13/R-14 regression 추가, §7 용어 `turn_not_active` 추가 |
-| v1.3 | 2026-04-22 | Sprint 14 A1 완료 반영 — FR-13/13a/13b / NFR-9/10 / UX-4/5 상태 ⏳ → ✅. FR-13b 가드 4종 확장 (pause/resume/cancel/**hitl_response** — Round 17). UX-4 에 모달 자동 close 추가. In Scope 를 A1 완료 / A2~A4 대기 / Reducer 🔒 보류 로 구분. Acceptance 체크박스 완료 마킹 + **R-15** (resume_query INVALID_MESSAGE) 추가. 관련 커밋 `d2d14a9 ~ 851683c` (8건) + 완료 보고서 `docs/reports/sprint14_a1_completion_report.md` |
-| **v1.4** | **2026-04-23** | **Sprint 14 A3 착수 준비 — FR-12 를 12a~h 로 분해** (structured modify/delete/add/reorder + NL edit_nl + 상태가드 + cascade + γ out-of-scope). **FR-13c 신설** (is_turn_active 가드 todo_* 4종 확장). **UX-7~12 신설** (Pause 모달 자동 팝업 / C-dual 모달 재사용 / 행 편집 컨트롤 / NL textarea / cascade 시각화 / NL 파싱 실패 UX). **NFR-11~14 신설** (NL LLM 지연 / 결정성 / 드래그 앤 드롭 프레임워크 / cascade 복잡도). §6 Acceptance 에 A3 기준 + R-5~R-8 (Sprint 12 정의, A3 live 최초) + R-16~R-18 (NL 신규) 추가. §7 용어 12개 확장 (`plan_review`, `execution_pause`, `todo_edit_nl`, `CascadeResult`, `invalidated_todos`, `restart_from` UX-only, `preserved_results`, `plan_editor`, `C-dual` 등). Y-a / D1=E / D2=C-dual / D3=B 결정 반영. 1번 섹션 비즈니스 목표에 "Todo 편집 = 앱 핵심 상호작용" 추가. 페르소나 주 사용 기능 갱신. 관련 자산: `docs/_claude/sprint14_a3_plan.md`, `sprint14_a3_decisions.md`, `sprint14_a3_scope_investigation.md`, `sprint14_a3_nl_edit_investigation.md` |
-| **v1.5** | **2026-04-23** | **Sprint 14 A3 백엔드·자동 테스트 완료 반영.** FR-12a~h 상태 ⏳ → 🟡 (브라우저 수동 대기) / FR-12f/g ✅ / FR-13c ✅ / UX-7~12 🟡. §6 Acceptance Sprint 14 A3 블록 대폭 확장 — **실행 환경 (uv run python run_server_v2.py)**, **R-5~R-8 Structured 상세 검증 단계**, **R-16~R-18 NL 상세 검증 단계**, **UX-7~12 선택 검증**, **보호 기능 검증 (D4 beforeunload / D9 L1/L2 / D-13 injection / FR-13c 가드)**, **D-14 NL 성공률 100회 측정 절차 및 판정 trigger** 명시. 자동 테스트 달성 기록 (230 pass + Contract 8/8 + 11 커밋). 관련 명세 링크 갱신 (10 v1.9 / 12 v1.2 / 21 v1.3 / 22 v1.1). 완료 보고서 링크 추가 (`docs/reports/sprint14_a3_completion_report.md`) |
-| **v1.6** | **2026-04-24** | **Sprint 14 A3 Phase 5 — Plan review 편집 경로 통합.** 사용자 5항목 요구사항 §4 "hitl/pause 는 같은 개념" 반영. **FR-12f 단순화** — 기존 "paused 또는 plan_review" 이중 조건을 "paused 단일 조건" 으로 축소 (ws_agent 가 plan_review interrupt 시 임시 progress `status="paused"` 생성). 구현 변경: ws_agent `_graph_runner_with_resume` plan_review 분기에 `create_progress` 추가 / ws_hitl `_handle_hitl_response` approve 시 `{action:"modify", value:progress.plan}` 변환 / ws_hitl `_handle_todo_modify/delete` plan_review 분기 제거 (pause 단일 경로) / hitl_manager `cleanup_turn` 에 `_progress.pop` 추가. Group H 8건 신규 + regression 238 passed + 2 skipped 유지. 관련 명세 링크 갱신 (12 v1.3 / 21 v1.4 / 24 v1.3). 관련 자산: `docs/_claude/sprint14_a3_edit_flow.md` v1.1 + `sprint14_a3_implementation_plan.md` v1.0 + `sprint14_a3_missed_points.md` v1.1 |
+> 프레임워크 추출(2026-06-19) 이전(마케팅 도메인 시기)의 상세 변경 이력은 git 히스토리를 참조하세요.
