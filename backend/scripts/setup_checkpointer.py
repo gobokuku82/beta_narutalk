@@ -129,6 +129,36 @@ async def setup_checkpoint_tables():
         raise
 
 
+def setup_memory_table():
+    """memory_entries 테이블 생성 (dreamagent_system) — 향후 MemoryManager 용.
+
+    spec 35 §memory. append-only, JSONB-flexible. scope cascade(user|session|org|global).
+    LangGraph checkpoint 테이블과 동일 system DB 에 둔다.
+    """
+    print(f"\n[3/4] memory_entries 테이블 생성 중...")
+    ddl = """
+    CREATE TABLE IF NOT EXISTS memory_entries (
+        id             BIGSERIAL PRIMARY KEY,
+        scope_type     TEXT NOT NULL,        -- user | session | org | global
+        scope_id       TEXT,                 -- user_id / session_id 등 (global 은 NULL)
+        type           TEXT NOT NULL,        -- preference | pattern | workflow_template | fact | feedback
+        payload        JSONB NOT NULL,
+        schema_version INTEGER NOT NULL DEFAULT 1,
+        created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_memory_scope ON memory_entries (scope_type, scope_id);
+    CREATE INDEX IF NOT EXISTS idx_memory_type  ON memory_entries (type);
+    """
+    try:
+        with psycopg.connect(CHECKPOINT_DB_URI, autocommit=True) as conn:
+            with conn.cursor() as cur:
+                cur.execute(ddl)
+        print("      memory_entries 테이블 생성 완료!")
+    except Exception as e:
+        print(f"      오류: memory_entries 생성 실패 - {e}")
+        raise
+
+
 def print_env_config():
     """
     .env 파일에 추가할 설정 출력.
@@ -176,10 +206,13 @@ async def main():
     # 2. 체크포인트 테이블 생성
     await setup_checkpoint_tables()
 
-    # 3. 검증
+    # 3. memory_entries 테이블 생성 (향후 MemoryManager)
+    setup_memory_table()
+
+    # 4. 검증
     verify_setup()
 
-    # 4. 환경 설정 안내
+    # 5. 환경 설정 안내
     print_env_config()
 
     print("\n셋업 완료!")
