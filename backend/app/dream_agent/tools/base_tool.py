@@ -12,7 +12,7 @@ Step 4 (2026-05-27): DataSource DI 추가 (사용자 P1·P2 — tool 순수 기�
 from abc import ABC, abstractmethod
 from typing import Any
 
-from app.data_sources import DataSource, get_default_data_source
+from app.data_layer.data_sources import DataSource, get_default_data_source
 from app.dream_agent.models import ExecutionContext, ToolSpec
 
 

@@ -33,7 +33,7 @@ from app.data_pg_util import (
     write_jsonl_rows_streaming,
     write_typed_table,
 )
-from app.workspace.base import Layer, WorkspaceBackend
+from app.data_layer.workspace.base import Layer, WorkspaceBackend
 
 logger = get_logger(__name__)
 

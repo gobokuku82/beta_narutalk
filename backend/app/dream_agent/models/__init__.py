@@ -12,7 +12,7 @@
 | **Tool 입력 컨텍스트** | `models/execution.py::ExecutionContext` (본 패키지) |
 | **Tool 메타** | `models/tool.py` (`ToolSpec`/`ToolParameter`) |
 
-프레임 추출(2026-06-19): 구 `app.schemas.outputs.dashboard1` 마케팅 출력 재노출(소비처 0 — ADR-027
+프레임 추출(2026-06-19): 구 `app.data_layer.schemas.outputs.dashboard1` 마케팅 출력 재노출(소비처 0 — ADR-027
 이전 후 미삭제 shim) 제거. 도메인 출력 DTO 는 도메인별로 `app.dream_agent.schemas` / data layer 에 둔다.
 """
 

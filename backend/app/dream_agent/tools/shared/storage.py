@@ -7,7 +7,7 @@
     from app.dream_agent.tools.shared.storage import StorageBackend, FileStorage, get_storage, ...
 
 전환 후 (Step 4 진행 중):
-    from app.workspace import WorkspaceBackend, FileWorkspace, get_default_workspace, ...
+    from app.data_layer.workspace import WorkspaceBackend, FileWorkspace, get_default_workspace, ...
 
 위치 변경 사유: dream_agent 폴더 안에 두면 agent 종속처럼 보임. workspace 는
 agent + direct API 둘 다 공유하는 자원 → app/ 직속 (dream_agent 형제).
@@ -16,7 +16,7 @@ agent + direct API 둘 다 공유하는 자원 → app/ 직속 (dream_agent 형�
 """
 from __future__ import annotations
 
-from app.workspace import (
+from app.data_layer.workspace import (
     FileWorkspace as _FileWorkspace,
     Layer,
     WorkspaceBackend as _WorkspaceBackend,
@@ -33,17 +33,17 @@ FileStorage = _FileWorkspace
 
 # 옛 함수명 alias
 def get_storage() -> _WorkspaceBackend:
-    """[deprecated] use app.workspace.get_default_workspace()."""
+    """[deprecated] use app.data_layer.workspace.get_default_workspace()."""
     return get_default_workspace()
 
 
 def set_storage(backend: _WorkspaceBackend) -> None:
-    """[deprecated] use app.workspace.set_workspace()."""
+    """[deprecated] use app.data_layer.workspace.set_workspace()."""
     set_workspace(backend)
 
 
 def reset_storage() -> None:
-    """[deprecated] use app.workspace.reset_workspace()."""
+    """[deprecated] use app.data_layer.workspace.reset_workspace()."""
     reset_workspace()
 
 

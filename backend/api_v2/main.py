@@ -77,16 +77,16 @@ async def lifespan(app: FastAPI):
     #   - DataSource(입력): raw 읽기 → dreamagent_data {client}._workspace (항목①)
     if settings.DATA_BACKEND == "postgres":
         try:
-            from app.workspace import set_workspace
-            from app.workspace.postgres import PostgresWorkspace
+            from app.data_layer.workspace import set_workspace
+            from app.data_layer.workspace.postgres import PostgresWorkspace
 
             set_workspace(PostgresWorkspace())
             logger.info("✅ Workspace backend = PostgresWorkspace (normalized/computed → dreamagent_data)")
         except Exception as e:
             logger.warning(f"PostgresWorkspace 전환 실패 (file 백엔드 유지): {e}")
         try:
-            from app.data_sources import set_data_source
-            from app.data_sources.postgres import PostgresDataSource
+            from app.data_layer.data_sources import set_data_source
+            from app.data_layer.data_sources.postgres import PostgresDataSource
 
             set_data_source(PostgresDataSource())
             logger.info("✅ DataSource backend = PostgresDataSource (raw 읽기 ← dreamagent_data)")

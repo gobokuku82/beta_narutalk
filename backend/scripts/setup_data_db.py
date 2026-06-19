@@ -31,7 +31,7 @@ except Exception:
     DATA_DB_URI = "postgresql://postgres:postgres@localhost:5432/dreamagent_data"
 
 from app.data_pg_util import connect  # noqa: E402  (data_db_uri 정규화 connection)
-from app.workspace.postgres import PostgresWorkspace  # noqa: E402
+from app.data_layer.workspace.postgres import PostgresWorkspace  # noqa: E402
 
 _uri = (
     DATA_DB_URI.replace("postgresql+psycopg", "postgresql").replace(

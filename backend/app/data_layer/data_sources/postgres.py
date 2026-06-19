@@ -28,9 +28,9 @@ from psycopg import sql
 
 from app.core.logging import get_logger
 from app.data_pg_util import STREAM_MARKER_KEY, connect, iter_streamed_rows
-from app.data_sources.base import DataSource, DataSourceError, DataSourceNotFound, _PREFIX_OP
-from app.data_sources.file import SOURCE_REGISTRY
-from app.workspace.postgres import PostgresWorkspace
+from app.data_layer.data_sources.base import DataSource, DataSourceError, DataSourceNotFound, _PREFIX_OP
+from app.data_layer.data_sources.file import SOURCE_REGISTRY
+from app.data_layer.workspace.postgres import PostgresWorkspace
 
 logger = get_logger(__name__)
 
