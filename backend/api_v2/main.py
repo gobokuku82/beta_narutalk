@@ -1,4 +1,4 @@
-"""OctorAD API v2 — FastAPI 엔트리.
+"""DreamAgent API v2 — FastAPI 엔트리.
 
 Checkpointer(AsyncPostgresSaver) + 4-Layer LangGraph 그래프를 lifespan에서 초기화.
 PostgreSQL 연결 필수 — 실패 시 서버 시작 중단.
@@ -59,7 +59,7 @@ async def lifespan(app: FastAPI):
         app.state.db_pool = None
         logger.warning(f"DB console pool 생성 실패 (DB 콘솔 비활성): {e}")
 
-    # Data DB 풀 (octormate_data, schema-per-client). 비핵심 — 실패해도 서버는 가동.
+    # Data DB 풀 (dreamagent_data, schema-per-client). 비핵심 — 실패해도 서버는 가동.
     try:
         import asyncpg
 
@@ -73,15 +73,15 @@ async def lifespan(app: FastAPI):
 
     # 데이터 영속화 백엔드 전환: DATA_BACKEND=postgres 면 입력(raw 읽기)·출력(정제/계산 저장)
     # 양쪽을 Postgres로. (도구·러너는 get_default_*() 사용 → set_* 한 번으로 전체 전환)
-    #   - Workspace(출력): normalized/computed → octormate_data (항목②)
-    #   - DataSource(입력): raw 읽기 → octormate_data {client}._workspace (항목①)
+    #   - Workspace(출력): normalized/computed → dreamagent_data (항목②)
+    #   - DataSource(입력): raw 읽기 → dreamagent_data {client}._workspace (항목①)
     if settings.DATA_BACKEND == "postgres":
         try:
             from app.workspace import set_workspace
             from app.workspace.postgres import PostgresWorkspace
 
             set_workspace(PostgresWorkspace())
-            logger.info("✅ Workspace backend = PostgresWorkspace (normalized/computed → octormate_data)")
+            logger.info("✅ Workspace backend = PostgresWorkspace (normalized/computed → dreamagent_data)")
         except Exception as e:
             logger.warning(f"PostgresWorkspace 전환 실패 (file 백엔드 유지): {e}")
         try:
@@ -89,7 +89,7 @@ async def lifespan(app: FastAPI):
             from app.data_sources.postgres import PostgresDataSource
 
             set_data_source(PostgresDataSource())
-            logger.info("✅ DataSource backend = PostgresDataSource (raw 읽기 ← octormate_data)")
+            logger.info("✅ DataSource backend = PostgresDataSource (raw 읽기 ← dreamagent_data)")
         except Exception as e:
             logger.warning(f"PostgresDataSource 전환 실패 (file 백엔드 유지): {e}")
 
@@ -119,7 +119,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=f"{settings.APP_NAME} (v2)",
         version="2.0.0-alpha",
-        description="OctorAD API v2",
+        description="DreamAgent API v2",
         lifespan=lifespan,
     )
 

@@ -1,6 +1,6 @@
 """Data DB Setup — client 정형 데이터(schema-per-client)를 Postgres에 적재.
 
-`octormate_data` DB 생성 + client별 schema + computed 적재 + 네이밍 정합(P5).
+`dreamagent_data` DB 생성 + client별 schema + computed 적재 + 네이밍 정합(P5).
 computed 적재는 **PostgresWorkspace.save 경유** → 파이프라인과 동일 네이밍(`computed_{key}`)
 + `_workspace` 진실행까지 일관. (이전: 자체 CREATE TABLE 로 prefix 없이 적재 → P5에서 통일)
 
@@ -26,9 +26,9 @@ sys.path.insert(0, str(project_root))
 try:
     from app.core.config import settings
 
-    DATA_DB_URI = settings.data_db_uri  # CHECKPOINT_DB_URI 자격증명 재사용 (db=octormate_data)
+    DATA_DB_URI = settings.data_db_uri  # CHECKPOINT_DB_URI 자격증명 재사용 (db=dreamagent_data)
 except Exception:
-    DATA_DB_URI = "postgresql://postgres:postgres@localhost:5432/octormate_data"
+    DATA_DB_URI = "postgresql://postgres:postgres@localhost:5432/dreamagent_data"
 
 from app.data_pg_util import connect  # noqa: E402  (data_db_uri 정규화 connection)
 from app.workspace.postgres import PostgresWorkspace  # noqa: E402
@@ -43,7 +43,7 @@ HOST = _p.hostname or "localhost"
 PORT = _p.port or 5432
 USER = _p.username or "postgres"
 PW = _p.password or ""
-DB = (_p.path or "/octormate_data").lstrip("/") or "octormate_data"
+DB = (_p.path or "/dreamagent_data").lstrip("/") or "dreamagent_data"
 
 ADMIN = f"postgresql://{USER}:{PW}@{HOST}:{PORT}/postgres"
 DATA_ROOT = project_root.parent / "data"  # backend/ → repo/ → data/
@@ -112,7 +112,7 @@ def cleanup_legacy(conn, client: str) -> list[str]:
 
 def main() -> None:
     print("=" * 56)
-    print("OctorAD - Data DB Setup (schema-per-client, P5 네이밍 정합)")
+    print("DreamAgent - Data DB Setup (schema-per-client, P5 네이밍 정합)")
     print("=" * 56)
     create_database()
 

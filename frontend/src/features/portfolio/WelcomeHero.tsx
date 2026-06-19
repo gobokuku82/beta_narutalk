@@ -11,16 +11,16 @@ export function WelcomeHero() {
   return (
     <section className="flex flex-col gap-3 border-l-2 border-primary py-3 pl-6">
       <p className="font-mono text-2xs uppercase tracking-wider text-muted-foreground">
-        Data · Analyst
+        Agent · Framework
       </p>
       <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-        OctorAD
+        DreamAgent
       </h1>
       <p className="text-lg font-semibold text-foreground md:text-xl">
-        데이터 분석에서 소재·미디어·보고서 집행까지
+        4-Layer 에이전트 프레임워크
       </p>
       <p className="text-sm leading-relaxed text-muted-foreground md:text-base">
-        자연어로 묻고, 시각으로 답한다.
+        자연어로 묻고, 워크플로우로 실행한다.
       </p>
     </section>
   );

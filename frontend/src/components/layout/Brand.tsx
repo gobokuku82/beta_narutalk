@@ -1,12 +1,12 @@
 /**
- * Brand — OctorAD 워드마크 (◈ OctorAD ·).
+ * Brand — DreamAgent 워드마크 (◈ DreamAgent ·).
  *
  * 2026-06-09 Phase 4 신설. PALETTE §8.2 C (typography 위계) + 브랜드 액센트 dot.
  * 2026-06-10 v2: Link to="/" 추가 — 외부 프레임 좌상단 Brand 클릭 시 첫 진입 (PortfolioPage).
  *
  * 구성:
  *   ◈ (Diamond)  — text-muted-foreground/60, h-3.5 w-3.5 (브랜드 마크)
- *   OctorAD      — text-foreground, font-semibold tracking-tight
+ *   DreamAgent      — text-foreground, font-semibold tracking-tight
  *   ·            — text-primary, 옥스블러드 dot (브랜드 색 표시)
  *
  * size: 'sm' (TopBar) / 'md' (확장 footer 등)
@@ -36,7 +36,7 @@ export function Brand({ size = 'sm', compact = false, className }: BrandProps) {
         'inline-flex items-center gap-2 rounded-md transition-opacity duration-200 hover:opacity-80',
         className,
       )}
-      aria-label="OctorAD 홈으로"
+      aria-label="DreamAgent 홈으로"
       title="홈"
     >
       {!compact && (
@@ -45,7 +45,7 @@ export function Brand({ size = 'sm', compact = false, className }: BrandProps) {
           aria-hidden
         />
       )}
-      <span className={cn('text-foreground', wordmarkClass)}>OctorAD</span>
+      <span className={cn('text-foreground', wordmarkClass)}>DreamAgent</span>
       {!compact && (
         <span
           aria-hidden

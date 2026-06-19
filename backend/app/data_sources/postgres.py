@@ -1,4 +1,4 @@
-"""PostgresDataSource — DataSource 의 Postgres 구현 (raw 읽기, octormate_data, schema=client).
+"""PostgresDataSource — DataSource 의 Postgres 구현 (raw 읽기, dreamagent_data, schema=client).
 
 FileDataSource 와 동일 계약(get/list_sources/has). raw 는 `{client}._workspace`(layer='raw')
 에서 읽어 **확장자별로 FileDataSource.get 과 동일한 타입으로 복원** → 하위 도구 불변.
@@ -11,7 +11,7 @@ FileDataSource 와 동일 계약(get/list_sources/has). raw 는 `{client}._works
 
 raw 적재 경로 (둘 다 같은 _workspace 테이블에 layer='raw' 로 들어옴):
     - External 수집기: ExternalRawCollectorBase._fetch_from_mock_api → workspace.save("raw", ...)
-    - Internal/일괄: scripts/load_raw_to_data_db.py (파일 → octormate_data raw 적재)
+    - Internal/일괄: scripts/load_raw_to_data_db.py (파일 → dreamagent_data raw 적재)
 
 set_data_source(PostgresDataSource()) 한 번이면 도구·러너가 전부 Postgres raw 를 읽음 (lifespan, P4).
 
@@ -38,7 +38,7 @@ _RAW = "raw"
 
 
 class PostgresDataSource(DataSource):
-    """octormate_data `{client}._workspace`(layer='raw') 기반 DataSource.
+    """dreamagent_data `{client}._workspace`(layer='raw') 기반 DataSource.
 
     raw 쓰기는 Workspace(PostgresWorkspace)·수집기·적재 스크립트가 담당.
     본 클래스는 *읽기*(get/list_sources/has)만 — FileDataSource 와 대칭.

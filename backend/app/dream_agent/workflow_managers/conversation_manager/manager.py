@@ -2,7 +2,7 @@
 
 설계: docs/reports/대화이력_설계_단계적_2026-06-09.md §7.
 대화(conversation) 경로 전담 — 메모리(MemoryManager)와 **분리**(저장소·매니저로 구분).
-LangGraph checkpoint(octormate_system)를 읽어 과거 turn을 conversation_id로 묶어 반환.
+LangGraph checkpoint(dreamagent_system)를 읽어 과거 turn을 conversation_id로 묶어 반환.
 
 식별: thread_id="{conversation_id}_{turn_id}" 인데 실제 ID에 접두사/`_`가 있어
 parse_thread_id는 부정확 → **state 안의 conversation_id/turn_id 필드를 직접 사용**.
@@ -81,7 +81,7 @@ class ConversationManager:
 
     def __init__(self, checkpointer: Any, db_pool: Any) -> None:
         self._cp = checkpointer  # AsyncPostgresSaver (app.state.checkpointer)
-        self._pool = db_pool  # asyncpg pool on octormate_system (app.state.db_pool)
+        self._pool = db_pool  # asyncpg pool on dreamagent_system (app.state.db_pool)
 
     async def _load_latest_states(self) -> list[dict]:
         """모든 thread의 최신 state. 실제 agent turn만(테스트 thread 제외).

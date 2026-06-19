@@ -1,6 +1,6 @@
 # features/workflow/ — Workflow Canvas
 
-OctorAD Dream Agent 의 시각적 워크플로우 편집기 (`/workflow` 라우트).
+DreamAgent Dream Agent 의 시각적 워크플로우 편집기 (`/workflow` 라우트).
 
 spec: [62](../../../../docs/agent_specs/62_workflow_canvas_design_v1.0.md) (디자인) / [ADR-012](../../../../docs/agent_specs/adr/ADR-012_workflow_canvas_w2_structure.md) (확장형 구조)
 

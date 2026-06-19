@@ -1,7 +1,7 @@
 /**
  * PersonaCards — 멀티 페르소나 비전 (3 카드 그리드).
  *
- * Data Analyst (활성, 현재 OctorAD) + Campaign Designer (예정) + Media Director (예정).
+ * Data Analyst (활성, 현재 DreamAgent) + Campaign Designer (예정) + Media Director (예정).
  * 활성 = 옥스블러드 좌측 strip + 진한 텍스트. 예정 = dimmed + "예정" 라벨.
  *
  * 디자인 결: Card hover 자동 (VOCABULARY H1~H4) + 좌측 strip (PALETTE J) — 활성만.
@@ -23,28 +23,28 @@ interface Persona {
 
 const PERSONAS: Persona[] = [
   {
-    key: 'data-analyst',
-    label: 'Data Analyst',
-    ko: '데이터분석가',
-    desc: 'raw 데이터에서 행동까지 — 4 레이어 분석.',
+    key: 'four-layer',
+    label: '4-Layer',
+    ko: '4-레이어 파이프라인',
+    desc: 'cognitive → planning → execution → response.',
     icon: BarChart3,
     active: true,
   },
   {
-    key: 'campaign-designer',
-    label: 'Campaign Designer',
-    ko: '캠페인 디자이너',
-    desc: '예산 · 채널 · 소재 조합 설계.',
+    key: 'workflow',
+    label: 'Workflow',
+    ko: '워크플로우 캔버스',
+    desc: 'todo · DAG 기반 작업 추적 · 편집.',
     icon: Sparkles,
-    active: false,
+    active: true,
   },
   {
-    key: 'media-director',
-    label: 'Media Director',
-    ko: '미디어 디렉터',
-    desc: '집행 운영 · 학습 반영.',
+    key: 'memory',
+    label: 'Memory',
+    ko: '대화 · 메모리',
+    desc: '체크포인트 기반 대화이력 · 복원.',
     icon: ImageIcon,
-    active: false,
+    active: true,
   },
 ];
 
@@ -56,7 +56,7 @@ export function PersonaCards() {
           Personas
         </h2>
         <p className="font-mono text-2xs uppercase tracking-wider text-muted-foreground/70">
-          1 active · 2 planned
+          3 core
         </p>
       </header>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">

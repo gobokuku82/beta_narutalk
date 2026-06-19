@@ -1,4 +1,4 @@
-"""PostgresWorkspace — WorkspaceBackend의 Postgres 구현 (octormate_data, schema=client).
+"""PostgresWorkspace — WorkspaceBackend의 Postgres 구현 (dreamagent_data, schema=client).
 
 FileWorkspace와 동일 계약(save/load/exists/list_keys). sync psycopg 사용(ABC가 sync).
 

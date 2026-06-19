@@ -3,7 +3,7 @@
 Workspace/DataSource ABC가 sync 메서드라 **sync psycopg** 사용
 (asyncpg는 async 콘솔 라우트 /api/data 전용 — 별개).
 
-대상: `octormate_data` DB, schema = client.
+대상: `dreamagent_data` DB, schema = client.
 진실원천: `{client}._workspace(layer, key, payload jsonb, meta jsonb)` — 라운드트립 정확.
 추가: `{client}.{stem}_{layer}` 타입 테이블(best-effort, 접미사) — /db 콘솔 표시용.
 

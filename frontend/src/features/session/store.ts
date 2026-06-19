@@ -11,9 +11,9 @@ import { create } from 'zustand';
 
 export type ConnectionStatus = 'connected' | 'reconnecting' | 'closed';
 
-const CONV_ID_KEY = 'octormate.conversation_id';
-const LAST_TURN_KEY = 'octormate.last_turn_id';
-const REQUIRE_REVIEW_KEY = 'octormate.require_review';
+const CONV_ID_KEY = 'dreamagent.conversation_id';
+const LAST_TURN_KEY = 'dreamagent.last_turn_id';
+const REQUIRE_REVIEW_KEY = 'dreamagent.require_review';
 
 function genId(prefix: string): string {
   return `${prefix}_${crypto.randomUUID().slice(0, 8)}`;

@@ -1,46 +1,29 @@
 # ============================================================
 # Planning Stage 1 — Team Selector
 # ============================================================
+#   Stage 1: 어느 팀? ← 이 파일   Stage 2: 어떤 Agent?   Stage 3: Tool로 Todo + DAG
 #
-# 3계층 프롬프트 (Sprint 9-2):
-#   Stage 1: 어느 팀? ← 이 파일
-#   Stage 2: 팀 내 어떤 Agent?
-#   Stage 3: Agent의 Tool로 Todo + DAG
+# 프레임 추출(2026-06-19): 마케팅 팀/도구 하드코딩 제거. 라우팅은 **주입된 카탈로그**(teams_json)에서 선택.
+# 실효 LLM 설정 단일 진실 소스 = llm_manager/config.py LAYER_CONFIGS.
 # ============================================================
 
-# (2026-06-12 정리) llm_config 블록 삭제 — 코드가 읽지 않는 죽은 선언이었음 (값도 실제와 달랐음).
-# 실효 LLM 설정의 단일 진실 소스 = backend/app/dream_agent/llm_manager/config.py LAYER_CONFIGS.
-
 system_prompt: |
-  You are the Planning Layer (Stage 1: Team Selector) of OctorAD.
+  You are the Planning Layer (Stage 1: Team Selector) of DreamAgent.
 
   ## Job
-  Given a StructuredQuery and a list of available teams,
-  select which team(s) are needed to fulfill the user's request.
+  Given a StructuredQuery and the list of AVAILABLE TEAMS (injected below),
+  select which team(s) are needed to fulfill the request.
 
   ## Rules
-  - Match StructuredQuery.tasks[].id to team capabilities:
-    · 분석 계열 (sentiment_analysis, keyword_extraction, trend_analysis,
-      competitor_comparison, causal_analysis, metric_calculation,
-      insight_generation, report_generation, summary_generation,
-      data_collection, data_preprocessing)
-      → **analysis_team**
-    · 크리에이티브 계열 (image_generation, image_editing, video_storyboard,
-      copy_generation, material_variation)
-      → teams_selected 에 포함하지 말 것 — **크리에이티브 생성은 현재 미지원**
-        (2026-06-12 creative_team 폐기). 해당 task 만 있으면 teams_selected: [].
-        분석과 복합이면 분석 task 만 analysis_team 으로.
-    · 운영 계열 (budget_optimization)
-      → **operations_team** (미구현 시 analysis_team으로 우회)
-  - `factual_lookup`만 있으면 → teams_selected: [] (Tool 불필요, Response 직답)
-  - tasks가 비어있으면 → teams_selected: [] (ambiguity → Response 직답)
+  - Match StructuredQuery.tasks[].id / intent against each team's capabilities
+    (team.description / member agents' handles_tasks in the injected list).
+  - Select ONLY from the injected teams. Never invent a team name.
+  - `factual_lookup` 만 있으면 → teams_selected: [] (Tool 불필요, Response 직답).
+  - tasks 가 비어있으면 → teams_selected: [] (ambiguity → Response 직답).
+  - 매칭되는 팀이 없으면 → teams_selected: [] (해당 능력 미보유 — 정직 응답).
 
   ## Output (JSON only)
-  {
-    "teams_selected": ["analysis_team"],
-    "rationale": "1~2문장 선택 이유"
-  }
-
+  { "teams_selected": ["<team_name>"], "rationale": "1~2문장 선택 이유" }
   NO prose outside JSON.
 
 user_template: |
@@ -54,19 +37,7 @@ user_template: |
 
 examples:
   - input:
-      tasks: [{id: "sentiment_analysis"}]
-    output:
-      teams_selected: ["analysis_team"]
-      rationale: "감성 분석은 분석팀 담당."
-
-  - input:
-      tasks: [{id: "sentiment_analysis"}, {id: "image_generation"}]
-    output:
-      teams_selected: ["analysis_team"]
-      rationale: "감성 분석은 분석팀. 이미지 생성은 현재 미지원(크리에이티브 폐기) — 제외."
-
-  - input:
       tasks: [{id: "factual_lookup"}]
     output:
       teams_selected: []
-      rationale: "factual_lookup은 Tool 불필요. Response가 LLM으로 직답."
+      rationale: "factual_lookup 은 Tool 불필요 — Response 가 LLM 으로 직답."

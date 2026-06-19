@@ -4,7 +4,7 @@ GET /api/conversations                            → 대화 목록 (client 필�
 GET /api/conversations/{id}/turns                 → 대화의 turn(메시지) 목록 (채팅 복원용)
 GET /api/conversations/{id}/turns/{tid}/state     → 턴 실행 라이브 상태 (세션 연속성 재접속 복원)
 
-ConversationManager(대화 전용, MemoryManager와 분리)가 octormate_system checkpoint를 읽음.
+ConversationManager(대화 전용, MemoryManager와 분리)가 dreamagent_system checkpoint를 읽음.
 app.state.checkpointer(AsyncPostgresSaver) + app.state.db_pool(asyncpg) 재활용.
 턴 상태는 checkpoint(static)가 아니라 hitl_manager 런타임 싱글톤(live)에서 읽음.
 설계: docs/reports/대화이력_설계_단계적_2026-06-09.md · docs/reports/세션연속성_복원_설계계획_2026-06-11.md

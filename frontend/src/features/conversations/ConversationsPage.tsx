@@ -2,7 +2,7 @@
  * ConversationsPage — 이전 대화 이력 + 검색 + 클릭→채팅 복원 + 새 대화/삭제.
  *
  * 데이터 (2026-06-10 Phase1 실데이터 배선): GET /api/conversations (checkpoint 기반).
- *  - 목록 = useConversations(client) — ConversationManager가 octormate_system checkpoint 조회
+ *  - 목록 = useConversations(client) — ConversationManager가 dreamagent_system checkpoint 조회
  *  - 카드 클릭 → fetchConversationTurns → 채팅창에 복원(메시지 재현)
  *  - + 새 대화 → conversation_id 리셋(session) + 채팅 비우기 + 패널 열기
  *  - 🗑 삭제 → DELETE /api/conversations/{id} (checkpoint 제거, 되돌릴 수 없음)

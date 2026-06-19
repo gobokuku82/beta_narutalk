@@ -95,7 +95,7 @@ export function SideChatPanel() {
       {/* 헤더 */}
       <header className="h-14 border-b border-border flex items-center justify-between px-4 flex-shrink-0">
         <div className="flex items-center gap-3">
-          <h3 className="font-semibold">OctorAD Agent</h3>
+          <h3 className="font-semibold">DreamAgent Agent</h3>
           <div className="flex items-center gap-2">
             <span
               className={cn(

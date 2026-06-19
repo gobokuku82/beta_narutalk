@@ -41,7 +41,7 @@ except ImportError:
     CHECKPOINT_DB_URI = None
 
 # 기본값 (settings 로드 실패 시 폴백)
-_DEFAULT_URI = "postgresql://postgres:postgres@localhost:5432/octormate_system"
+_DEFAULT_URI = "postgresql://postgres:postgres@localhost:5432/dreamagent_system"
 if not CHECKPOINT_DB_URI:
     CHECKPOINT_DB_URI = _DEFAULT_URI
 
@@ -53,7 +53,7 @@ POSTGRES_HOST = _parsed.hostname or "localhost"
 POSTGRES_PORT = _parsed.port or 5432
 POSTGRES_USER = _parsed.username or "postgres"
 POSTGRES_PASSWORD = _parsed.password or ""
-DATABASE_NAME = (_parsed.path or "/octormate_system").lstrip("/") or "octormate_system"
+DATABASE_NAME = (_parsed.path or "/dreamagent_system").lstrip("/") or "dreamagent_system"
 
 # Admin 접속 (postgres 시스템 DB) — DB 생성용
 ADMIN_CONN_STRING = (
@@ -64,7 +64,7 @@ ADMIN_CONN_STRING = (
 
 def create_database():
     """
-    octormate_system 데이터베이스 생성 (동기 작업).
+    dreamagent_system 데이터베이스 생성 (동기 작업).
 
     PostgreSQL에서 CREATE DATABASE는 트랜잭션 내에서 실행할 수 없으므로
     autocommit 모드로 실행해야 합니다.
@@ -167,7 +167,7 @@ def verify_setup():
 async def main():
     """메인 실행 함수"""
     print("=" * 60)
-    print("OctorAD - Checkpoint Database Setup")
+    print("DreamAgent - Checkpoint Database Setup")
     print("=" * 60)
 
     # 1. 데이터베이스 생성

@@ -43,7 +43,7 @@ class Settings(BaseSettings):
 
     # === Data DB (client 정형 데이터, schema-per-client) ===
     # client = schema. 새 client = data/{client}/computed/ 폴더만 추가 → setup_data_db 재실행으로 자동 schema.
-    # 미설정(None) 시 CHECKPOINT_DB_URI 자격증명 재사용 + db명만 octormate_data로 교체 (data_db_uri 프로퍼티).
+    # 미설정(None) 시 CHECKPOINT_DB_URI 자격증명 재사용 + db명만 dreamagent_data로 교체 (data_db_uri 프로퍼티).
     DATA_DB_URI: Optional[str] = None
 
     # 데이터 영속화 백엔드: "file"(기본) | "postgres".

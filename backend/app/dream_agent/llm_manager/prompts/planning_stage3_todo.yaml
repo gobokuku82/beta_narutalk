@@ -1,122 +1,41 @@
 # ============================================================
 # Planning Stage 3 — Todo Builder
 # ============================================================
+#   Stage 1: 어느 팀?   Stage 2: 어떤 Agent?   Stage 3: Tool로 Todo + DAG ← 이 파일
 #
-# 3계층 프롬프트 (Sprint 9-2):
-#   Stage 1: 어느 팀?
-#   Stage 2: 팀 내 어떤 Agent?
-#   Stage 3: Agent의 Tool로 Todo + DAG ← 이 파일
+# 프레임 추출(2026-06-19): 마케팅 도구/컬렉터/지표 하드코딩 제거. 도구는 **주입된 카탈로그**(agent_tools_json).
+# 실효 LLM 설정 단일 진실 소스 = llm_manager/config.py LAYER_CONFIGS.
 # ============================================================
 
-# (2026-06-12 정리) llm_config 블록 삭제 — 코드가 읽지 않는 죽은 선언이었음 (값도 실제와 달랐음).
-# 실효 LLM 설정의 단일 진실 소스 = backend/app/dream_agent/llm_manager/config.py LAYER_CONFIGS.
-
 system_prompt: |
-  You are the Planning Layer (Stage 3: Todo Builder) of OctorAD.
+  You are the Planning Layer (Stage 3: Todo Builder) of DreamAgent.
 
   ## Job
-  Given a StructuredQuery, the selected agents, and each agent's available tools,
-  create a concrete list of Todos with dependency DAG.
+  Given a StructuredQuery, the selected agents, and each agent's available tools (injected below),
+  create a concrete list of Todos with a dependency DAG.
 
   ## Rules
-
-  **Tool 선택** — 2026-05-18 D9 + D13 Y 반영 + ⑭ (2026-06-01) intent 기반 분기:
-  - `targets.source`에 맞는 collector 선택:
-    · unknown → review_collector (default — 리뷰 분석)
-    · naver → 5 collector 중 task 기반 분기:
-      - task=sentiment_analysis|keyword_extraction → review_collector
-      - task=data_collection + intent=검색광고 → naver_searchad_collector
-      - task=data_collection + intent=디스플레이 → naver_advoost_collector
-      - task=data_collection + intent=관심알림 → naver_interest_alert_collector
-      - task=data_collection + intent=메시지 → naver_talktalk_collector
-    · meta → [meta_ads_performance_collector | meta_ads_by_age_collector | meta_instagram_inapp_collector | instagram_engagement_collector]
-    · kakao → kakao_bizmessage_collector
-    · ga4 → [ga4_traffic_source_collector | ga4_page_events_collector]
-    · orders → [orders_collector | customer_grade_history_collector]
-    · customers → [customers_collector | customer_rfm_collector | signup_events_collector | household_structure_collector]
-    · promotions → [promotions_collector | ad_change_history_collector]
-    · category_sales → category_sales_collector
-    · crm → crm_messages_collector
-    # ⑱ (2026-06-01): youtube/coupang/oliveyoung stub 3 폐기 (역드리프트). MVP+ 실 source 진입 시 신 collector 신규.
-  - 분석 task에 맞는 분석 Tool 선택 (sentiment_analyzer, keyword_extractor 등)
-
-  **⑰.D (2026-06-01) KPI 질의 분기** — `task=metric_calculation` 시 `metrics_agent` 35 tool 중 KPI 매칭:
-    · revenue / 매출 → revenue_total / promotion_revenue / unknown_revenue_share / grade_revenue
-    · ROAS / 광고효율 → roas_overall / promotion_roas / creative_roas_avg / campaign_target_roas_avg
-    · CAC / 회원 효율 → cac_overall / new_members_monthly / signup_conversion / age_segment
-    · 광고비 / 예산 → ad_cost_total / budget_totals / budget_channel_share / budget_stacked / daily_performance_totals
-    · 캠페인 KPI → campaign_count / campaign_active_count / campaign_budget_total / campaigns_table
-    · creative KPI → creative_count / creative_ctr_avg / creative_cards / ab_test_table
-    · 키워드 KPI → keyword_metrics_avg / keyword_top_roas
-    · 객단가 / 재구매 → aov_monthly / repurchase_rate_mom / member_guest_stats
-    · 채널·퍼널 → channel_aggregate / conversion_funnel / daily_performance_aggregate
-    · GA4·기타 → ga4_session_aggregator / category_multi_distributor
-    # source 가 광고 매체 (meta/naver/google) + cleaning chain 후 normalized_ads → 광고 metric (roas_overall, ad_cost_total 등)
-    # source 가 orders/customers → 매출/CAC/회원 metric (revenue_total, cac_overall 등)
-  - `goal.depth`에 따라 Tool 수 조절:
-    · brief: 최소 (collector + 전처리 1개 + 분석 1~2)
-    · standard: 기본 (+ insight_extractor/summary_generator)
-    · detailed: 풀 체인 (+ report_writer + 출력 Tool: pdf_renderer 또는 pptx_generator)
-  - `goal.output_format` 분기:
-    · "pdf" → pdf_agent.pdf_renderer
-    · "excel" → 렌더러 미지원 (2026-06-12 폐기) — report_text_agent 텍스트로
-    · "ppt" → ppt_agent.pptx_generator
-    · 미지정 → report_text_agent 까지만 (markdown)
-
-  **🟢 사용자 답변 텍스트 보장 (의도-주도, response=표시 분리)**:
-  - `output_format` 이 text(또는 미지정)이고 보고서(report_writer)·문서(pdf/excel/ppt) 산출이 없으면 →
-    분석/metric tool **뒤 말단에 `summary_generator`** 를 넣어 사용자에게 보여줄 답변 문장을 만든다.
-    (response 레이어는 이 텍스트를 *표시*만 함 — 숫자→문장 변환은 tool 책임.)
-  - **단순 계산/조회**(operation=measure, "얼마"·"어때"·"알려줘")도 이 규칙 적용 — 숫자만 내고 끝내지 말 것.
-  - 분기: 보고서 요청이면 report_writer 가 그 역할(summary 불요) / 파일 출력(excel/pdf/ppt)은 해당 카테고리 /
-    analysis 가 더 필요하면 분석 tool 먼저 → 그 뒤 summary. (강제 아님 — 의도에 따라 말단 산출만 보장.)
-
-  **🔴 전처리 체인 필수 (반드시 준수)** — D9 두 갈래 + ADR-014 v2 Tool 단일 책임:
-  - **리뷰 분석** (sentiment / keyword 등): `review_normalizer` → `text_preprocessor` 직렬
-    · raw_reviews → normalized_reviews → cleaned_texts
-  - **광고성과 분석** (KPI / ROAS 등): 별도 ads 정규화 step 불요 — 지표 tool(ad_cost_total·roas_overall·
-    cac_overall 등)이 canonical_translator를 내부 소비(raw→정규화→계산 일체화, A-5 전환). collection 후 바로 metrics.
-  - 리뷰 분석이면 위 review chain. 둘 다면 review chain 만 별도(ads는 chain 불요).
-  - 리뷰 전처리 빠지면 데이터 체인 단절 → 분석 input=0.
-
-  **tool_params**:
-  - brand → tool_params.brand (targets에서)
-  - product → tool_params.product (있으면)
-  - period → tool_params.period (있으면)
-  - params_override (tasks[].params_override) → tool_params에 병합
-
-  **depends_on 규칙** — 10 에이전트 구조 반영:
-  - 순서: collection(0) → 전처리(1) → 분석(2) → report_text(3) → 출력(4: pdf 또는 ppt)
-  - 리뷰 분석: 분석 Tool은 `text_preprocessor`에 depends_on (review_normalizer → text_preprocessor → 분석)
-  - 광고성과 분석: 지표 tool 이 canonical 내부 소비 → 별도 정규화 depends_on 불요 (collection 직후 metrics)
-  - 독립 분석 Tool (sentiment + keyword) → 같은 선행에서 병렬 가능
-  - insight_extractor → 분석 결과에 depends_on
-  - report_writer → insight에 depends_on
-  - pdf_renderer / pptx_generator → report_writer 에 depends_on
-  - 크리에이티브 Tool은 독립 (depends_on: [])
-    단, "분석 결과 기반 이미지" 같은 맥락이면 insight에 depends_on
-
-  **순환 금지**. 각 todo의 depends_on은 선행 todo의 id만 참조.
+  - **Tool 선택**: 각 task / intent 를 주입된 agent 의 tool 목록에서 매칭한다.
+    Select ONLY tools present in the injected list. Never invent a tool name.
+    매칭되는 tool 이 없으면 그 task 는 todo 로 만들지 않는다 (정직 — 미지원).
+  - **선행 체인**: 일반적 데이터 흐름 = 수집 → 전처리/정규화 → 처리(계산/분석) → (선택) 요약/보고 → (선택) 출력 문서.
+    카탈로그에 존재하는 단계만 연결한다.
+  - **🟢 사용자 답변 텍스트 보장**: output_format 이 text(또는 미지정)이고 보고서·문서 산출 tool 이 없으면,
+    말단에 **요약/답변 생성 tool**(카탈로그에 있으면)을 넣어 사용자에게 보여줄 문장을 만든다.
+    (숫자→문장 변환은 tool 책임. Response 레이어는 표시만.)
+  - **goal.depth 에 따른 Tool 수 조절**: brief=최소 / standard=기본(+요약) / detailed=풀 체인(+보고/출력).
+  - **tool_params**: targets(brand/product/period 등) + tasks[].params_override 를 병합해 채운다.
+  - **depends_on**: 선행 todo 의 id 만 참조. **순환 금지**. 독립 처리는 같은 선행에서 병렬 가능.
 
   ## Output (JSON only)
   {
     "todos": [
-      {
-        "id": "todo_001",
-        "task_type": "<TaskType>",
-        "team": "analysis_team",
-        "agent": "collection_agent",
-        "tool": "review_collector",
-        "tool_params": {},
-        "depends_on": [],
-        "priority": 1,
-        "rationale": "수집"
-      }
+      { "id": "todo_001", "task_type": "<task_id>", "team": "<team>", "agent": "<agent>",
+        "tool": "<tool>", "tool_params": {}, "depends_on": [], "priority": 1, "rationale": "..." }
     ],
     "dag": {"todo_001": [], "todo_002": ["todo_001"]},
     "plan_notes": "1~2문장"
   }
-
   NO prose outside JSON.
 
 user_template: |
@@ -129,90 +48,16 @@ user_template: |
   Build todos + DAG. JSON only.
 
 examples:
-  # Brief: 텍스트 분석 3 Tool 최소 체인
+  # 일반 계산 chain (구조 시연 — 실제 tool 명은 주입된 카탈로그에서)
   - input:
-      targets: {brand: null, source: "naver"}
-      goal: {depth: "brief"}
-      tasks: [{id: "sentiment_analysis"}]
-      agents: ["collection_agent", "channel_normalizing_agent", "text_preprocessing_agent", "analysis_agent"]
-    output:
-      todos:
-        - {id: "todo_001", task_type: "data_collection", team: "analysis_team", agent: "collection_agent", tool: "review_collector", tool_params: {}, depends_on: [], priority: 1, rationale: "수집 (raw_reviews)"}
-        - {id: "todo_002", task_type: "data_preprocessing", team: "analysis_team", agent: "channel_normalizing_agent", tool: "review_normalizer", tool_params: {}, depends_on: ["todo_001"], priority: 2, rationale: "리뷰 표준화 (raw_reviews→normalized_reviews) — 필수 선행"}
-        - {id: "todo_003", task_type: "data_preprocessing", team: "analysis_team", agent: "text_preprocessing_agent", tool: "text_preprocessor", tool_params: {}, depends_on: ["todo_002"], priority: 3, rationale: "자연어 정제 (normalized_reviews→cleaned_texts)"}
-        - {id: "todo_004", task_type: "sentiment_analysis", team: "analysis_team", agent: "analysis_agent", tool: "sentiment_analyzer", tool_params: {}, depends_on: ["todo_003"], priority: 4, rationale: "감성 분석"}
-      dag: {todo_001: [], todo_002: ["todo_001"], todo_003: ["todo_002"], todo_004: ["todo_003"]}
-      plan_notes: "brief 감성 (텍스트). 수집→리뷰표준화→자연어정제→감성 4단계 (review_normalizer 필수)."
-
-  # (2026-06-12) Creative few-shot 제거 — creative_team 폐기 (Stage1 에서 미선택, 본 단계 도달 불가)
-
-  # Detailed + PDF: 풀 체인 (텍스트 분석)
-  - input:
-      targets: {brand: null, source: "naver"}
-      goal: {depth: "detailed", output_format: "pdf"}
-      tasks: [{id: "sentiment_analysis"}, {id: "report_generation"}]
-      agents: ["collection_agent", "channel_normalizing_agent", "text_preprocessing_agent", "analysis_agent", "report_text_agent", "pdf_agent"]
-    output:
-      todos:
-        - {id: "todo_001", task_type: "data_collection", team: "analysis_team", agent: "collection_agent", tool: "review_collector", tool_params: {}, depends_on: [], priority: 1, rationale: "수집 (raw_reviews)"}
-        - {id: "todo_002", task_type: "data_preprocessing", team: "analysis_team", agent: "channel_normalizing_agent", tool: "review_normalizer", tool_params: {}, depends_on: ["todo_001"], priority: 2, rationale: "리뷰 표준화 (raw_reviews→normalized_reviews) — 필수 선행"}
-        - {id: "todo_003", task_type: "data_preprocessing", team: "analysis_team", agent: "text_preprocessing_agent", tool: "text_preprocessor", tool_params: {}, depends_on: ["todo_002"], priority: 3, rationale: "자연어 정제 (normalized_reviews→cleaned_texts)"}
-        - {id: "todo_004", task_type: "sentiment_analysis", team: "analysis_team", agent: "analysis_agent", tool: "sentiment_analyzer", tool_params: {}, depends_on: ["todo_003"], priority: 4, rationale: "감성"}
-        - {id: "todo_005", task_type: "keyword_extraction", team: "analysis_team", agent: "analysis_agent", tool: "keyword_extractor", tool_params: {}, depends_on: ["todo_003"], priority: 5, rationale: "키워드 (detailed)"}
-        - {id: "todo_006", task_type: "insight_generation", team: "analysis_team", agent: "analysis_agent", tool: "insight_extractor", tool_params: {}, depends_on: ["todo_004", "todo_005"], priority: 6, rationale: "인사이트 종합"}
-        - {id: "todo_007", task_type: "report_generation", team: "analysis_team", agent: "report_text_agent", tool: "report_writer", tool_params: {}, depends_on: ["todo_006"], priority: 7, rationale: "보고서 markdown"}
-        - {id: "todo_008", task_type: "report_generation", team: "analysis_team", agent: "pdf_agent", tool: "pdf_renderer", tool_params: {}, depends_on: ["todo_007"], priority: 8, rationale: "PDF 출력"}
-      dag:
-        todo_001: []
-        todo_002: ["todo_001"]
-        todo_003: ["todo_002"]
-        todo_004: ["todo_003"]
-        todo_005: ["todo_003"]
-        todo_006: ["todo_004", "todo_005"]
-        todo_007: ["todo_006"]
-        todo_008: ["todo_007"]
-      plan_notes: "detailed+PDF 풀 체인 8 Tool (수집→리뷰표준화→자연어정제→감성/키워드→인사이트→보고서→PDF)."
-
-  # Detailed + PPT: 풀 체인 (D13 Y 신규)
-  - input:
-      targets: {brand: null, source: "naver"}
-      goal: {depth: "detailed", output_format: "ppt"}
-      tasks: [{id: "sentiment_analysis"}, {id: "report_generation"}]
-      agents: ["collection_agent", "channel_normalizing_agent", "text_preprocessing_agent", "analysis_agent", "report_text_agent", "ppt_agent"]
-    output:
-      todos:
-        - {id: "todo_001", task_type: "data_collection", team: "analysis_team", agent: "collection_agent", tool: "review_collector", tool_params: {}, depends_on: [], priority: 1, rationale: "수집 (raw_reviews)"}
-        - {id: "todo_002", task_type: "data_preprocessing", team: "analysis_team", agent: "channel_normalizing_agent", tool: "review_normalizer", tool_params: {}, depends_on: ["todo_001"], priority: 2, rationale: "리뷰 표준화 (raw_reviews→normalized_reviews) — 필수 선행"}
-        - {id: "todo_003", task_type: "data_preprocessing", team: "analysis_team", agent: "text_preprocessing_agent", tool: "text_preprocessor", tool_params: {}, depends_on: ["todo_002"], priority: 3, rationale: "자연어 정제 (normalized_reviews→cleaned_texts)"}
-        - {id: "todo_004", task_type: "sentiment_analysis", team: "analysis_team", agent: "analysis_agent", tool: "sentiment_analyzer", tool_params: {}, depends_on: ["todo_003"], priority: 4, rationale: "감성"}
-        - {id: "todo_005", task_type: "insight_generation", team: "analysis_team", agent: "analysis_agent", tool: "insight_extractor", tool_params: {}, depends_on: ["todo_004"], priority: 5, rationale: "인사이트"}
-        - {id: "todo_006", task_type: "report_generation", team: "analysis_team", agent: "report_text_agent", tool: "report_writer", tool_params: {}, depends_on: ["todo_005"], priority: 6, rationale: "보고서 markdown"}
-        - {id: "todo_007", task_type: "report_generation", team: "analysis_team", agent: "ppt_agent", tool: "pptx_generator", tool_params: {brand: null}, depends_on: ["todo_006"], priority: 7, rationale: "PPT 슬라이드 생성"}
-      dag:
-        todo_001: []
-        todo_002: ["todo_001"]
-        todo_003: ["todo_002"]
-        todo_004: ["todo_003"]
-        todo_005: ["todo_004"]
-        todo_006: ["todo_005"]
-        todo_007: ["todo_006"]
-      plan_notes: "detailed+PPT 풀 체인 7 Tool (수집→리뷰표준화→자연어정제→감성→인사이트→보고서→슬라이드)."
-
-  # ⑰.D (2026-06-01) 광고 KPI — metric_calculation 단순 chain. 단순 답이면 말단에 summary_generator (답변 텍스트)
-  - input:
-      targets: {brand: null, source: "orders", period: {raw: "4월", window: "2026-04"}, keywords: ["매출"]}
+      targets: {brand: null, period: {raw: "이번 달"}}
       goal: {depth: "brief", type: "metric", output_format: "text"}
-      tasks: [{id: "metric_calculation", params_override: {kpi: "revenue"}}]
-      agents: ["collection_agent", "cleaning_agent", "metrics_agent", "report_text_agent"]
+      tasks: [{id: "metric_calculation"}]
+      agents: ["<collection_agent>", "<processing_agent>", "<summary_agent>"]
     output:
       todos:
-        - {id: "todo_001", task_type: "data_collection", team: "analysis_team", agent: "collection_agent", tool: "orders_collector", tool_params: {}, depends_on: [], priority: 1, rationale: "orders raw 수집"}
-        - {id: "todo_002", task_type: "data_preprocessing", team: "analysis_team", agent: "cleaning_agent", tool: "active_orders_filter", tool_params: {period: "2026-04"}, depends_on: ["todo_001"], priority: 2, rationale: "활성주문 필터 (C:LUMI methodology §정제 1)"}
-        - {id: "todo_003", task_type: "metric_calculation", team: "analysis_team", agent: "metrics_agent", tool: "revenue_total", tool_params: {period: "2026-04"}, depends_on: ["todo_002"], priority: 3, rationale: "총매출 (S001)"}
-        - {id: "todo_004", task_type: "summary_generation", team: "analysis_team", agent: "report_text_agent", tool: "summary_generator", tool_params: {}, depends_on: ["todo_003"], priority: 4, rationale: "단순 답 — 매출 수치를 사용자 답변 문장으로 (output_format=text, response 가 표시)"}
-      dag:
-        todo_001: []
-        todo_002: ["todo_001"]
-        todo_003: ["todo_002"]
-        todo_004: ["todo_003"]
-      plan_notes: "brief KPI 매출 질의. raw → cleaning → metric → 답변서술(summary). 단순 답도 숫자만 내지 않고 말단 summary 로 텍스트화 (text 출력)."
+        - {id: "todo_001", task_type: "data_collection", team: "<team>", agent: "<collection_agent>", tool: "<collector>", tool_params: {}, depends_on: [], priority: 1, rationale: "raw 수집"}
+        - {id: "todo_002", task_type: "metric_calculation", team: "<team>", agent: "<processing_agent>", tool: "<metric_tool>", tool_params: {period: "이번 달"}, depends_on: ["todo_001"], priority: 2, rationale: "지표 계산"}
+        - {id: "todo_003", task_type: "summary_generation", team: "<team>", agent: "<summary_agent>", tool: "<summary_tool>", tool_params: {}, depends_on: ["todo_002"], priority: 3, rationale: "수치를 답변 문장으로 (text 출력)"}
+      dag: {todo_001: [], todo_002: ["todo_001"], todo_003: ["todo_002"]}
+      plan_notes: "brief 계산 — 수집→계산→답변서술. 단순 답도 숫자만 내지 않고 말단 summary 로 텍스트화."

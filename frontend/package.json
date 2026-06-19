@@ -1,9 +1,9 @@
 {
-  "name": "octorad-frontend",
+  "name": "dreamagent-frontend",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "OctorAD Dream Agent V2 — Frontend (Sprint 15+)",
+  "description": "DreamAgent Dream Agent V2 — Frontend (Sprint 15+)",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
