@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     )
 
     # === App ===
-    APP_NAME: str = "OctorAD"
+    APP_NAME: str = "DreamAgent"
     APP_VERSION: str = "2.0.0"
     DEBUG: bool = False
     ENVIRONMENT: str = "development"  # development, staging, production
@@ -34,12 +34,12 @@ class Settings(BaseSettings):
     PORT: int = 8000
 
     # === Database ===
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/octormate_system"
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/dreamagent_system"
     DATABASE_POOL_SIZE: int = 10
     DATABASE_MAX_OVERFLOW: int = 20
 
     # === Checkpoint Database (LangGraph) ===
-    CHECKPOINT_DB_URI: str = "postgresql://postgres:postgres@localhost:5432/octormate_system"
+    CHECKPOINT_DB_URI: str = "postgresql://postgres:postgres@localhost:5432/dreamagent_system"
 
     # === Data DB (client 정형 데이터, schema-per-client) ===
     # client = schema. 새 client = data/{client}/computed/ 폴더만 추가 → setup_data_db 재실행으로 자동 schema.
@@ -106,11 +106,11 @@ class Settings(BaseSettings):
 
     @property
     def data_db_uri(self) -> str:
-        """Data DB URI — 명시값(DATA_DB_URI) 우선, 없으면 CHECKPOINT_DB_URI 자격증명 재사용(db명만 octormate_data로 교체)."""
+        """Data DB URI — 명시값(DATA_DB_URI) 우선, 없으면 CHECKPOINT_DB_URI 자격증명 재사용(db명만 dreamagent_data로 교체)."""
         if self.DATA_DB_URI:
             return self.DATA_DB_URI
         head, _, _tail = self.CHECKPOINT_DB_URI.rpartition("/")
-        return f"{head}/octormate_data"
+        return f"{head}/dreamagent_data"
 
 
 # Singleton

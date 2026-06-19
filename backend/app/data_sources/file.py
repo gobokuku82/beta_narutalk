@@ -42,47 +42,10 @@ class SourceSpec:
     platform: str | None = None
 
 
-SOURCE_REGISTRY: dict[str, SourceSpec] = {
-    # ── external = API (현재 mock = data/mock_api/{client}) ──
-    # Meta (Instagram 포함)
-    "meta_ads_performance":  SourceSpec("meta_ads_performance.json", "external", "meta"),
-    "meta_ads_by_age":       SourceSpec("meta_ads_by_age.json", "external", "meta"),
-    "meta_instagram_inapp":  SourceSpec("meta_instagram_inapp.json", "external", "meta"),
-    "instagram_engagement":  SourceSpec("instagram_engagement.json", "external", "meta"),
-    # Naver
-    "naver_searchad":        SourceSpec("naver_searchad.json", "external", "naver"),
-    "naver_advoost":         SourceSpec("naver_advoost.csv", "external", "naver"),
-    "naver_talktalk":        SourceSpec("naver_talktalk.json", "external", "naver"),
-    "naver_interest_alert":  SourceSpec("naver_interest_alert.csv", "external", "naver"),
-    # Kakao
-    "kakao_bizmessage":      SourceSpec("kakao_bizmessage.json", "external", "kakao"),
-    # Google (GA4 + Ads)
-    "ga4_traffic_source":    SourceSpec("ga4_traffic_source.jsonl", "external", "google"),
-    "ga4_page_events":       SourceSpec("ga4_page_events.jsonl", "external", "google"),
-    "google_ads_performance": SourceSpec("google_ads_performance.csv", "external", "google"),  # 유료 광고 실적 (canonical 18번째, A1 2026-06-16)
-    # 외부 (플랫폼 미정)
-    "ad_change_history":     SourceSpec("ad_change_history.json", "external", None),
-    "household_structure":   SourceSpec("household_structure.csv", "external", None),
-    "reviews":               SourceSpec("reviews.csv", "external", None),            # 리뷰 사이트
-    "keyword_performance":   SourceSpec("keyword_performance.csv", "external", None),  # 검색광고 키워드
-    # daily_performance 제거 (A-5.3): World-C 별개 mock(raw 미reconcile) — 4 tool·라우트가 canonical 전환. csv 폐기.
-
-    # ── internal = 내 서버 (data/{client}) ──
-    "orders":                SourceSpec("orders.csv", "internal"),
-    "customers":             SourceSpec("customers.csv", "internal"),
-    "customer_rfm":          SourceSpec("customer_rfm.csv", "internal"),
-    "grade_history":         SourceSpec("customer_grade_history.csv", "internal"),
-    "signup_events":         SourceSpec("signup_events.csv", "internal"),
-    "promotions":            SourceSpec("promotions.sql", "internal"),
-    "category_sales":        SourceSpec("category_sales.csv", "internal"),
-    "crm_messages":          SourceSpec("crm_messages.sql", "internal"),
-    "campaigns":             SourceSpec("campaigns.csv", "internal"),          # 캠페인 기획
-    "creatives":             SourceSpec("creatives.csv", "internal"),          # 소재 (내부 자산)
-    "budget_allocation":     SourceSpec("budget_allocation.csv", "internal"),  # 예산 배분
-    "ab_tests":              SourceSpec("ab_tests.csv", "internal"),           # A/B 결과
-    "marketing_targets":     SourceSpec("marketing_monthly_targets.csv", "internal"),  # 월별 마케팅 목표 (대시보드 목표대비, 2026-06-09)
-    "channel_targets":       SourceSpec("channel_targets.csv", "internal"),            # 채널별 ROAS/CPA 목표 (채널 페이지, 2026-06-09)
-}
+# 프레임 추출(2026-06-19): 마케팅 도메인 소스 매핑 제거. 빈 레지스트리.
+# 새 도메인은 여기에 source_id → SourceSpec(filename, kind, platform) 을 등록한다.
+# 미등록 source_id 조회 시 DataSourceNotFound — 빈-프레임 정상 동작.
+SOURCE_REGISTRY: dict[str, SourceSpec] = {}
 
 
 # 하위호환: source_id → 파일명 (기존 import·테스트 유지). SOURCE_REGISTRY 에서 파생.
