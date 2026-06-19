@@ -12,10 +12,7 @@
 agent · direct API 모두 본 인터페이스 경유 → 일관성. tool 은 *어떤 source 필요한지* (의미)
 만 안다. *어디서/어떻게* 는 DataSource 책임.
 
-위치: backend/app/data_sources/ (dream_agent 형제 — agent + API 공유).
-
-spec: docs/_claude/architecture/backend_data_agent_2026-05-26.md §4.2
-memory: project_tool_data_agent_separation
+위치: backend/app/data_layer/data_sources/ (dream_agent 형제 — agent + API 공유).
 """
 from __future__ import annotations
 from abc import ABC, abstractmethod
@@ -75,8 +72,8 @@ class DataSource(ABC):
 
     구현체:
         - FileDataSource: data/{client}/raw/{file} 파일 기반 (POC)
-        - ApiDataSource: 외부 광고 API (네이버광고·메타광고, MVP+)
-        - DbDataSource: PostgreSQL clumi.<table> (MVP+)
+        - ApiDataSource: 외부 API (외부 source 커넥터, MVP+)
+        - DbDataSource: PostgreSQL dreamagent.<table> (MVP+)
     """
 
     @abstractmethod
@@ -85,7 +82,7 @@ class DataSource(ABC):
 
         Args:
             client: 회사 식별자 (디렉토리·테넌트 키) — context.client_id
-            source_id: 'orders' · 'customers' · 'grade_history' 등 — semantic name
+            source_id: 'orders' · 'customers' · 'events' 등 — semantic name
 
         Returns:
             확장자/포맷에 따라:

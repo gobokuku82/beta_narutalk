@@ -1,7 +1,4 @@
-"""ExecutionResult — Execution 레이어 산출물
-
-Reference: docs/_claude/4layer_system/system_architecture.md
-"""
+"""ExecutionResult — Execution 레이어 산출물"""
 
 from __future__ import annotations
 

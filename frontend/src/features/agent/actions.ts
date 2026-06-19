@@ -2,10 +2,9 @@
  * askAgent — 카드(대시보드 결과)에서 에이전트에게 질문을 보내는 공용 seam (P1).
  *
  * SideChatPanel.handleSend 와 동일 절차(턴 시작→store 리셋→버블→WS 송신)를 imperative 로 노출.
- * 카드 컨텍스트는 user_input 에 `[지표 값 · 기간]` 으로 임베드 — checkpoint 에 그대로 박제되어
- * 대화이력 회상 시 무엇을 물었는지 보존(설계 §6 저장 트랙).
+ * 카드 컨텍스트는 user_input 에 `[항목 값 · 기간]` 으로 임베드 — checkpoint 에 그대로 박제되어
+ * 대화이력 회상 시 무엇을 물었는지 보존(저장 트랙).
  *
- * 설계: docs/reports/카드클릭_에이전트연결_설계계획_2026-06-10.md §4.1
  * client 는 호출 컴포넌트가 useCurrentClient() 로 해석해 전달 (해석 규칙 중복 금지).
  */
 import { sendQuery } from '@/api/ws';
@@ -16,17 +15,17 @@ import { useChatPanel } from './chatPanelStore';
 
 /** 카드 1장의 스코프 — 팝업 컨텍스트 칩 + user_input 임베드에 쓰임. */
 export interface CardContext {
-  /** 지표 라벨 — '전체 ROAS' */
+  /** 항목 라벨 — '전체 count' */
   metric: string;
   /** 표시값 그대로 — '0.30×' (카드가 보여주는 정답값) */
   value: string;
   /** 기간 — '2026-04' (라우팅 테스트에서 실증된 period gap 의 해법) */
   period: string;
-  /** methodology 출처 — 'methodology §S004 — ROAS' (🔍 숫자나온방법 P5 에서 사용) */
+  /** methodology 출처 — 'methodology §S004' (🔍 숫자나온방법 에서 사용) */
   methodology?: string;
   /** 산식 — META.formula (팝업 칩 표시용) */
   formula?: string;
-  /** 카드 보조 텍스트 — '매출 ÷ 마케팅비' */
+  /** 카드 보조 텍스트 — 'total ÷ source' */
   sub?: string;
 }
 
@@ -34,7 +33,7 @@ export type AskAgentResult =
   | { ok: true }
   | { ok: false; reason: 'not_connected' | 'no_client' | 'busy' | 'send_failed' };
 
-/** 카드 컨텍스트를 user_input 접두로 임베드 — 대화이력에 `[전체 ROAS 0.30× · 2026-04] 왜...` 로 박제. */
+/** 카드 컨텍스트를 user_input 접두로 임베드 — 대화이력에 `[전체 count 0.30× · 2026-04] 왜...` 로 박제. */
 export function buildUserInput(prompt: string, context?: CardContext): string {
   if (!context) return prompt;
   return `[${context.metric} ${context.value} · ${context.period}] ${prompt}`;

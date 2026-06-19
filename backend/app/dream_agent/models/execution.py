@@ -5,8 +5,6 @@
     활성 ExecutionResult = `app.dream_agent.schemas.execution_result.ExecutionResult`
     (Plan 전체의 집계 결과 — 4-Layer 가 사용)
   - 유지: `ExecutionContext` — 모든 Tool 의 입력 컨텍스트
-
-Reference: docs/_claude/models_cleanup_plan_2026-05-15.md
 """
 
 from typing import Any, Optional

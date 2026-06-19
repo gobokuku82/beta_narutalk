@@ -3,7 +3,6 @@
  *
  * GET /api/conversations/{id}/turns 응답(ConversationTurns) → 채팅 ChatMessage[].
  * 사용처: ConversationsPage 클릭 복원 + RootLayout 부팅 자동 복원(세션 연속성 P2).
- * 설계: docs/reports/세션연속성_복원_설계계획_2026-06-11.md §4
  */
 import type { Plan } from '@/api/schemas';
 import type { ChatMessage } from './store';

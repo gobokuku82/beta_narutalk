@@ -5,7 +5,6 @@
  * 모노 라벨 + 큰 한국어 sans 제목 + 부제 + 슬로건.
  *
  * spec: VOCABULARY §2 Welcome Hero (v12 재신설).
- *       계획서 docs/reports/계획_첫진입페이지_재설계_2026-06-12.md §6.2 (위계 표).
  */
 export function WelcomeHero() {
   return (

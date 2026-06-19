@@ -57,14 +57,12 @@ class HITLManager:
         self._resume_queues: dict[str, asyncio.Queue] = {}
 
         # ── Sprint 14 A1: HITL timeout 활성 turn 레지스트리 ──
-        # 계획: docs/_claude/sprint14_a1_hitl_timeout_plan.md §R1.1
         # run_turn 진입 시 register_turn, finally 에서 cleanup_turn 으로 제거.
         # ws_hitl 4개 핸들러(pause/resume/cancel/hitl_response) + A3 4개 (todo_modify/delete/add/edit_nl)
         # 가 is_turn_active 로 stale guard.
         self._active_turns: set[str] = set()
 
         # ── Sprint 14 A3 (D9 L1): per-session Lock for Todo 편집 ──
-        # 계획: docs/_claude/sprint14_a3_plan.md §D9 layered defense L1
         # handle_todo_edit/delete/add + (Phase 3 의 NL 경로) 동시 호출 시 직렬화.
         # D5=B 정책 (pause 상태만 편집) 으로 main race window 는 이미 좁지만,
         # 단일 사용자 다중 탭 연타 / NL LLM 호출 중 race 완화.
@@ -389,7 +387,6 @@ class HITLManager:
 
     # ─────────────────────────────────────────────────────────────
     # Sprint 13 I7 — run_turn task ↔ ws_hitl Resume Queue
-    # 명세서: docs/_claude/checkpointer/sprint13_integration_i7_hitl_resume_queue_spec.md
     # ─────────────────────────────────────────────────────────────
 
     async def wait_for_resume(
@@ -416,7 +413,6 @@ class HITLManager:
 
     # ─────────────────────────────────────────────────────────────
     # Sprint 14 A1 — 활성 turn 레지스트리 (HITL timeout 가드)
-    # 계획: docs/_claude/sprint14_a1_hitl_timeout_plan.md §R1.1
     # ─────────────────────────────────────────────────────────────
 
     def register_turn(self, turn_id: str) -> None:

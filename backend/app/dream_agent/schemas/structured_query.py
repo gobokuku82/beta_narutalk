@@ -2,8 +2,6 @@
 
 4-Layer 아키텍처의 핵심 계약:
   user_input (자연어) → [Cognitive] → StructuredQuery → [Planning] → Todo[]
-
-Reference: docs/_claude/4layer_system/system_architecture.md
 """
 
 from __future__ import annotations
@@ -71,7 +69,7 @@ class OutputFormat(str, Enum):
 
 class Depth(str, Enum):
     """요청 깊이 — Planning이 Tool 체인 길이 결정에 사용"""
-    BRIEF    = "brief"       # 최소 Tool (예: "감성 어때?")
+    BRIEF    = "brief"       # 최소 Tool (예: 단순 조회 한 건)
     STANDARD = "standard"    # 기본 체인
     DETAILED = "detailed"    # 풀 체인 + 보고서
 
@@ -109,7 +107,7 @@ class Goal(BaseModel):
     type: GoalType
     output_format: OutputFormat
     depth: Depth = Depth.STANDARD
-    audience: Optional[str] = None    # "마케팅 팀장" 등 (선택)
+    audience: Optional[str] = None    # 대상 독자 (선택)
 
 
 class Task(BaseModel):
@@ -144,8 +142,8 @@ class QueryMeta(BaseModel):
 class SubIntent(BaseModel):
     """복합쿼리의 개별 의도 한 줄 — 다의도 씨앗 (S1, append-only 2026-06-09).
 
-    `operation` 스칼라 천장(한 쿼리=한 HOW)을 *구조적으로* 푸는 칸. 복합("4월 매출 진단하고
-    채널별 ROAS 비교") 쿼리에서 cognitive 가 각 의도를 한 개씩 채운다. Intent 의 분석 4칸과 동형.
+    `operation` 스칼라 천장(한 쿼리=한 HOW)을 *구조적으로* 푸는 칸. 복합(의도 2개+: "A 를 진단하고
+    B 별로 비교") 쿼리에서 cognitive 가 각 의도를 한 개씩 채운다. Intent 의 분석 4칸과 동형.
 
     Status: planned — cognitive emit=지금(씨앗 심기) / planning 소비=MVP. 현 planning 은 미소비라
       현 동작 무영향(append-only). 의존·직렬/병렬(steps DAG)은 다음 성장링(S2) — 여기 미포함.
@@ -159,11 +157,11 @@ class SubIntent(BaseModel):
 class Intent(BaseModel):
     """PMAL 의도 — 쪽지의 핵심: '무엇을(WHAT) 어떻게(HOW)'.
 
-    cognitive 가 채우는 PMAL 1급 칸 (spec 37 §2 / criteria_map §2 ①).
+    cognitive 가 채우는 PMAL 1급 칸.
     - operation:  HOW. authored(파생 X) — 미언급 시 measure. (measure/breakdown/rank/compare/trend/diagnose/forecast/attribute)
-    - domain:     WHAT 영역. SET(스칼라 X — ROAS=revenue∩ad_performance 다중 대응). 주제(매출/리뷰)를 *결정적으로* 담는 칸 = F2 anchor.
+    - domain:     WHAT 영역. SET(스칼라 X — 한 지표가 여러 영역에 다중 대응 가능). 주제를 *결정적으로* 담는 칸 = F2 anchor.
     - metric:     WHAT 지표. OPEN vocab (닫힌 enum X — 카탈로그 결합 회피).
-    - dimensions: 분해 축 (channel/creative/member_grade...). tool 선택을 가르는 진짜 disambiguator.
+    - dimensions: 분해 축 (category/source/entity...). tool 선택을 가르는 진짜 disambiguator.
     - sub_intents: 다의도 씨앗(S1, 2026-06-09). 복합(의도 2개+)일 때만 각 의도를 나열. 단일이면 [].
         operation 은 *대표 1개* 유지(back-compat) → 현 planning/shim 무영향. MVP 에 planning 이 소비.
 

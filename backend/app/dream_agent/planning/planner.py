@@ -6,8 +6,6 @@
   Stage 3: todo_builder   — "Agent의 Tool로 Todo + DAG"
 
 각 단계 프롬프트가 분리되어 LLM이 관련 정보만 봄 → 집중도 향상.
-
-Reference: docs/_claude/4layer_system/sprint9_hierarchical_plan_260417.md
 """
 
 from __future__ import annotations
@@ -32,38 +30,38 @@ PROMPTS_DIR = Path(__file__).parent.parent / "llm_manager" / "prompts"
 # ───────────────────────────────────────────────────────
 # Subject-coherence 게이트 (F2 수정 — 2026-06-04)
 #
-# 문제(일반화 테스트 실측): cognitive 가 causal_analysis/insight_generation 을
-# 라벨링하면 planning 이 리뷰·텍스트 파이프로 들어가, "왜 매출 늘었어?" 같은
-# *숫자 주제* 질문에 리뷰 24건을 분석해 자신만만한 (틀린) 리포트를 씀.
-# 근본: insight_extractor 의 필수입력(sentiment_distribution·top_keywords)이
-# 리뷰 수집 체인 전체를 빨아들이고, Stage3 프롬프트 default 가 review_collector.
+# 문제(일반화 테스트 실측): cognitive 가 인과/인사이트 task 를
+# 라벨링하면 planning 이 텍스트 파이프로 들어가, *숫자 주제* 질문에
+# 무관한 텍스트 항목을 분석해 자신만만한 (틀린) 리포트를 씀.
+# 근본: 해석 tool 의 필수입력이 텍스트 수집 체인 전체를 빨아들이고,
+# Stage3 프롬프트 default 가 텍스트 collector 로 기운다.
 #
-# 게이트: 텍스트 의도(sentiment/keyword task 또는 "리뷰/후기" 주제)가 없으면
-# 리뷰-데이터 tool 을 Stage3 메뉴에서 제외 → LLM 이 고를 수 없음 → 숫자/빈-plan 으로 정직 degrade.
-# 식별 = tool 이 선언한 *리뷰 데이터 산출물* (이름 denylist 아님, 데이터 계약 기반).
+# 게이트: 텍스트 의도(텍스트 task 또는 텍스트 주제)가 없으면
+# 텍스트-데이터 tool 을 Stage3 메뉴에서 제외 → LLM 이 고를 수 없음 → 숫자/빈-plan 으로 정직 degrade.
+# 식별 = tool 이 선언한 *텍스트 데이터 산출물* (이름 denylist 아님, 데이터 계약 기반).
 # ───────────────────────────────────────────────────────
 
-# 리뷰 텍스트 파이프 고유 데이터 산출물 (review_collector→text_preprocessor→sentiment/keyword→insight_extractor 체인의 input/output)
+# 텍스트 파이프 고유 데이터 산출물 (collector→preprocessor→분석→해석 체인의 input/output)
 REVIEW_DATA_ARTIFACTS = {
     "raw_reviews", "normalized_reviews", "cleaned_texts",
     "sentiment_distribution", "top_keywords",
 }
 
-# (프레임 추출 2026-06-19) 마케팅 텍스트(리뷰) 의도 게이트 제거 — 빈 세트(도메인 무관).
-# 남은 subject-coherence/review-helper 함수는 빈 카탈로그에서 dormant(no-op). 도메인 도입 시 재설계.
+# (프레임 추출 2026-06-19) 텍스트 의도 게이트 제거 — 빈 세트(도메인 무관).
+# 남은 subject-coherence/텍스트-helper 함수는 빈 카탈로그에서 dormant(no-op). 도메인 도입 시 재설계.
 _TEXT_INTENT_TASKS: set[str] = set()
 
-# 주제가 리뷰임을 시사하는 자연어 마커 (cognitive 가 task 를 놓쳐도 주제로 구제)
+# 주제가 텍스트 분석임을 시사하는 자연어 마커 (cognitive 가 task 를 놓쳐도 주제로 구제)
 _REVIEW_SUBJECT_MARKERS = ("리뷰", "후기", "평점", "댓글", "review")
 
 
 def _tool_needs_review_data(tool: dict) -> bool:
-    """tool 이 리뷰 텍스트 데이터에 의존하는가.
+    """tool 이 텍스트 데이터에 의존하는가.
 
     2 신호 (둘 중 하나):
-    1) 선언된 input/output 산출물이 리뷰 데이터 계약과 겹침 (review_collector→text_preprocessor→insight 체인).
-    2) 명명 규칙 — review_* / *sentiment* 는 이 codebase 에서 일관되게 리뷰 텍스트 전용 tool
-       (review_keywords/recent/sentiment 는 reviews.csv 를 자체 수집하며 produces 가 generic 이라
+    1) 선언된 input/output 산출물이 텍스트 데이터 계약과 겹침 (collector→preprocessor→해석 체인).
+    2) 명명 규칙 — review_* / *sentiment* 는 텍스트 전용 tool 로 일관되게 명명됨
+       (이런 tool 은 데이터를 자체 수집하며 produces 가 generic 이라
         산출물 규칙만으론 안 잡힘 → 명명 규칙으로 보강).
     """
     name = (tool.get("name") or "").lower()
@@ -74,7 +72,7 @@ def _tool_needs_review_data(tool: dict) -> bool:
 
 
 def _collect_review_data_tool_names(catalog: dict) -> set[str]:
-    """카탈로그 전체에서 리뷰-데이터 tool 이름 집합 (post-filter 용)."""
+    """카탈로그 전체에서 텍스트-데이터 tool 이름 집합 (post-filter 용)."""
     names: set[str] = set()
     for team in (catalog.get("teams", {}) or {}).values():
         for agent in (team.get("agents", {}) or {}).values():
@@ -153,10 +151,10 @@ def detect_cycle(dag: dict[str, list[str]]) -> str | None:
 def apply_subject_coherence_filter(
     plan: Plan, review_tool_names: set[str], allow_text: bool,
 ) -> Plan:
-    """텍스트 의도 없으면 리뷰-데이터 todo 를 *확정* 제거하고 DAG/deps 정리 (F2 게이트 post-filter).
+    """텍스트 의도 없으면 텍스트-데이터 todo 를 *확정* 제거하고 DAG/deps 정리 (F2 게이트 post-filter).
 
     Status: complete — menu-filter(_get_agent_tools) 가 메뉴에서 빼도 LLM 이 Stage3
-    프롬프트의 하드코딩 예시(insight_extractor 등)를 복사할 수 있으므로, 결정론적으로
+    프롬프트의 하드코딩 예시(해석 tool 등)를 복사할 수 있으므로, 결정론적으로
     재차 제거한다. menu-filter 와 동일 규칙(review_tool_names).
     Pure — plan 을 in-place 수정 후 반환 (단위테스트 대상).
     """
@@ -181,9 +179,9 @@ def apply_subject_coherence_filter(
 # ───────────────────────────────────────────────────────
 # Dataflow 체인 완성 (결정론) — 2026-06-05
 #
-# Stage3 LLM 이 고정 전처리 체인(예: review_collector→review_normalizer→
-# text_preprocessor→sentiment)에서 필수 tool 을 빠뜨리면 체인이 끊겨 분석 input=0
-# (리뷰 ~40% silent-0 실측). tool 의 선언된 produces/consumes 로 "consumer 가 먹는
+# Stage3 LLM 이 고정 전처리 체인(예: collector→normalizer→
+# preprocessor→분석)에서 필수 tool 을 빠뜨리면 체인이 끊겨 분석 input=0
+# (~40% silent-0 실측). tool 의 선언된 produces/consumes 로 "consumer 가 먹는
 # artifact 의 생산자가 plan 에 있는가" 검사 → 없으면 카탈로그 생산자를 삽입·배선.
 # 하드코딩 체인 아님 — 카탈로그 메타 기반(신규 체인은 consumes/produces 선언만 하면 자동).
 # ───────────────────────────────────────────────────────
@@ -224,7 +222,7 @@ def detect_plan_gaps(plan: Plan, tool_index: dict[str, dict]) -> list[str]:
 
     현 체크: 각 todo 의 카탈로그 `params_required` 가 (a) todo.tool_params 또는 (b) 직속
     upstream(depends_on) 산출 artifact 로 채워지나. 못 채우면 gap.
-    예: roas_overall 은 period 필수인데 "전체 ROAS"(기간 없음) → tool_params 에 period 부재
+    예: metric tool 은 period 필수인데 기간 없는 질문 → tool_params 에 period 부재
         → gap → (추후) 크래시 대신 "기간 알려주세요" 정직 degrade 의 씨앗.
 
     Pure — plan 불변, gap 리스트만 반환. (params_required 가 카탈로그에 정확해야 잡힘 —
@@ -383,7 +381,7 @@ def complete_dataflow_chain(plan: Plan, catalog: dict) -> Plan:
 # complete_dataflow_chain 이 못 챙김 → 별도 feeding 안전망(아래).
 _INTERPRETATION_TOOLS = frozenset({"insight_extractor", "diagnoser", "forecaster"})
 # 도메인 → 그 도메인의 대표(headline) metric tool. 해석 tool 이 raw 만 받는 plan 의 결정론 보강용.
-# 도메인 지식(임의 하드코딩 아님 — 새 domain 은 한 줄). 매핑 밖이면 기본 revenue_total("실적/성과"=매출).
+# 도메인 지식(임의 하드코딩 아님 — 새 domain 은 한 줄). 매핑 밖이면 기본 metric tool.
 _DOMAIN_HEADLINE_METRIC = {
     "revenue": "revenue_total",
     "ad_performance": "roas_overall",
@@ -402,7 +400,7 @@ def ensure_interpretation_fed(plan: Plan, sq: StructuredQuery, catalog: dict) ->
 
     근거(stage1 coverage 감사): 해석 tool 은 도메인무관(consumes 미선언)이라 complete_dataflow_chain
     이 metric 생산자를 못 끼움 → Stage3 LLM 이 metric 단계를 빠뜨리면 해석 tool 이 빈입력 가드로
-    EMPTY. metric tool(revenue_total 등)은 self.fetch 로 독립 데이터 로드 → 단독 삽입 가능
+    EMPTY. metric tool 은 self.fetch 로 독립 데이터 로드 → 단독 삽입 가능
     (collector 불요, period 는 bind_temporal 이 채움).
     """
     interp = [t for t in plan.todos if (t.tool or "") in _INTERPRETATION_TOOLS]
@@ -429,7 +427,7 @@ def ensure_interpretation_fed(plan: Plan, sq: StructuredQuery, catalog: dict) ->
         return plan
 
     # 계산 산출자 없음(해석 tool 이 굶음) → 도메인 대표 metric 삽입
-    # metric tool(revenue_total/roas_overall)은 period 필수(코드) → 결정론 월이 있어야 안전 삽입.
+    # metric tool 은 period 필수(코드) → 결정론 월이 있어야 안전 삽입.
     # 월 없으면 미발동(degrade 유지 — 실패→halt 로 악화시키지 않음).
     month = _resolved_month(sq)
     if not month:
@@ -462,13 +460,13 @@ def enforce_breakdown_dimension(plan: Plan, sq: StructuredQuery, catalog: dict) 
     """operation=breakdown + dimensions 있는데 plan 에 *차원 분해(rows 산출)* tool 이 없으면
     차원 대응 breakdown tool 을 삽입 (결정론 안전망·멱등·순수).
 
-    근거(복합 베이스라인 2026-06-11): "채널별 ROAS"(breakdown·dimensions=[channel])가 Stage3 에서
-    per-channel tool(channel_aggregate) 대신 *전체* scalar(roas_overall)로 ~60% 비결정 붕괴 → 차원 누락.
+    근거(복합 베이스라인 2026-06-11): 차원별 질의(breakdown·dimensions=[<dim>])가 Stage3 에서
+    per-dimension tool 대신 *전체* scalar tool 로 ~60% 비결정 붕괴 → 차원 누락.
     convention(하드코딩 맵 아님): 'rows' 산출 = 테이블 = 차원분해 신호 + name.startswith(dimension) 로
-    차원 대응 tool 식별(channel→channel_aggregate, keyword→keyword_top_roas). 기존 _tool_needs_review_data
-    의 name+produces 휴리스틱과 동류. 매칭 없으면(예 creative — per-creative rows tool 부재) graceful 무발동
-    (정직 degrade, 환각 안 함). cognitive 는 dimension 을 영어 토큰으로 emit(실측: channel/creative/keyword).
-    breakdown tool 은 self.fetch 독립(consumes 미선언) → 단독 삽입 안전(silent-0 없음, channel_aggregate 실측).
+    차원 대응 tool 식별. 기존 _tool_needs_review_data
+    의 name+produces 휴리스틱과 동류. 매칭 없으면(per-dim rows tool 부재) graceful 무발동
+    (정직 degrade, 환각 안 함). cognitive 는 dimension 을 영어 토큰으로 emit.
+    breakdown tool 은 self.fetch 독립(consumes 미선언) → 단독 삽입 안전(silent-0 없음).
     """
     intent = getattr(sq, "intent", None)
     if not intent or (intent.operation or "") != "breakdown" or not intent.dimensions:
@@ -630,9 +628,9 @@ class Planner:
 
     @staticmethod
     def _has_text_intent(sq: StructuredQuery) -> bool:
-        """리뷰·텍스트 파이프가 정당한가 — 텍스트 task 또는 리뷰 주제 마커.
+        """텍스트 파이프가 정당한가 — 텍스트 task 또는 텍스트 주제 마커.
 
-        Status: complete — 없으면 _build_todos 가 리뷰-데이터 tool 을 제외 (F2 게이트).
+        Status: complete — 없으면 _build_todos 가 텍스트-데이터 tool 을 제외 (F2 게이트).
         """
         if any(t.id in _TEXT_INTENT_TASKS for t in sq.tasks):
             return True
@@ -684,7 +682,7 @@ class Planner:
         """의사결정 추천(recommendation) 쿼리인가 — 결정론 라우팅 신호.
 
         cognitive operation=recommend → intent_shim RECOMMENDATION task. 의사결정_설계서 §4.
-        단 *단일 의도*일 때만 — 복합(sub_intents≥2, 예 "부진채널 찾아서 추천")이면 우회 →
+        단 *단일 의도*일 때만 — 복합(sub_intents≥2, 예 "분석 후 추천")이면 우회 →
         Stage3 가 선행 분석+추천 체인을 컴파일(lv4 붕괴 해소, stage2 근원귀속 ⒟).
         """
         if sq.intent and len(sq.intent.sub_intents) >= 2:
@@ -693,11 +691,11 @@ class Planner:
 
     @staticmethod
     def _build_recommendation_plan(sq: StructuredQuery) -> Plan:
-        """의사결정 결정론 plan — recommender 단일 todo (ml_model mock).
+        """의사결정 결정론 plan — recommender 단일 todo (mock).
 
         mock 은 상류 분석 무시·fixture 반환 → 데이터 파이프 없이 작동(큰틀 구동). LLM 스테이지
-        우회(Stage3 가 recommender 대신 분석 파이프를 짜는 비결정성 회피). 의사결정_설계서 §4.
-        Status: complete — 실모델 swap 시 분석 산출 feeding 은 추후(§7).
+        우회(Stage3 가 recommender 대신 분석 파이프를 짜는 비결정성 회피).
+        Status: complete — 실모델 swap 시 분석 산출 feeding 은 추후.
         """
         todo = PlannedTodo(
             id="todo_rec_001",
@@ -770,7 +768,7 @@ class Planner:
         # complete_dataflow_chain 보다 먼저 — 삽입 tool 이 consumes 있으면 chain 이 상류 backfill 하도록.
         plan = enforce_breakdown_dimension(plan, structured_query, self._catalog)
 
-        # 전처리 체인 결정론 보강 — Stage3 LLM 이 필수 tool(예 review_normalizer)을 빠뜨려도
+        # 전처리 체인 결정론 보강 — Stage3 LLM 이 필수 tool(예 normalizer)을 빠뜨려도
         # produces/consumes 로 생산자를 삽입해 체인 단절(silent-0)을 막는다.
         plan = complete_dataflow_chain(plan, self._catalog)
 

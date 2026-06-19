@@ -16,7 +16,6 @@ SKIPPED + 정밀 사유(어느 artifact 가 0건/부재)로 만들어, 하류 �
   - non-empty 만 (B2.1). shape(필드)·semantic 은 B2.2/B2.3 별도 phase.
 
 Status: complete — B2.1 non-empty 계약 게이트.
-Reference: docs/_claude/4layer_system/b2_data_sufficiency_intent_and_plan_260605_v2.md §5
 """
 
 from __future__ import annotations
@@ -57,9 +56,9 @@ def check_consume_sufficiency(
     for art in consumes:
         value = find_in_previous(previous, art)
         if isinstance(value, dict) and value.get("_dataref"):
-            # L4 참조 스텁(collector 데이터셋 비탑재 정책, 85ef5de) — 스텁 dict 는 항상
+            # L4 참조 스텁(데이터셋 비탑재 정책) — 스텁 dict 는 항상
             # truthy 라 존재성 검사를 통과하므로 실데이터 양은 count 로 판정.
-            # 근본원인 보고서 §9.3-1: 이게 없으면 0건 수집이 게이트를 지나 silent-0 재발.
+            # 이게 없으면 0건 수집이 게이트를 지나 silent-0 재발.
             if not value.get("count"):
                 return {
                     "reason": "data_insufficient",

@@ -6,7 +6,6 @@
  *  - 카드 클릭 → fetchConversationTurns → 채팅창에 복원(메시지 재현)
  *  - + 새 대화 → conversation_id 리셋(session) + 채팅 비우기 + 패널 열기
  *  - 🗑 삭제 → DELETE /api/conversations/{id} (checkpoint 제거, 되돌릴 수 없음)
- * 설계: docs/reports/대화이력_설계_단계적_2026-06-09.md
  */
 import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';

@@ -3,8 +3,6 @@
 학습 데이터 JSONL 익스포트
 
 Status: planned — Sprint 15 wiring 예정. 수집기 미배선이라 export 대상도 현재 0.
-
-Reference: docs/specs/LEARNING_SPEC.md
 """
 
 import json

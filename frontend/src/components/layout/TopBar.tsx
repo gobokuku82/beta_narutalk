@@ -49,7 +49,7 @@ export function TopBar() {
     if (c) setClient(c.id, c.name);
   };
 
-  // 현재 client = store 선택값 ?? 데이터 기반(데이터 있는 첫 client) — clumi 하드코딩 제거(①.6c)
+  // 현재 client = store 선택값 ?? 데이터 기반(데이터 있는 첫 client) — client 하드코딩 제거(①.6c)
   const currentClient = useCurrentClient();
 
   const today = new Date().toLocaleDateString('ko-KR', {

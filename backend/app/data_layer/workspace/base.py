@@ -6,13 +6,7 @@ DataSource (input 관절) 와 짝이 되는 OUTPUT 공유 공간:
 
 agent · direct API 둘 다 같은 Workspace 사용 → 정답값 캐시 공유 (ms 응답).
 
-위치: backend/app/workspace/ (dream_agent 형제 — agent + API 공유).
-spec: docs/_claude/architecture/backend_data_agent_2026-05-26.md §4.0
-memory: project_tool_data_agent_separation
-
-이전 (Step 3b, 2026-05-27):
-    backend/app/dream_agent/tools/shared/storage.py::StorageBackend → 본 파일 (WorkspaceBackend)
-    호환 shim 유지: storage.py 가 본 패키지를 re-export
+위치: backend/app/data_layer/workspace/ (dream_agent 형제 — agent + API 공유).
 """
 from __future__ import annotations
 from abc import ABC, abstractmethod

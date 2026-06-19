@@ -1,6 +1,5 @@
 """ConversationManager — 대화(turn) 조회 전용 (checkpoint 읽기).
 
-설계: docs/reports/대화이력_설계_단계적_2026-06-09.md §7.
 대화(conversation) 경로 전담 — 메모리(MemoryManager)와 **분리**(저장소·매니저로 구분).
 LangGraph checkpoint(dreamagent_system)를 읽어 과거 turn을 conversation_id로 묶어 반환.
 
@@ -59,7 +58,7 @@ def _status(cv: dict) -> str:
 
 
 def _messages(cv: dict) -> list[dict]:
-    """turn → 채팅 메시지 배열 (프론트 ChatMessage 형태: 텍스트/슬라이드/다운로드 재현)."""
+    """turn → 채팅 메시지 배열 (프론트 ChatMessage 형태: 텍스트/첨부 재현)."""
     msgs: list[dict] = []
     if cv.get("user_input"):
         msgs.append({"role": "user", "content": cv["user_input"]})
@@ -183,7 +182,7 @@ class ConversationManager:
         """대화 삭제 — 해당 conversation의 모든 turn checkpoint 제거.
 
         checkpoints/checkpoint_blobs/checkpoint_writes 에서 thread_id 일괄 삭제.
-        (Phase 1: checkpoint만. 첨부파일 outputs/ 정리는 후속 §9.) 되돌릴 수 없음.
+        (Phase 1: checkpoint만. 첨부파일 outputs/ 정리는 후속.) 되돌릴 수 없음.
         """
         states = await self._load_latest_states()
         tids = [

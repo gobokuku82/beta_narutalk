@@ -1,20 +1,19 @@
 """LLMTool — LLM 호출 tool 의 공통 부모 (silent-0 축2, 2026-06-08).
 
-선례: collection/_base.py RawCollectorBase(BaseTool) 와 같은 '카테고리 중간 부모' 패턴.
+선례: '카테고리 중간 부모' 패턴 (BaseTool 을 상속한 카테고리별 중간 베이스).
 
-목적: 빈 입력에 LLM 을 불러 환각(거짓 보고서/인사이트/요약)을 만드는 silent-0 를
+목적: 빈 입력에 LLM 을 불러 환각(거짓 산출물)을 만드는 silent-0 를
   *구조적으로* 차단한다. execute() 가 collect_inputs → [전부 빔 검사] → run_llm 순서를
   base 에서 소유하므로, subclass 는 빈입력 가드를 건너뛸 수 없다(새 LLM tool 자동 안전).
 
-R1(report_writer.py)이 인라인으로 하던 빈가드를 여기로 끌어올린 것. 게이트(consumes)와
+LLM tool 이 인라인으로 하던 빈가드를 여기로 끌어올린 것. 게이트(consumes)와
   2겹 방어:
     - 게이트(executor B2.1) = 실행 *전* 1차 차단(consumes 선언 시). 상류서 미리 SKIP.
     - 본 가드 = 방어심층 — 직접 호출 / consumes 미선언 / OR-입력(아무거나) 대비.
   의미(OR): collect_inputs 가 돌려준 값이 *전부* 0건/부재일 때만 degrade(하나라도 값 있으면
-  실행). report_writer 의 기존 `not a and not b and not c` 와 동일.
+  실행). 기존 `not a and not b and not c` 와 동일.
 
 Status: complete — Template Method 빈입력 가드.
-Reference: docs/reports/silent0_복구_데이터흐름맵_2026-06-08.md §4·8
 """
 from __future__ import annotations
 

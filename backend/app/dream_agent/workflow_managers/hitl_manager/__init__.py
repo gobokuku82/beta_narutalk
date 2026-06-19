@@ -1,8 +1,6 @@
 """HITL Manager Package
 
 Human-in-the-Loop 워크플로우 관리
-
-Reference: docs/specs/HITL_SPEC.md
 """
 
 from .manager import ExecutionProgress, HITLManager, get_hitl_manager

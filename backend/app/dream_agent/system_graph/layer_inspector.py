@@ -12,8 +12,6 @@ R4 발견 보완: 각 layer는 해당 "기대 key"가 data에 없으면 inspect 
 
 Sprint 14 A3 (D10 2026-04-23): dict literal 5곳 제거, `ErrorCodes` 중앙 카탈로그
 참조로 통합. error_codes.py 가 단일 진실 소스 (22_error_codes v1.0+).
-
-명세서: docs/_claude/checkpointer/sprint13_i11_i12_plan.md §2.5
 """
 
 from __future__ import annotations

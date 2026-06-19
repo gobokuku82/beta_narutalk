@@ -23,8 +23,6 @@ LangGraph 특성:
   - resume 시 이 함수 전체가 재실행됨
   - hitl_manager(싱글톤)에서 completed_todos 조회 → 완료된 건 skip
   - 서버 재시작 시 ws_agent가 interrupt payload에서 restore_progress 호출
-
-Reference: docs/_claude/checkpointer/sprint12_executor_refactor_plan.md v5.0
 """
 
 from __future__ import annotations
@@ -55,7 +53,7 @@ def _iso_now() -> str:
 
 
 async def _emit_layer_start(session_id: str) -> None:
-    """실행 시작 즉시 layer_start emit (대시보드 타이밍 개선용)."""
+    """실행 시작 즉시 layer_start emit (UI 타이밍 개선용)."""
     try:
         from app.dream_agent.workflow_managers.callback_manager import get_callback_manager
         await get_callback_manager().emit(session_id, {
@@ -280,7 +278,7 @@ async def execution_stage(state: AgentState) -> Command[Any]:
     # R1 의 data_insufficient 신호로 "막힘" 감지. detect_recovery 는 never-raise(actions.yaml
     # 오류여도 None → 정상 실행 보호). 막힘 아니면 None → no-op(정상 흐름 무영향).
     # ⚠️ 실제 interactive interrupt(메뉴 띄우고 선택받기)는 graph+ws_agent+ws_hitl+frontend 협응
-    #    → 현재는 *감지·로그까지*(안전). 계획: docs/_claude/4layer_system/silent0_g6_interactive_wiring_계획_260607_v1.md
+    #    → 현재는 *감지·로그까지*(안전).
     from app.dream_agent.workflow_managers.recovery import detect_recovery
     recovery_menu = detect_recovery(execution_result)
     if recovery_menu:
@@ -294,7 +292,6 @@ async def execution_stage(state: AgentState) -> Command[Any]:
     # L5 (2026-06-11 state 경계 게이트): execution_progress 미러 쓰기 제거.
     # 전수 감사 결과 이 채널을 읽는 곳 0 (pause 복원은 interrupt payload 를 읽음) —
     # execution_result 와 같은 내용을 한 번 더 저장해 checkpoint 를 2배로 만들던 죽은 무게.
-    # 근거: docs/reports/근본원인_execution_state_raw누수_2026-06-11.md §7.2-3
     return Command(
         update={"execution_result": execution_result},
         goto="response",
@@ -345,8 +342,8 @@ def _build_execution_result(
 
     # M1-S3 (2026-06-12, 계획_멀티쿼리 v2 — 실행 침묵 드롭 가시화): 계획에는 있는데
     # 실행 기록이 없는 todo(DAG 미해결 의존으로 phase 미편성·halt/취소 잔여)를 SKIPPED 로
-    # 명시 등기. M0 실측: 계획 11 vs 실행 8, 누락 3개가 무기록 증발 → 응답 "분석을 완료했습니다"
-    # EMPTY 둔갑 (r3 부진채널). responder 의 skipped 고지·귀속 판정(T4)이 이 행을 소비.
+    # 명시 등기. 실측: 계획 11 vs 실행 8, 누락 3개가 무기록 증발 → 응답 "분석을 완료했습니다"
+    # EMPTY 둔갑. responder 의 skipped 고지·귀속 판정(T4)이 이 행을 소비.
     plan_todos = progress.plan.get("todos") or []
     for t in plan_todos:
         tid = t.get("id")

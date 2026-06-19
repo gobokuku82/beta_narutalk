@@ -6,9 +6,6 @@
   _active: dict[user_id, set[turn_id]]
 
 **sync 메서드** — 순수 메모리 연산이라 asyncio atomic (P1).
-
-명세서: docs/_claude/checkpointer/sprint13_test_t2_concurrency_manager_spec.md
-정책: docs/_claude/checkpointer/sprint13_session_thread_redesign_plan.md §3.5, §3.5.1
 """
 
 
@@ -70,7 +67,7 @@ class ConcurrencyManager:
     def _reset_for_test(self) -> None:
         """테스트 전용 — 프로덕션 호출 금지.
 
-        서버 재시작 시뮬 (§3.5.1 C-3 정책 실증용).
+        서버 재시작 시뮬 (정책 실증용).
         언더스코어 prefix로 프로덕션 실수 호출 방지.
         """
         self._active = {}

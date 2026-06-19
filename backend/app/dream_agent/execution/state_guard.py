@@ -1,7 +1,7 @@
 """State Guard (L3) — 제어 평면(state/checkpoint) 입구 크기 게이트.
 
-근본원인 (docs/reports/근본원인_execution_state_raw누수_2026-06-11.md):
-  collector 가 raw 데이터셋(GA4 38,319행=104MB)을 결과로 반환 → execution_result 채널
+근본원인:
+  tool 이 raw 데이터셋(수만 행=수십~수백MB)을 결과로 반환 → execution_result 채널
   → checkpoint 155MB·WS ~312MB·복원 5.5s. 소비자 전수 감사 결과 그 raw 를 state 에서
   읽는 곳 0 (downstream 은 data 레이어 직접 조회).
 
@@ -15,8 +15,7 @@
 불변식: **in-memory 체이닝(hitl completed_todos → previous_results)은 불변** —
   슬림은 state 사본에만. 리뷰 체인·데이터 게이트(consumes)·resume 무영향 (계획 §2.1·§3).
 
-Status: complete — L3 임계치 슬림. L3b(pause snapshot)·L4(collector 참조 반환)는 후속.
-계획: docs/reports/계획_state경계게이트_L3L5_2026-06-11.md
+Status: complete — L3 임계치 슬림. L3b(pause snapshot)·L4(tool 참조 반환)는 후속.
 """
 from __future__ import annotations
 

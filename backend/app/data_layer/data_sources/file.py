@@ -10,8 +10,6 @@ DEFAULT_MAPPING = source_id → 파일명 (확장자 포함, client 무관 공�
 신규 client 추가 시 데이터 파일만 동일 이름으로 두면 자동 작동.
 
 향후 client 별로 다른 mapping 필요 시 __init__ 에 client_mappings: dict[str, dict] 추가.
-
-spec: docs/_claude/architecture/backend_data_agent_2026-05-26.md §4.2
 """
 from __future__ import annotations
 import json
@@ -29,9 +27,9 @@ logger = get_logger(__name__)
 
 
 # ── 단일 진실 소스: source_id → SourceSpec (filename + kind + platform) ──
-# kind     : external(API, 현재 mock=data/mock_api/{client}, 외부커넥터 수집) | internal(내 서버, 내부리더)
-# platform : 외부 플랫폼명(meta/naver/kakao/google). 내부·미정 = None.
-# 설계: docs/reports/수집_datasource_설계노트_2026-05-28.md (external/internal 구분은 폴더 아닌 매핑표·tool)
+# kind     : external(API, 외부커넥터 수집) | internal(내 서버, 내부리더)
+# platform : 외부 source 플랫폼명. 내부·미정 = None.
+# external/internal 구분은 폴더 아닌 매핑표·tool 책임.
 
 
 @dataclass(frozen=True)
@@ -59,7 +57,7 @@ def source_kind(source_id: str) -> str | None:
 
 
 def source_platform(source_id: str) -> str | None:
-    """source_id → 외부 플랫폼명(meta/naver/kakao/google) | None."""
+    """source_id → 외부 source 플랫폼명 | None."""
     s = SOURCE_REGISTRY.get(source_id)
     return s.platform if s else None
 
@@ -137,7 +135,7 @@ class FileDataSource(DataSource):
         )
 
     def stream_jsonl(self, client: str, source_id: str):
-        """jsonl 파일을 record 단위 yield — 대용량 메모리 절약 (예: ga4_page_events 265MB).
+        """jsonl 파일을 record 단위 yield — 대용량 메모리 절약 (예: 대용량 event source).
 
         Note: FileDataSource 특화 메서드. abstract DataSource 인터페이스에는 포함하지 않음
               (다른 client/storage 가 jsonl stream 일반화 필요해진 시점에 옮김).

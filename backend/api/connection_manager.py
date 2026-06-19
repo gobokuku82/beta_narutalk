@@ -10,7 +10,6 @@
 명세서:
 - docs/agent_specs/21_WEBSOCKET_PROTOCOL_v1.5.md §1.2 §1.3 §3.2
 - docs/agent_specs/adr/ADR-011_connection_channel_separation.md
-- docs/_claude/checkpointer/sprint13_test_t1_connection_manager_spec.md §2.1 (v1 이력)
 """
 
 from typing import Any, Literal

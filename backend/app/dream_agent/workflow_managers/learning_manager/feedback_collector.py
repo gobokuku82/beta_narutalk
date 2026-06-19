@@ -4,8 +4,6 @@
 
 Status: planned — Sprint 15 wiring 예정. 현 프로덕션 적용처 0 (학습 페어 미수집 중).
 선행 조건: wiring 전 date.replace(day=...) 월경계 버그 수정 (2026-06-11 재분석 검증).
-
-Reference: docs/specs/LEARNING_SPEC.md
 """
 
 import json

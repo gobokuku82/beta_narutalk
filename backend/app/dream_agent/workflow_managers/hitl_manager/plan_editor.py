@@ -11,7 +11,6 @@ Phase 3 (D-13) 보존:
 
 Reference:
   - docs/agent_specs/adr/ADR-010_plan_schema_unification.md
-  - docs/reports/sprint14_a3_phase_c_unify_plan.md
 """
 
 import re
@@ -62,7 +61,7 @@ class PlanEditor:
         """자연어 명령 파싱.
 
         Args:
-            instruction: 사용자 명령 ("2번 작업 삭제해줘", "구글 트렌드 추가해줘")
+            instruction: 사용자 명령 ("2번 작업 삭제해줘", "<tool> 추가해줘")
             plan: 현재 planner.Plan
 
         Returns:

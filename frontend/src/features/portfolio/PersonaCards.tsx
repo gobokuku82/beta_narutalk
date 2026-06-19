@@ -1,13 +1,11 @@
 /**
- * PersonaCards — 멀티 페르소나 비전 (3 카드 그리드).
+ * PersonaCards — 핵심 기능 카드 그리드 (3 카드).
  *
- * Data Analyst (활성, 현재 DreamAgent) + Campaign Designer (예정) + Media Director (예정).
  * 활성 = 옥스블러드 좌측 strip + 진한 텍스트. 예정 = dimmed + "예정" 라벨.
  *
  * 디자인 결: Card hover 자동 (VOCABULARY H1~H4) + 좌측 strip (PALETTE J) — 활성만.
  *
  * spec: VOCABULARY §2 Persona Card (v12 신설).
- *       계획서 docs/reports/계획_첫진입페이지_재설계_2026-06-12.md §5.3 (C5=ii).
  */
 import { BarChart3, Image as ImageIcon, Sparkles, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';

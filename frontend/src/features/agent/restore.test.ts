@@ -1,7 +1,5 @@
 /**
  * turnsToMessages 단위 테스트 — 대화 복원 매핑 (세션 연속성 P2).
- *
- * 설계: docs/reports/세션연속성_복원_설계계획_2026-06-11.md §4
  */
 import { describe, expect, it } from 'vitest';
 import { turnsToMessages } from './restore';

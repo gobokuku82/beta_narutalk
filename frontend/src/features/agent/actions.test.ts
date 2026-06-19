@@ -1,6 +1,5 @@
 /**
  * askAgent seam (P1) 단위 테스트.
- * 설계: docs/reports/카드클릭_에이전트연결_설계계획_2026-06-10.md §4.1
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

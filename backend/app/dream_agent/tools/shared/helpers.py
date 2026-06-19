@@ -5,9 +5,8 @@
 - normalize_sentiment: 감성 라벨 정규화
 - parse_percent: "12.3%" 문자열 → 12.3 float
 
-작업 ⑫ 후속 (2026-06-01): load_mock_csv + MOCK_DATA_DIR 死코드 폐기.
-사유: broken 6 collector (작업 ⑫.A·B) 폐기 후 활성 호출자 0.
-data/mock/ 디렉토리도 2026-05-28 이미 폐기. 사용자 [死코드 즉시 폐기] 원칙.
+참고: load_mock_csv + MOCK_DATA_DIR 死코드는 활성 호출자 0 으로 이미 폐기됨.
+사용자 [死코드 즉시 폐기] 원칙.
 """
 
 from __future__ import annotations
@@ -63,7 +62,7 @@ def find_in_previous(
 
     Args:
         previous_results: 이전 Todo 실행 결과 딕셔너리
-        produces_key: 찾을 키 (예: "raw_reviews", "normalized_reviews")
+        produces_key: 찾을 키 (예: "raw_records", "normalized_records")
 
     Returns:
         첫 번째로 발견된 값. 없으면 None.

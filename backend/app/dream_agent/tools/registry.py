@@ -107,7 +107,7 @@ class ToolRegistry:
                 )
             )
 
-        # Storage 정책 파싱 (C:LUMI tools — normalized/computed 저장 분기)
+        # Storage 정책 파싱 (tool 산출물 — normalized/computed 저장 분기)
         storage_data = data.get("storage")
         storage = StoragePolicy.model_validate(storage_data) if storage_data else None
 
@@ -166,8 +166,8 @@ class ToolRegistry:
         """Tool 이름으로 구현 클래스 동적 import
 
         컨벤션: catalog 경로 → Python 경로 자동 추론
-        예: catalog/collection/naver_collector.yaml
-            → app.dream_agent.tools.collection.naver_collector.NaverCollector
+        예: catalog/collection/<tool>.yaml
+            → app.dream_agent.tools.collection.<tool>.<ToolClass>
 
         Args:
             name: 도구 이름
@@ -212,20 +212,20 @@ class ToolRegistry:
     def _infer_import_path(self, name: str) -> tuple[str, str]:
         """YAML 카탈로그 경로로부터 Python import 경로 추론
 
-        catalog/collection/naver_collector.yaml
-          → module: app.dream_agent.tools.collection.naver_collector
-          → class:  NaverCollector
+        catalog/collection/<tool>.yaml
+          → module: app.dream_agent.tools.collection.<tool>
+          → class:  <ToolClass>
 
-        catalog/preprocessing/text_cleaning/emoji_handler.yaml
-          → module: app.dream_agent.tools.preprocessing.text_cleaning.emoji_handler
-          → class:  EmojiHandler
+        catalog/preprocessing/text_cleaning/<tool>.yaml
+          → module: app.dream_agent.tools.preprocessing.text_cleaning.<tool>
+          → class:  <ToolClass>
         """
         # catalog에서 이 이름의 YAML 찾기
         for yaml_file in CATALOG_DIR.rglob(f"{name}.yaml"):
             if yaml_file.name.startswith("_"):
                 continue
             rel = yaml_file.relative_to(CATALOG_DIR).with_suffix("")
-            parts = rel.parts  # ('collection', 'naver_collector')
+            parts = rel.parts  # ('collection', '<tool>')
             module_path = ".".join(parts)
             class_name = "".join(word.capitalize() for word in name.split("_"))
             return f"app.dream_agent.tools.{module_path}", class_name

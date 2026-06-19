@@ -1,9 +1,7 @@
 """DataSource layer — tool ↔ data 사이의 '관절' (사용자 표현).
 
-위치: backend/app/data_sources/ (dream_agent 형제 — agent + API 공유)
+위치: backend/app/data_layer/data_sources/ (dream_agent 형제 — agent + API 공유)
 표준 패턴: Repository (Fowler) + Adapter (Cockburn Hexagonal)
-spec: docs/_claude/architecture/backend_data_agent_2026-05-26.md
-memory: project_tool_data_agent_separation
 """
 from __future__ import annotations
 from pathlib import Path
@@ -27,7 +25,7 @@ def get_default_data_source() -> DataSource:
     """전역 default DataSource (POC: FileStorage 패턴 동일)."""
     global _default
     if _default is None:
-        # backend/app/data_sources/__init__.py → parents: data_sources(0) app(1) backend(2) repo(3)
+        # backend/app/data_layer/data_sources/__init__.py → parents: data_sources(0) data_layer(1) app(2) backend(3)
         repo_root = Path(__file__).resolve().parents[3]
         _default = FileDataSource(repo_root)
     return _default

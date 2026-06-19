@@ -1,7 +1,4 @@
-"""Tool Models
-
-Reference: docs/specs/DATA_MODELS.md#Tool-Models
-"""
+"""Tool Models"""
 
 from typing import Any, Literal, Optional
 
@@ -10,12 +7,12 @@ from pydantic import BaseModel, Field
 from app.dream_agent.models.enums import ToolCategory, ToolParameterType
 
 
-# C:LUMI pipeline 3-layer (raw/normalized/computed) — storage backend 와 짝 (피봇 P1: cleaned→normalized)
+# pipeline 3-layer (raw/normalized/computed) — storage backend 와 짝 (피봇 P1: cleaned→normalized)
 Layer = Literal["raw", "normalized", "computed", "blended"]
 
 
 class StoragePolicy(BaseModel):
-    """Tool 산출물의 저장 정책 — app/workspace/ 의 WorkspaceBackend 와 짝.
+    """Tool 산출물의 저장 정책 — app/data_layer/workspace/ 의 WorkspaceBackend 와 짝.
 
     POC: FileWorkspace 가 data/{client}/{layer}/{key} 로 저장.
     MVP+: PostgresWorkspace 가 {client}_{layer} → 테이블 매핑.
@@ -62,6 +59,6 @@ class ToolSpec(BaseModel):
     has_cost: bool = False
     estimated_cost_usd: float = 0.0
 
-    # Storage (C:LUMI tools — cleaned/computed 산출물 저장 정책)
+    # Storage (tool — cleaned/computed 산출물 저장 정책)
     # None = 저장 안 함 (in-memory 만, 기존 tool 호환)
     storage: Optional[StoragePolicy] = None

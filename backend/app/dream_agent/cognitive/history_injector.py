@@ -1,10 +1,7 @@
-"""conversation_history → Cognitive 프롬프트 주입 문자열 생성 (Sprint 13).
+"""conversation_history → Cognitive 프롬프트 주입 문자열 생성.
 
-Sprint 13은 **슬롯만 준비** (빈 history 기본).
-Sprint 15 MemoryManager가 실제 데이터 채우면 바로 동작.
-
-명세서: docs/_claude/checkpointer/sprint13_test_t4_history_injector_spec.md
-계획서: docs/_claude/checkpointer/sprint13_session_thread_redesign_plan.md §3.6
+현재는 **슬롯만 준비** (빈 history 기본).
+MemoryManager가 실제 데이터 채우면 바로 동작.
 """
 
 from __future__ import annotations

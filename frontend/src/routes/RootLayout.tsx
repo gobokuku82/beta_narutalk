@@ -22,7 +22,6 @@ export function RootLayout({ children }: { children: ReactNode }) {
   // 세션 연속성 — 부팅 시 직전 대화(완료 메시지) 정적 복원(P2) + 진행 중이면 라이브 재연결(P4).
   // hydrate(main.tsx)가 conversationId를 이미 복원 → 그 대화 turns 를 fetch → loadMessages.
   // 이어서: 마지막 turn 이 아직 실행 중이면 진행 상태를 rehydrate(입력 잠금 + 패널 열림).
-  // 설계: docs/reports/세션연속성_복원_설계계획_2026-06-11.md §3
   useEffect(() => {
     const convId = useSession.getState().conversationId;
     if (!convId) return;

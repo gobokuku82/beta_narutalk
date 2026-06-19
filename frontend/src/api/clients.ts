@@ -38,7 +38,7 @@ export function useClients() {
 /**
  * 현재 client — store 선택값 우선, 없으면 **데이터 기반**(데이터 있는 첫 client → 첫 client).
  * 미선택/로딩 중이면 `undefined` → 호출부는 `enabled: !!client` 로 게이트.
- * ①.6c (2026-05-29): 'clumi' 하드코딩 제거 — 코드는 "목록의 첫 client" 규칙만 안다.
+ * ①.6c (2026-05-29): client 하드코딩 제거 — 코드는 "목록의 첫 client" 규칙만 안다.
  */
 export function useCurrentClient(): string | undefined {
   const selected = useNavigation((s) => s.selectedClientId);

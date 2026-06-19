@@ -1,8 +1,6 @@
 """Responder — ExecutionResult → ResponsePayload
 
-Sprint 4: 4-Layer의 마지막 변환 — "기계 언어 → 사용자 언어" 역번역.
-
-Reference: docs/_claude/4layer_system/system_architecture.md  Response Layer
+4-Layer의 마지막 변환 — "기계 언어 → 사용자 언어" 역번역.
 """
 
 from __future__ import annotations
@@ -19,7 +17,7 @@ from app.dream_agent.schemas.structured_query import DEGRADE_OPS, SCOPE_PARAMS, 
 logger = get_logger(__name__)
 
 # ── 정직 degrade 문구 (사용자 언어 = response 레이어 책임) ──────────────────
-# 왜 비었나 = 인과/예측/기여 *기능 미구현*. 데이터가 없어서가 아님(매출 119M 계산됨).
+# 왜 비었나 = 인과/예측/기여 *기능 미구현*. 데이터가 없어서가 아님(수치는 계산됨).
 # LLM 에 빈 execution_summary 를 주면 "데이터 제공 안 됨"이라 지어내고 내부용어 누출 →
 # 데이터 0 케이스는 결정론으로 진짜 이유를 말한다 (criteria_map C3 정직 degrade).
 _DEGRADE_MESSAGES = {
@@ -53,7 +51,7 @@ def build_degrade_payload(
     None 반환 = 정상 LLM 경로 (degrade 아니거나 뭔가 실행됨). 순수 함수(LLM 무관).
       - intent.operation ∈ DEGRADE_OPS (diagnose/forecast/attribute) 그리고
       - exec_result.todos 비어있음 (= shim 이 빈 tasks → planning skip → 실행 0)
-    todos 가 차 있으면(예: "왜 리뷰 나빠졌어"→sentiment 실행) LLM 이 실제 결과를 요약.
+    todos 가 차 있으면(예: 텍스트 분석이 실행됨) LLM 이 실제 결과를 요약.
     """
     intent = structured_query.intent
     if intent is None:
@@ -122,7 +120,7 @@ def build_missing_period_payload(
 
     None 반환 = 정상 경로. 발동: executor param 경계가 SKIPPED 처리한 todo 중
     data.reason ∈ {missing_param, invalid_param} 이고 data.param ∈ SCOPE_PARAMS(period 류).
-    자동 기본월 금지(D3) — 가정한 숫자(구버전의 CAC 0원 silent-0 포함) 대신 기간을 묻는다.
+    자동 기본월 금지(D3) — 가정한 숫자(구버전의 0값 silent-0 포함) 대신 기간을 묻는다.
     부분 완료가 있어도 발동 — "기간 없는 질문에 숫자를 단정하지 않는다"가 G2 의 DoD.
     이미 생성된 attachment(PDF 등)도 의도적으로 미표시 — 무스코프 수치가 든 산출물 제시는 같은 위반.
     단 실행이 FAILED 면 양보 — 실패 고지(ERROR 경로)가 우선, ask 가 실패를 가리면 안 됨 (I1, 리뷰 R-5).
@@ -213,7 +211,7 @@ _FILE_ARTIFACTS = {
 _RENDER_NOISE = frozenset({
     "count", "file_no", "source_id", "is_mock", "reason", "detail", "artifact",
     "word_count", "char_count", "length", "report_markdown", "summary",
-    # 구조/provenance — 답이 아닌 내부 메타 (raw-leak 방지, stage1 감사 C). "schema_version: ads.v1" 류 차단.
+    # 구조/provenance — 답이 아닌 내부 메타 (raw-leak 방지, stage1 감사 C). "schema_version: <ver>" 류 차단.
     # label/value/unit 은 아래 _render_metrics 가 "label: value unit" 으로 합쳐 렌더(노이즈 아님).
     "schema_version", "op", "field",
 })
@@ -251,7 +249,7 @@ def _render_breakdowns(exec_result: ExecutionResult) -> str:
     """완료 todo 의 분해 산출(rows 표 · {그룹: 스칼라} dict)을 결정론 컴팩트 렌더 (M1-S1).
 
     or-체인·스칼라 한정 렌더가 차원분해 결과를 통째 침묵시키던 M0 실측
-    ("채널별 ROAS 보여줘" — channel_aggregate completed 인데 표출 0%, 3/3런)의 수술.
+    (차원별 질의 — breakdown tool completed 인데 표출 0%, 3/3런)의 수술.
     행 수 cap 으로 단일 의도 응답을 시끄럽게 만들지 않음 (계획 리스크 §5).
     """
     lines: list[str] = []
@@ -283,8 +281,8 @@ def _render_breakdowns(exec_result: ExecutionResult) -> str:
 def _render_insights(exec_result: ExecutionResult) -> str:
     """insights(list[{title, description, ...}]) 산출의 결정론 렌더 (M1-S1c, 2026-06-12).
 
-    T3 재실행 실측: insight_extractor 가 completed 인데 산출 키(insights)가 표시 어휘 밖이라
-    '개선안' 의도가 통째 침묵 — diagnoser '진단' false-red 와 동종 함정의 실증. 상한 5건.
+    T3 재실행 실측: 해석 tool 이 completed 인데 산출 키(insights)가 표시 어휘 밖이라
+    '개선안' 의도가 통째 침묵 — 진단 false-red 와 동종 함정의 실증. 상한 5건.
     """
     lines: list[str] = []
     for r in exec_result.todos.values():

@@ -7,7 +7,6 @@ GET /api/conversations/{id}/turns/{tid}/state     → 턴 실행 라이브 상�
 ConversationManager(대화 전용, MemoryManager와 분리)가 dreamagent_system checkpoint를 읽음.
 app.state.checkpointer(AsyncPostgresSaver) + app.state.db_pool(asyncpg) 재활용.
 턴 상태는 checkpoint(static)가 아니라 hitl_manager 런타임 싱글톤(live)에서 읽음.
-설계: docs/reports/대화이력_설계_단계적_2026-06-09.md · docs/reports/세션연속성_복원_설계계획_2026-06-11.md
 Status: partial — Phase 1 read-only (목록·복원-보기). 이어서작업(P1.5)·회상(P3)은 후속.
 """
 from typing import Any
@@ -80,7 +79,6 @@ async def get_turn_state(request: Request, conversation_id: str, turn_id: str) -
     """세션 연속성 — 재접속 시 진행 중 턴의 라이브 상태(plan·완료 todo·진행).
 
     소스 = hitl_manager 싱글톤(같은 프로세스의 run_turn task 와 공유). DB 불요.
-    설계: docs/reports/세션연속성_복원_설계계획_2026-06-11.md §4
     """
     from app.dream_agent.workflow_managers.hitl_manager import get_hitl_manager
 

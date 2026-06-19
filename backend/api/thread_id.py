@@ -5,8 +5,6 @@ LangGraph Checkpointer의 thread_id를 conversation_id + turn_id 조합으로 �
 형식: f"{conversation_id}_{turn_id}"
 전제: 두 ID 모두 UUID v4 (클라이언트 crypto.randomUUID() 발급).
       UUID는 `-`만 포함하므로 `_` 구분자 안전.
-
-명세서: docs/_claude/checkpointer/sprint13_test_t3_thread_id_spec.md
 """
 
 from __future__ import annotations

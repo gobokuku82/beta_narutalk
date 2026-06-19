@@ -39,7 +39,7 @@ logger = get_logger(__name__)
 # ────────────────────────────────────────────────────────
 
 def _generate_summary(tool_name: str, data: dict, is_mock: bool, status: str) -> str:
-    """Tool 결과에서 대시보드용 1줄 요약 생성."""
+    """Tool 결과에서 UI용 1줄 요약 생성."""
     if status == "failed":
         return "실패"
     if status == "skipped":
@@ -83,7 +83,7 @@ def _generate_summary(tool_name: str, data: dict, is_mock: bool, status: str) ->
     if tool_name == "pdf_renderer":
         return f"PDF {data.get('pages', '?')}p{mock_tag}"
 
-    # (2026-06-12) 크리에이티브 요약 분기 4종 삭제 — creative_team 폐기와 짝 단위.
+    # (2026-06-12) 도메인 요약 분기 4종 삭제 — 해당 팀 폐기와 짝 단위.
 
     if is_mock:
         return f"완료{mock_tag}"
@@ -98,7 +98,7 @@ def _json_safe(obj: Any) -> Any:
     """직렬화 안전 변환 — DataFrame 등 비직렬 값은 None 으로 제거.
 
     TodoResult.data 는 (a) chaining(previous_results) + (b) model_dump(mode="json")
-    양쪽에 쓰인다. collector 가 raw pandas.DataFrame 을 반환하면 (b) 에서
+    양쪽에 쓰인다. tool 이 raw pandas.DataFrame 을 반환하면 (b) 에서
     PydanticSerializationError → agent turn 크래시 (2026-06-02 F1).
     chaining 소비자는 list/dict 키만 읽으므로(검증 완료) DataFrame 드롭이 안전.
 
@@ -284,7 +284,7 @@ def _inject_prev_outputs(
     """상류 COMPLETED 산출을 미바인딩 param 에 주입 (artifact 체이닝).
 
     SCOPE_PARAMS(period 류)는 주입 금지 (슬라이스 1, 헌법 D3·R2) — 시간 스코프는
-    쿼리에서만 온다. 상류의 'all'/타월 라벨이 param 으로 흘러 startswith 0건
+    쿼리에서만 온다. 상류의 'all'/라벨 값이 param 으로 흘러 startswith 0건
     silent-0 을 만들던 오염 경로 차단. 누락 시 경계가 SKIPPED → "기간을 알려주세요".
     """
     merged = dict(params)

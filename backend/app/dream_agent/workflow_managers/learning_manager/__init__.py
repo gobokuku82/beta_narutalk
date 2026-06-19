@@ -1,8 +1,6 @@
 """Learning Manager Package
 
 학습 인프라 (데이터 수집)
-
-Reference: docs/specs/LEARNING_SPEC.md
 """
 
 from .decorators import trace_log

@@ -9,8 +9,6 @@
 
 실재 Tool(status=implemented)은 ToolRegistry로 실제 import,
 stub Tool은 mock executor로 대체.
-
-Reference: docs/_claude/4layer_system/system_architecture.md  D-7
 """
 
 from __future__ import annotations
