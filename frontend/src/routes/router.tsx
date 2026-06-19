@@ -14,6 +14,7 @@ import {
 import { PortfolioPage } from '@/features/portfolio/PortfolioPage';
 import { WorkflowPage } from '@/features/workflow/WorkflowPage';
 import { ConversationsPage } from '@/features/conversations/ConversationsPage';
+import { DbDesignPage } from '@/features/db_design/DbDesignPage';
 
 import { RootLayout } from './RootLayout';
 
@@ -47,11 +48,18 @@ const conversationsRoute = createRoute({
   component: ConversationsPage,
 });
 
+const dbDesignRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/db-design',
+  component: DbDesignPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   portfolioRoute,
   workflowRoute,
   conversationsRoute,
+  dbDesignRoute,
 ]);
 
 export const router = createRouter({ routeTree });

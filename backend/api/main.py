@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.middleware import setup_error_handlers
 from api.routes import (
     conversations_router,
+    db_design_router,
     health_router,
 )
 from api.ws_agent import router as ws_agent_router
@@ -135,6 +136,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(conversations_router)
+    app.include_router(db_design_router)
     app.include_router(ws_agent_router)
     app.include_router(ws_hitl_router)
 

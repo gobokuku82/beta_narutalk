@@ -31,6 +31,7 @@ const SYSTEM_TABS: NavigationTab[] = [
   { id: 'portfolio', label: '포트폴리오', path: '/portfolio', iconName: 'Briefcase' },
   { id: 'workflow', label: '워크플로우', path: '/workflow', iconName: 'GitBranch', group: '에이전트' },
   { id: 'conversations', label: '대화이력', path: '/conversations', iconName: 'History', group: '에이전트' },
+  { id: 'db-design', label: 'DB설계', path: '/db-design', iconName: 'Database', group: '시스템' },
 ];
 
 // "클라이언트" 컨텍스트 — 도메인 분석 페이지 제거 후 에이전트 기능만 잔존 (2026-06-19)
