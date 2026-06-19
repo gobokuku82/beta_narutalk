@@ -19,40 +19,32 @@ from pydantic import BaseModel, ConfigDict, Field
 # ────────────────────────────────────────────────────────────────
 
 class TaskType(str, Enum):
-    """유한 작업 어휘 — Planning이 Tool 매핑 키로 사용"""
+    """프레임 기본 작업 어휘 (open-vocab 기본값).
+
+    프레임 추출(2026-06-19): 마케팅 전용 작업 제거 → 도메인 무관 generic 세트.
+    `Task.id` 는 이제 **자유 문자열(str)** — 도메인은 이 enum 밖의 어휘도 자유롭게 사용한다.
+    이 상수들은 intent_shim/planner 의 프레임 기본 라우팅 + 호환을 위한 reference 일 뿐.
+    """
 
     # 데이터
-    DATA_COLLECTION       = "data_collection"
-    DATA_PREPROCESSING    = "data_preprocessing"
+    DATA_COLLECTION    = "data_collection"
+    DATA_PREPROCESSING = "data_preprocessing"
 
-    # 분석
-    SENTIMENT_ANALYSIS    = "sentiment_analysis"
-    KEYWORD_EXTRACTION    = "keyword_extraction"
-    TREND_ANALYSIS        = "trend_analysis"
-    COMPETITOR_COMPARISON = "competitor_comparison"
-    CAUSAL_ANALYSIS       = "causal_analysis"
-    METRIC_CALCULATION    = "metric_calculation"   # ⑰ 신 (페어: GoalType.METRIC, KPI 질의)
+    # 처리 (generic)
+    METRIC_CALCULATION = "metric_calculation"
+    ANALYSIS           = "analysis"
+    COMPARISON         = "comparison"
 
     # 산출물
-    INSIGHT_GENERATION    = "insight_generation"
-    REPORT_GENERATION     = "report_generation"
-    SUMMARY_GENERATION    = "summary_generation"
+    INSIGHT_GENERATION = "insight_generation"
+    SUMMARY_GENERATION = "summary_generation"
+    REPORT_GENERATION  = "report_generation"
 
-    # 크리에이티브
-    IMAGE_GENERATION      = "image_generation"
-    IMAGE_EDITING         = "image_editing"          # 리사이징/썸네일
-    VIDEO_STORYBOARD      = "video_storyboard"
-    COPY_GENERATION       = "copy_generation"        # 슬로건/카피
-    MATERIAL_VARIATION    = "material_variation"
+    # 의사결정
+    RECOMMENDATION     = "recommendation"
 
-    # 운영
-    BUDGET_OPTIMIZATION   = "budget_optimization"
-
-    # 의사결정 (2026-06-10 — 추천/행동 제안. operation=recommend → intent_shim 파생)
-    RECOMMENDATION        = "recommendation"
-
-    # 조회형
-    FACTUAL_LOOKUP        = "factual_lookup"
+    # 조회형 (Tool 불필요 — Response 직답)
+    FACTUAL_LOOKUP     = "factual_lookup"
 
 
 class GoalType(str, Enum):
@@ -84,27 +76,8 @@ class Depth(str, Enum):
     DETAILED = "detailed"    # 풀 체인 + 보고서
 
 
-class Source(str, Enum):
-    """데이터 소스 (⑭ 2026-06-01: 신 8개 추가 — clumi raw 정합, 21 collector 흡수)"""
-    # 기존 9
-    NAVER       = "naver"
-    YOUTUBE     = "youtube"
-    COUPANG     = "coupang"
-    OLIVEYOUNG  = "oliveyoung"
-    TIKTOK      = "tiktok"
-    AMAZON      = "amazon"
-    GOOGLE      = "google"
-    MULTI       = "multi"
-    UNKNOWN     = "unknown"
-    # ⑭ 신 8 (계획서 §1.1 21 collector → 8 enum 매핑 박제)
-    META           = "meta"            # meta_ads_performance/by_age/instagram_inapp/instagram_engagement
-    KAKAO          = "kakao"           # kakao_bizmessage
-    GA4            = "ga4"             # ga4_traffic_source/page_events
-    ORDERS         = "orders"          # orders/customer_grade_history
-    CUSTOMERS      = "customers"       # customers/customer_rfm/signup_events/household_structure
-    PROMOTIONS     = "promotions"      # promotions/ad_change_history
-    CATEGORY_SALES = "category_sales"  # category_sales
-    CRM            = "crm"             # crm_messages
+# Source 는 open-vocab 자유 문자열(str) — 도메인별 소스 id 를 SOURCE_REGISTRY 가 정의.
+# 특수값: "unknown"(불명) · "multi"(복수 종합). (프레임 추출 2026-06-19: 마케팅 Source enum 제거)
 
 
 # ────────────────────────────────────────────────────────────────
@@ -125,7 +98,7 @@ class Targets(BaseModel):
     brand: Optional[str] = None
     product: Optional[str] = None
     competitors: list[str] = Field(default_factory=list)
-    source: Source = Source.UNKNOWN
+    source: str = "unknown"            # open-vocab 소스 id (SOURCE_REGISTRY) | "unknown" | "multi"
     period: Optional[Period] = None
     keywords: list[str] = Field(default_factory=list)
     extra_filters: dict = Field(default_factory=dict)
@@ -140,8 +113,8 @@ class Goal(BaseModel):
 
 
 class Task(BaseModel):
-    """sub-intent (작업 단위)"""
-    id: TaskType
+    """sub-intent (작업 단위) — id 는 open-vocab 자유 문자열(TaskType 기본값 또는 도메인 어휘)"""
+    id: str
     priority: int = 1                 # 1=최우선
     params_override: dict = Field(default_factory=dict)
 

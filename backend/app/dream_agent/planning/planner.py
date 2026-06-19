@@ -49,8 +49,9 @@ REVIEW_DATA_ARTIFACTS = {
     "sentiment_distribution", "top_keywords",
 }
 
-# 텍스트 의도로 간주되는 TaskType (이게 있으면 리뷰 파이프 정당)
-_TEXT_INTENT_TASKS = {TaskType.SENTIMENT_ANALYSIS, TaskType.KEYWORD_EXTRACTION}
+# (프레임 추출 2026-06-19) 마케팅 텍스트(리뷰) 의도 게이트 제거 — 빈 세트(도메인 무관).
+# 남은 subject-coherence/review-helper 함수는 빈 카탈로그에서 dormant(no-op). 도메인 도입 시 재설계.
+_TEXT_INTENT_TASKS: set[str] = set()
 
 # 주제가 리뷰임을 시사하는 자연어 마커 (cognitive 가 task 를 놓쳐도 주제로 구제)
 _REVIEW_SUBJECT_MARKERS = ("리뷰", "후기", "평점", "댓글", "review")
