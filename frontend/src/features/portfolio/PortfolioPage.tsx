@@ -1,37 +1,14 @@
 /**
- * PortfolioPage — OctorAD 첫 진입 화면.
+ * PortfolioPage — 프레임워크 첫 진입 화면(시스템 랜딩).
  *
- * 2026-06-12 v3 (계획서 적용): 6 섹션 → 4 섹션 단순화.
- *   1. WelcomeHero (Brand + 한 줄 가치) — Apple/Stripe 결, 좌측 옥스블러드 strip 1군데
- *   2. AgentLayerDiagram (데이터분석가 4-Layer) — 시스템 결 SVG
- *   3. Page Group (시스템 6 + 클라이언트 8) — 진입 안내
- *   4. PersonaCards (Data Analyst 활성 + Campaign Designer/Media Director 예정)
- *
- * 폐기: MirofishHeader / OverviewCard / YouTubeEmbed / FeatureCards (Page Group 과 중복).
- *
- * 디자인 시스템 정합:
- *   - PALETTE: Warm Neutral + 옥스블러드 단일 액센트 (Hero strip + 활성 Persona)
- *   - VOCABULARY: Welcome Hero / Layer Diagram / Page Group Card / Persona Card
- *   - feedback_no_ai_looking_ui (그라데이션·glow 0)
- *
- * spec: docs/reports/계획_첫진입페이지_재설계_2026-06-12.md
- *       project_data_analyst_4_layers / project_core_value_data_transformation
+ * 구성: WelcomeHero(브랜드 + 한 줄 가치) / AgentLayerDiagram(4-Layer) /
+ *       Page Group(프레임 페이지 안내) / PersonaCards.
+ * (도메인 분석 페이지 + 부가 콘솔/리포트/설정 진입 카드는 프레임 추출 시 제거 — 2026-06-19)
  */
 import {
-  Activity,
-  BarChart3,
-  Boxes,
-  Brain,
   Briefcase,
-  CalendarRange,
-  Database,
-  DollarSign,
-  FileText,
   GitBranch,
   History,
-  Home,
-  Image as ImageIcon,
-  TrendingUp,
   type LucideIcon,
 } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
@@ -49,22 +26,8 @@ interface PageEntry {
   icon: LucideIcon;
 }
 
-const SYSTEM_PAGES: PageEntry[] = [
-  { path: '/portfolio', label: '포트폴리오', desc: '다중 client 개요', icon: Briefcase },
-  { path: '/report', label: '리포트', desc: 'PDF 리포트 생성', icon: FileText },
-  { path: '/agent-observability', label: '에이전트', desc: '4-Layer 작동 관찰', icon: Activity },
-  { path: '/memory', label: '메모리', desc: '장기 기억 관리', icon: Brain },
-  { path: '/system', label: 'System', desc: '시스템 콘솔', icon: Database },
-  { path: '/db', label: 'DB', desc: 'Data DB 콘솔', icon: Boxes },
-];
-
-const CLIENT_PAGES: PageEntry[] = [
-  { path: '/dashboard', label: '대시보드', desc: '핵심 KPI 한눈에', icon: Home },
-  { path: '/monthly', label: '월간 결산', desc: '월별 결산 + MoM', icon: CalendarRange },
-  { path: '/channel', label: '채널', desc: '채널별 비교', icon: BarChart3 },
-  { path: '/trend', label: '트렌드', desc: '시계열 추이', icon: TrendingUp },
-  { path: '/creatives', label: '소재', desc: '광고 소재 분석', icon: ImageIcon },
-  { path: '/cost', label: '비용', desc: '예산 페이싱', icon: DollarSign },
+const FRAMEWORK_PAGES: PageEntry[] = [
+  { path: '/portfolio', label: '포트폴리오', desc: '시스템 개요', icon: Briefcase },
   { path: '/workflow', label: '워크플로우', desc: '에이전트 작업 추적', icon: GitBranch },
   { path: '/conversations', label: '대화이력', desc: '지난 쿼리 기록', icon: History },
 ];
@@ -75,14 +38,9 @@ export function PortfolioPage() {
       <WelcomeHero />
       <AgentLayerDiagram />
       <PageGroupSection
-        label="시스템 컨텍스트"
-        sublabel="6 페이지 — 전체 운영 + 관찰"
-        pages={SYSTEM_PAGES}
-      />
-      <PageGroupSection
-        label="클라이언트 컨텍스트"
-        sublabel="8 페이지 — client 별 분석 + 작업"
-        pages={CLIENT_PAGES}
+        label="프레임워크"
+        sublabel="3 페이지 — 랜딩 + 에이전트"
+        pages={FRAMEWORK_PAGES}
       />
       <PersonaCards />
     </div>

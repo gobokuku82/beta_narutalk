@@ -12,8 +12,6 @@ import { useAgent } from '@/features/agent/store';
 import { useExecution } from '@/features/execution/store';
 import { useHitl } from '@/features/hitl/store';
 import { useSession } from '@/features/session/store';
-// [agent-observability] raw 콜백 스트림 캡처용 (계획서 §7.5). 대시보드 삭제 시 이 import + 아래 fanout 1줄 제거.
-import { useObsEventLog } from '@/features/agent_observability/store/eventLogStore';
 import type { WSMessage } from '../schemas';
 
 export function useWebSocket() {
@@ -25,7 +23,6 @@ export function useWebSocket() {
       useAgent.getState().handleWSMessage(msg);
       useExecution.getState().handleWSMessage(msg);
       useHitl.getState().handleWSMessage(msg);
-      useObsEventLog.getState().handleWSMessage(msg); // [agent-observability] 삭제 시 이 줄 제거
     };
 
     // (멈춤 수술 ③, 2026-06-12) 순단 복구 — 끊겼다 다시 붙으면, 진행 중 turn 의

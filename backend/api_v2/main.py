@@ -11,15 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api_v2.middleware import setup_error_handlers
 from api_v2.routes import (
-    admin_router,
-    canonical_router,
     conversations_router,
-    dashboard1_router,
-    data_console_router,
-    files_router,
     health_router,
-    pipelines_router,
-    system_console_router,
 )
 from api_v2.ws_agent import router as ws_agent_router
 from api_v2.ws_hitl import router as ws_hitl_router
@@ -141,15 +134,7 @@ def create_app() -> FastAPI:
     setup_error_handlers(app)
 
     app.include_router(health_router)
-    app.include_router(dashboard1_router)
-    app.include_router(canonical_router)
     app.include_router(conversations_router)
-    app.include_router(admin_router)
-    app.include_router(pipelines_router)
-    app.include_router(system_console_router)
-    app.include_router(data_console_router)
-    app.include_router(files_router)
-    # /api/mock (mock_data_router) 폐기 — 2026-05-28 (data/mock 삭제 + blooming 폐기)
     app.include_router(ws_agent_router)
     app.include_router(ws_hitl_router)
 
