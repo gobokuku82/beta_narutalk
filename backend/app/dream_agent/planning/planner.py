@@ -41,43 +41,51 @@ PROMPTS_DIR = Path(__file__).parent.parent / "llm_manager" / "prompts"
 # 식별 = tool 이 선언한 *텍스트 데이터 산출물* (이름 denylist 아님, 데이터 계약 기반).
 # ───────────────────────────────────────────────────────
 
-# 텍스트 파이프 고유 데이터 산출물 (collector→preprocessor→분석→해석 체인의 input/output)
-REVIEW_DATA_ARTIFACTS = {
-    "raw_reviews", "normalized_reviews", "cleaned_texts",
-    "sentiment_distribution", "top_keywords",
-}
+# 주제-결속(텍스트) 데이터 산출물은 카탈로그가 선언한다 (도메인 무관 — 하드코딩 이름·명명 휴리스틱 아님).
+#   catalog["subject_bound_artifacts"] = [<artifact_name>, ...]
+# = collector→preprocessor→분석→해석 텍스트 체인의 input/output 산출물 이름들.
+# 미선언/빈 카탈로그 = 빈 set → subject-coherence 게이트가 잡을 tool 0 → dormant(no-op).
 
-# (프레임 추출 2026-06-19) 텍스트 의도 게이트 제거 — 빈 세트(도메인 무관).
-# 남은 subject-coherence/텍스트-helper 함수는 빈 카탈로그에서 dormant(no-op). 도메인 도입 시 재설계.
+# 텍스트 파이프를 정당화하는 task id — 설정-주입(도메인 등록), 기본 빈 set(도메인 무관).
+# 빈 카탈로그에선 subject-coherence/텍스트-helper 가 dormant(no-op).
 _TEXT_INTENT_TASKS: set[str] = set()
 
-# 주제가 텍스트 분석임을 시사하는 자연어 마커 (cognitive 가 task 를 놓쳐도 주제로 구제)
-_REVIEW_SUBJECT_MARKERS = ("리뷰", "후기", "평점", "댓글", "review")
+# 주제가 텍스트 분석임을 시사하는 자연어 마커 — 설정-주입(도메인 등록), 기본 빈 tuple(도메인 무관).
+# cognitive 가 텍스트 task 를 놓쳐도 주제 마커로 구제. 빈 tuple = 마커 구제 비활성.
+_SUBJECT_INTENT_MARKERS: tuple[str, ...] = ()
 
 
-def _tool_needs_review_data(tool: dict) -> bool:
-    """tool 이 텍스트 데이터에 의존하는가.
+def _subject_bound_artifacts(catalog: dict) -> set[str]:
+    """카탈로그가 선언한 주제-결속(텍스트) 데이터 산출물 집합 — 미선언 시 빈 set(게이트 dormant)."""
+    return set(catalog.get("subject_bound_artifacts") or [])
 
-    2 신호 (둘 중 하나):
-    1) 선언된 input/output 산출물이 텍스트 데이터 계약과 겹침 (collector→preprocessor→해석 체인).
-    2) 명명 규칙 — review_* / *sentiment* 는 텍스트 전용 tool 로 일관되게 명명됨
-       (이런 tool 은 데이터를 자체 수집하며 produces 가 generic 이라
-        산출물 규칙만으론 안 잡힘 → 명명 규칙으로 보강).
+
+def _tool_is_subject_bound(tool: dict, subject_artifacts: set[str]) -> bool:
+    """tool 이 주제-결속(텍스트) 데이터에 의존하는가 — 데이터 계약 기반(이름 denylist·명명 휴리스틱 아님).
+
+    선언된 produces/consumes/params_required 중 하나라도 카탈로그의 subject_bound_artifacts
+    와 겹치면 True (collector→preprocessor→해석 체인 어디든). subject_artifacts 빈 set 이면 항상 False.
     """
-    name = (tool.get("name") or "").lower()
-    if name.startswith("review") or "sentiment" in name:
-        return True
-    io = set(tool.get("params_required", []) or []) | set(tool.get("produces", []) or [])
-    return bool(io & REVIEW_DATA_ARTIFACTS)
+    if not subject_artifacts:
+        return False
+    io = (
+        set(tool.get("produces") or [])
+        | set(tool.get("consumes") or [])
+        | set(tool.get("params_required") or [])
+    )
+    return bool(io & subject_artifacts)
 
 
-def _collect_review_data_tool_names(catalog: dict) -> set[str]:
-    """카탈로그 전체에서 텍스트-데이터 tool 이름 집합 (post-filter 용)."""
+def _collect_subject_bound_tool_names(catalog: dict) -> set[str]:
+    """카탈로그 전체에서 주제-결속(텍스트) tool 이름 집합 (post-filter 용)."""
+    subject_artifacts = _subject_bound_artifacts(catalog)
+    if not subject_artifacts:
+        return set()
     names: set[str] = set()
     for team in (catalog.get("teams", {}) or {}).values():
         for agent in (team.get("agents", {}) or {}).values():
             for t in (agent.get("tools", []) or []):
-                if _tool_needs_review_data(t) and t.get("name"):
+                if _tool_is_subject_bound(t, subject_artifacts) and t.get("name"):
                     names.add(t["name"])
     return names
 
@@ -149,18 +157,18 @@ def detect_cycle(dag: dict[str, list[str]]) -> str | None:
 
 
 def apply_subject_coherence_filter(
-    plan: Plan, review_tool_names: set[str], allow_text: bool,
+    plan: Plan, subject_tool_names: set[str], allow_text: bool,
 ) -> Plan:
-    """텍스트 의도 없으면 텍스트-데이터 todo 를 *확정* 제거하고 DAG/deps 정리 (F2 게이트 post-filter).
+    """텍스트 의도 없으면 주제-결속(텍스트) todo 를 *확정* 제거하고 DAG/deps 정리 (F2 게이트 post-filter).
 
     Status: complete — menu-filter(_get_agent_tools) 가 메뉴에서 빼도 LLM 이 Stage3
     프롬프트의 하드코딩 예시(해석 tool 등)를 복사할 수 있으므로, 결정론적으로
-    재차 제거한다. menu-filter 와 동일 규칙(review_tool_names).
+    재차 제거한다. menu-filter 와 동일 규칙(subject_tool_names).
     Pure — plan 을 in-place 수정 후 반환 (단위테스트 대상).
     """
     if allow_text:
         return plan
-    drop = {t.id for t in plan.todos if t.tool in review_tool_names}
+    drop = {t.id for t in plan.todos if t.tool in subject_tool_names}
     if not drop:
         return plan
     plan.todos = [t for t in plan.todos if t.id not in drop]
@@ -171,8 +179,8 @@ def apply_subject_coherence_filter(
         for k, v in plan.dag.items() if k not in drop
     }
     plan.plan_notes = (plan.plan_notes or "") + \
-        f" [subject-coherence: 리뷰-데이터 todo {len(drop)}개 제거 (텍스트 의도 없음)]"
-    logger.info("subject-coherence post-filter dropped review todos", count=len(drop))
+        f" [subject-coherence: 주제-결속(텍스트) todo {len(drop)}개 제거 (텍스트 의도 없음)]"
+    logger.info("subject-coherence post-filter dropped subject-bound todos", count=len(drop))
     return plan
 
 
@@ -380,18 +388,12 @@ def complete_dataflow_chain(plan: Plan, catalog: dict) -> Plan:
 # 해석(LLM 추론) tool — 계산된 분석 산출을 *먹어야* 함. 도메인무관(consumes 미선언)이라
 # complete_dataflow_chain 이 못 챙김 → 별도 feeding 안전망(아래).
 _INTERPRETATION_TOOLS = frozenset({"insight_extractor", "diagnoser", "forecaster"})
-# 도메인 → 그 도메인의 대표(headline) metric tool. 해석 tool 이 raw 만 받는 plan 의 결정론 보강용.
-# 도메인 지식(임의 하드코딩 아님 — 새 domain 은 한 줄). 매핑 밖이면 기본 metric tool.
-_DOMAIN_HEADLINE_METRIC = {
-    "revenue": "revenue_total",
-    "ad_performance": "roas_overall",
-}
-# 해석 tool 의 '먹이' = 계산된 metric/분포 산출자. 출력 tool(summary/report)·해석 tool 자신은 제외
-# (summary 는 raw-stage 가 아니라서 '아니면 computed' 식으로 짜면 오판 → 명시 집합으로 못박음).
-_COMPUTED_TASKS = frozenset({
-    "metric_calculation", "competitor_comparison",
-    "sentiment_analysis", "keyword_extraction", "trend_analysis",
-})
+# 도메인 → 그 도메인의 대표(headline) metric tool 매핑은 카탈로그가 선언한다 (도메인 무관):
+#   catalog["domain_headline_metric"] = {<domain>: <metric_tool_name>}
+# 해석 tool 이 raw 만 받는 plan 에 대표 metric 을 결정론 보강할 때 사용. 미선언/매핑밖 = 무발동.
+# 해석 tool 의 '먹이' = 계산된 metric/분포 산출자(아래 task_type). 출력 tool(summary/report)·
+# 해석 tool 자신은 제외 — generic 계산 task_type 집합으로 명시(도메인 무관, '아니면 computed' 식 오판 방지).
+_COMPUTED_TASKS = frozenset({"metric_calculation", "comparison", "analysis"})
 
 
 def ensure_interpretation_fed(plan: Plan, sq: StructuredQuery, catalog: dict) -> Plan:
@@ -433,9 +435,10 @@ def ensure_interpretation_fed(plan: Plan, sq: StructuredQuery, catalog: dict) ->
     if not month:
         return plan
     domains = [d.lower() for d in (sq.intent.domain if sq.intent else [])]
-    metric_tool = next((_DOMAIN_HEADLINE_METRIC[d] for d in domains if d in _DOMAIN_HEADLINE_METRIC), "revenue_total")
-    if metric_tool not in tool_index:
-        return plan   # graceful: 못 찾으면 미발동(기존 동작 — 가드가 hallucination 은 막음)
+    headline = catalog.get("domain_headline_metric") or {}
+    metric_tool = next((headline[d] for d in domains if d in headline), None)
+    if not metric_tool or metric_tool not in tool_index:
+        return plan   # graceful: 등록된 headline metric 없음/카탈로그 부재 → 무발동(정직 degrade, hallucination 안 함)
 
     pmeta = tool_index[metric_tool]
     new_id = f"auto_{metric_tool}"
@@ -463,8 +466,8 @@ def enforce_breakdown_dimension(plan: Plan, sq: StructuredQuery, catalog: dict) 
     근거(복합 베이스라인 2026-06-11): 차원별 질의(breakdown·dimensions=[<dim>])가 Stage3 에서
     per-dimension tool 대신 *전체* scalar tool 로 ~60% 비결정 붕괴 → 차원 누락.
     convention(하드코딩 맵 아님): 'rows' 산출 = 테이블 = 차원분해 신호 + name.startswith(dimension) 로
-    차원 대응 tool 식별. 기존 _tool_needs_review_data
-    의 name+produces 휴리스틱과 동류. 매칭 없으면(per-dim rows tool 부재) graceful 무발동
+    차원 대응 tool 식별 — dimension 은 *쿼리가 요청한 토큰*이라 도메인 하드코딩 아님.
+    매칭 없으면(per-dim rows tool 부재) graceful 무발동
     (정직 degrade, 환각 안 함). cognitive 는 dimension 을 영어 토큰으로 emit.
     breakdown tool 은 self.fetch 독립(consumes 미선언) → 단독 삽입 안전(silent-0 없음).
     """
@@ -595,10 +598,11 @@ def _get_team_agents(catalog: dict, teams_selected: list[str]) -> dict:
 def _get_agent_tools(catalog: dict, agents_selected: list[str], allow_text: bool = True) -> dict:
     """선택 Agent의 Tool 상세 (Stage 3용).
 
-    Status: complete — allow_text=False 시 리뷰-데이터 tool 을 메뉴에서 제외
+    Status: complete — allow_text=False 시 주제-결속(텍스트) tool 을 메뉴에서 제외
     (subject-coherence 게이트, F2 수정 2026-06-04). LLM 이 못 보면 못 고름.
     """
     result: dict[str, dict] = {}
+    subject_artifacts = _subject_bound_artifacts(catalog) if not allow_text else set()
     teams = catalog.get("teams", {}) or {}
     for team_data in teams.values():
         agents = team_data.get("agents", {}) or {}
@@ -606,7 +610,7 @@ def _get_agent_tools(catalog: dict, agents_selected: list[str], allow_text: bool
             if agent_name in agents_selected:
                 tools = agent_data.get("tools", []) or []
                 if not allow_text:
-                    tools = [t for t in tools if not _tool_needs_review_data(t)]
+                    tools = [t for t in tools if not _tool_is_subject_bound(t, subject_artifacts)]
                 result[agent_name] = {
                     "description": agent_data.get("description", ""),
                     "tools": tools,
@@ -624,7 +628,7 @@ class Planner:
     def __init__(self):
         self.client = get_llm_client("planning")
         self._catalog = _load_catalog()
-        self._review_tool_names = _collect_review_data_tool_names(self._catalog)
+        self._subject_bound_tool_names = _collect_subject_bound_tool_names(self._catalog)
 
     @staticmethod
     def _has_text_intent(sq: StructuredQuery) -> bool:
@@ -634,10 +638,12 @@ class Planner:
         """
         if any(t.id in _TEXT_INTENT_TASKS for t in sq.tasks):
             return True
+        if not _SUBJECT_INTENT_MARKERS:
+            return False
         raw = (sq.meta.raw_input or sq.targets.product or "").lower()
         kw = " ".join(sq.targets.keywords).lower()
         hay = f"{raw} {kw}"
-        return any(m in hay for m in _REVIEW_SUBJECT_MARKERS)
+        return any(m in hay for m in _SUBJECT_INTENT_MARKERS)
 
     @staticmethod
     def _is_qa(sq: StructuredQuery) -> bool:
@@ -873,4 +879,4 @@ class Planner:
             return None
 
         # subject-coherence post-filter (F2 보강) — 순수 함수, 단위테스트 가능
-        return apply_subject_coherence_filter(plan, self._review_tool_names, allow_text)
+        return apply_subject_coherence_filter(plan, self._subject_bound_tool_names, allow_text)

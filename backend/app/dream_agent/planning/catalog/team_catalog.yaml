@@ -11,10 +11,25 @@
 #     agents:
 #       <agent_name>:
 #         description: "에이전트 설명"
-#         handles_tasks: ["<task_type>", ...]   # open-vocab task 라우팅 키
+#         handles_tasks: ["<task_type>", ...]   # open-vocab task 라우팅 키 (task_type = handles_tasks[0])
 #         tools:
 #           - name: <tool_name>
-#             status: implemented      # implemented | stub
+#             status: implemented              # implemented | stub
 #             description: "도구 설명"
+#             produces: ["<artifact>", ...]    # 이 도구가 만드는 산출물 (dataflow 배선·게이트 키)
+#             consumes: ["<artifact>", ...]    # 이 도구가 먹는 산출물
+#             params_required: ["<param>", ...]
+#             params_optional: ["<param>", ...]
+#
+# ── (선택) Planning 게이트 설정 — 도메인 무관 게이트의 도메인 바인딩. 미선언 시 해당 게이트 dormant ──
+#
+# G02 subject-coherence: 텍스트 의도 없는 쿼리서 주제-결속(텍스트) 도구를 plan 에서 제외(F2).
+#   식별 = 도구의 produces/consumes/params_required 가 아래 산출물과 겹치면 (이름 휴리스틱 아님, 데이터 계약 기반).
+# subject_bound_artifacts: ["<text_artifact>", ...]
+#
+# G04 ensure_interpretation_fed: 해석 도구(insight_extractor/diagnoser/forecaster)가 계산 metric 없이
+#   raw 만 받을 때 도메인 대표(headline) metric 도구를 결정론 삽입(빈입력 EMPTY 차단).
+# domain_headline_metric:
+#   <domain>: <metric_tool_name>
 
 teams: {}
