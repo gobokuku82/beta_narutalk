@@ -270,6 +270,26 @@
 - **정정 반영 목록**: `_schema.yaml` B1 편입(4개 검토자 공통 — 계약 문서가 코드와 원자적), B3의 pgvector 서술 오류·:137 stale org·스펙 35 개정·ERD 참조 6곳, B5 스크럽 10파일 열거·spec-doc 16파일 확장·frontend/.env.example 편입, 루트 .env.example 정리, B6에 PortfolioPage 명시, 전역 선행 커밋 승격, `vitest run` 명시.
 - **비정정 확인 사항**: 라인엔딩은 우려와 달리 무해(미래 파일 대부분 CRLF + autocrlf=true — 전량 diff 발생 안 함). main.py diff에는 계획 미기재 4번째 변경(CORS `["*"]`→`settings.CORS_ORIGINS`)이 있으나 미래 config 기본값이 `["*"]`라 동작 동일 — 되돌리지 말 것. B4의 hitl/store.test.ts는 주석-전용이 아니라 코드 1줄(옵셔널 체이닝) 포함 — 무해. 선재 부채 신규 등재: frontend MemoryTypeSchema 9종 vs DDL memory_type_chk 8종 어휘 불일치(교집합 4종) — MemoryManager 배선 시 CHECK 위반 예정, B3가 두 파일을 여는 적기.
 
+## 10.6 (2026-07-13 추가) 이식 실행 기록 — 완료
+
+§10.3 계획(§10.5 정정 반영)을 전량 실행. 커밋 체인:
+
+| 커밋 | 내용 |
+|---|---|
+| `70de0bc` | 기준선: UI 리디자인 + db_design 워크벤치 WIP 고정 (66파일) |
+| `01859e2` | docs: 비교/감사 문서 등재 |
+| `c0ecbb1` | **B1**: 코어 일반화 — 신규 4(scope_params.yaml·display.py·부트스모크·tool_prompts/README) + 교체 13 + storage.py 삭제 + 후속 2(executor 참조 1줄, cognitive_stage.py:205 크래시 수정) |
+| `8d0e88b` | **B2**: config.py 교체(MEANINGFUL_QUERY_FIELDS 신설·죽은 설정 제거) + main.py 병합(db_design 라우터 보존, data_db_pool 삭제, CORS 설정 배선) + .env.example 정리 |
+| `4df62a5` | **B3**: setup_checkpointer(auth 4테이블+workspaces+conversations, scope org→workspace) + schemas.ts workspace + 스펙 35 org 8개소 개정 + ERD 죽은 경로 참조 정리 |
+| `ba43387` | **B4**: no_client 폐지 4파일 연동 + 주석 정리 7파일 + Sidebar /settings 제거(B5 앞당김 — tsc TS2322 차단 해소) |
+| `29daf5d` | **B5**: 주석 스크럽 10파일 + recovery broaden_period 제거 + 죽은 spec 참조 매핑(백엔드 5 실수정 + 프론트 README 4 — 나머지 11파일은 현재 참조가 이미 실존 문서라 유지) + frontend/.env.example + 스펙 11 유령 설정 표기 |
+
+**최종 검증**: pytest 6 passed(부트스모크 신설 포함) · vitest run 144 passed(17 files) · tsc -b + vite build GREEN · `qa_team/decision_team/_PERIOD_RE/CHANNEL_MAP` grep = 제거 툼스톤 1건 외 0 · 죽은 spec 참조 grep 0건.
+
+**이로써 해소된 감사 항목**: §3의 H1(월-스코프)~H4(닫힌 enum) 전부 + §2 표의 ✘ 백엔드 5곳 + #10(no_client)·#11(org→workspace) + CHANNEL_MAP/SENTIMENT_MAP + Sidebar /settings + CORS 죽은 설정 + broaden_period + §10.5-C2 크래시. **미해소 잔존(§10.4 백로그 유효분)**: H5 parents[3] ×2, 폐기 모델 claude-3-5, USER_ID='demo', retry 미소비, 채널 CSS 토큰, zod 이원화(useConversations/useDbDesign), 월경계 버그, CDN 폰트, _RENDER_NOISE, 'data' 스니핑, _TEXT_INTENT_TASKS 주입 경로, _COMPUTED_TASKS·rows+startswith, Targets 어휘, 테스트 픽스처(ROAS/clumi), TopBar /dashboard·/db, 버전 이중 진실, pyproject packages, PORT+1, memory type 어휘 불일치(9종 vs 8종).
+
+DB 반영 주의: setup_checkpointer.py는 코드만 이식됨 — 신규 테이블(auth/workspaces/conversations)과 scope CHECK 개명은 **스크립트를 수동 실행해야 DB에 적용**된다(memory_entries 로컬 0행 확인, 멱등).
+
 ## 부록 — 확정 발견 전수 목록 (92건)
 
 아래 표는 검증(존재확인+반박)을 통과한 file:line 단위 원자료다. 본문은 이를 논리 이슈로 병합해 서술했다.
