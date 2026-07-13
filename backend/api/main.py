@@ -60,17 +60,8 @@ async def lifespan(app: FastAPI):
         app.state.db_pool = None
         logger.warning(f"DB console pool 생성 실패 (DB 콘솔 비활성): {e}")
 
-    # Data DB 풀 (dreamagent_data, schema-per-client). 비핵심 — 실패해도 서버는 가동.
-    try:
-        import asyncpg
-
-        app.state.data_db_pool = await asyncpg.create_pool(
-            settings.data_db_uri, min_size=1, max_size=5
-        )
-        logger.info("✅ Data DB pool created")
-    except Exception as e:
-        app.state.data_db_pool = None
-        logger.warning(f"Data DB pool 생성 실패 (Data 콘솔 비활성): {e}")
+    # (2026-07-02 정리) data_db_pool 폐기 — 소비 라우트 0 (구 /api/data 콘솔용 잔재).
+    # 데이터 DB 접근은 data_layer 의 Workspace/DataSource 구현이 자체 연결로 수행.
 
     # 데이터 영속화 백엔드 전환: DATA_BACKEND=postgres 면 입력(raw 읽기)·출력(정제/계산 저장)
     # 양쪽을 Postgres로. (도구·러너는 get_default_*() 사용 → set_* 한 번으로 전체 전환)
@@ -103,12 +94,6 @@ async def lifespan(app: FastAPI):
             await pool.close()
         except Exception as e:
             logger.warning("DB pool cleanup failed", error=str(e))
-    data_pool = getattr(app.state, "data_db_pool", None)
-    if data_pool is not None:
-        try:
-            await data_pool.close()
-        except Exception as e:
-            logger.warning("Data DB pool cleanup failed", error=str(e))
     try:
         await cm.__aexit__(None, None, None)
         logger.info("Checkpointer connection closed")
@@ -124,9 +109,10 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # CORS — settings.CORS_ORIGINS 로 제어 (기본 ["*"] = POC 전개방, 배포 시 .env 로 제한)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.CORS_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -136,6 +122,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(conversations_router)
+    # db_design: 시스템 DB설계 워크벤치 라우터 (2026-07 신설 — 구 ERD 도메인과 별개 기능)
     app.include_router(db_design_router)
     app.include_router(ws_agent_router)
     app.include_router(ws_hitl_router)

@@ -34,9 +34,8 @@ class Settings(BaseSettings):
     PORT: int = 8000
 
     # === Database ===
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/dreamagent_system"
-    DATABASE_POOL_SIZE: int = 10
-    DATABASE_MAX_OVERFLOW: int = 20
+    # (2026-07-02) DATABASE_URL·DATABASE_POOL_SIZE·DATABASE_MAX_OVERFLOW 제거 —
+    # v1 SQLAlchemy 잔재, 참조 0. 실 연결은 CHECKPOINT_DB_URI(시스템 DB) + data_db_uri(데이터 DB).
 
     # === Checkpoint Database (LangGraph) ===
     CHECKPOINT_DB_URI: str = "postgresql://postgres:postgres@localhost:5432/dreamagent_system"
@@ -51,8 +50,7 @@ class Settings(BaseSettings):
     # 안전 토글 — 문제 시 .env에서 이 값만 빼면(=file) 즉시 원복. (DataSource 전환=raw 항목은 후속)
     DATA_BACKEND: str = "file"
 
-    # === Redis (Optional) ===
-    REDIS_URL: Optional[str] = None
+    # (2026-07-02) REDIS_URL 제거 — 참조 0. Redis 도입 시 재추가.
 
     # === LLM ===
     OPENAI_API_KEY: Optional[str] = None
@@ -84,7 +82,8 @@ class Settings(BaseSettings):
     LOG_FORMAT: str = "json"  # json, text
 
     # === CORS ===
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000", "null", "*"]
+    # main.py CORSMiddleware 가 소비. 기본 ["*"] = POC 전개방 — 배포 시 .env 로 제한.
+    CORS_ORIGINS: list[str] = ["*"]
 
     # === Sprint 13 — 멀티플렉싱 / 동시성 / 대화 컨텍스트 ===
     # 사용자 식별 (Sprint 16+ 실제 로그인 전까지 "demo" 고정)
@@ -100,9 +99,13 @@ class Settings(BaseSettings):
     DEFAULT_HISTORY_LIMIT: int = 3
     MAX_HISTORY_LIMIT: int = 10
 
-    # 대화 제목 자동 생성 (Sprint 15 실사용)
-    TITLE_SOURCE: str = "first_query"     # first_query | summary_llm
-    TITLE_MAX_LENGTH: int = 15
+    # (2026-07-02) TITLE_SOURCE·TITLE_MAX_LENGTH 제거 — 참조 0 (제목 자동생성 미구현 잔재).
+
+    # === Layer Guard (2026-07-02) ===
+    # COGNITIVE_EMPTY_QUERY 판정 보강 필드(dotted-path, sq 기준). 기본 [] = 순수 구조적 검사
+    # (tasks|intent)만 — 도메인 필드 요구 0. 도메인 주입 시만 선언해 추가 '유의미' 신호로 인정
+    # + guard 로그 요약에도 포함. 예(.env JSON 배열): ["targets.brand", "intent.domain"].
+    MEANINGFUL_QUERY_FIELDS: list[str] = []
 
     @property
     def data_db_uri(self) -> str:
