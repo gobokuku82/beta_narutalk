@@ -17,10 +17,11 @@ description: string             # 도구 설명 (LLM이 Plan 생성 시 참조)
 version: string                 # 시맨틱 버전 (예: "1.0.0")
 
 # 도구 분류
-category: string                # 실행 카테고리 (★정본 = models/enums.py ToolCategory 11 멤버·디스크 11 디렉토리 실측):
-                                #   데이터 단계축(8): collection | normalization | cleaning | preprocessing |
-                                #                     metrics | comparison | analysis | report
-                                #   비단계축(3):     rendering(출력) | qa(질의응답) | decision(의사결정)
+category: string                # 실행 카테고리 — open-vocab (2026-07-02): 검증된 자유 문자열(non-empty).
+                                #   폐쇄 집합 아님 — 도메인 고유 어휘도 그대로 등록·로드된다(미지 값 = debug 로그만).
+                                #   관례값(권장, models/enums.py KNOWN_TOOL_CATEGORIES):
+                                #     collection | normalization | cleaning | preprocessing | metrics |
+                                #     comparison | analysis | report | rendering | qa | decision
 
 # Executor 매핑
 executor: string                # 실행할 Executor 클래스 경로
@@ -46,6 +47,18 @@ requires_approval: boolean      # HITL 승인 필요 여부 (기본: false)
 
 dependencies: [string]          # 선행 필요 도구 이름 (DAG 구성에 사용)
 produces: [string]              # 산출물 키 (다음 도구가 참조 가능)
+
+# --- 표시 메타 (2026-07-02 — Response 레이어 디스패치. 미선언 = 표시 비활성/일반 렌더) ---
+# 이 도구의 produces 키가 응답에서 '어떻게' 보이는지 선언. responder·_generate_summary 가 소비.
+# 미선언 시 honest floor(_render_metrics 일반 스칼라)만 렌더 — 새 도메인 도구는 여기 선언 권장.
+display:
+  narrative_keys: [string]      # 서술형 산출 키(report/answer 류). 순서 = 표시 우선순위
+  insight_keys:   [string]      # list[{title, description}] 인사이트 산출 키
+  table_key:      string        # list[dict] 표(행) 산출 키
+  attachment:                   # 파일 산출 → 첨부. multi=true 면 그 키가 경로 list
+    - {key: string, kind: string, multi: boolean}
+  summary_template: string      # UI 1줄 요약. data 키를 {name} 으로 치환(누락 키='?')
+  infra: boolean                # true = 인프라 도구(구 'collector' 규약) — 산출 판정/skip 고지서 제외
 
 # --- 비용 ---
 

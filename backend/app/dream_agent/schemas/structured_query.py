@@ -6,9 +6,13 @@
 
 from __future__ import annotations
 
+import re
+from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Optional
 
+import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -179,11 +183,76 @@ class Intent(BaseModel):
 # (2026-06-05, spec 16 §4 V5: stage↔stage 옆결합 해소 — 둘 다 여기서 import).
 DEGRADE_OPS = {"diagnose", "forecast", "attribute"}
 
-# 시간 스코프 param — 값은 반드시 쿼리(사용자 기간)에서 와야 한다 (헌법 19 D3·R2, 슬라이스 1).
-# 상류 tool 산출 데이터로 주입 금지(executor._inject_prev_outputs) + 상류 artifact 로 충족
-# 간주 금지(planner.detect_plan_gaps) + 경계 형식검사 YYYY-MM(executor) 가 모두 이 집합을 본다.
-# planning·execution·response 공유 계약이라 중립 위치(schemas)에 둠 — D1 진실소스 코드 1곳.
-SCOPE_PARAMS = frozenset({"period", "period_a", "period_b"})
+# ────────────────────────────────────────────────────────────────
+# 스코프 파라미터 — 도메인 플러그 (2026-07-02 일반화)
+# ────────────────────────────────────────────────────────────────
+# 스코프 param = "값이 반드시 쿼리(사용자)에서 와야 하는" param (헌법 19 D3·R2, 슬라이스 1):
+#   상류 tool 산출로 주입 금지(executor._inject_prev_outputs) + 상류 artifact 충족 간주 금지
+#   (planner.detect_plan_gaps) + 경계 형식검사(executor) 가 모두 SCOPE_PARAMS 를 본다.
+#
+# 과거(v0 이전)엔 period/period_a/period_b + YYYY-MM 월 의미가 코어에 하드코딩됐다. 이제:
+#   - 어느 param 이 스코프인가 = 도메인 데이터(schemas/scope_params.yaml) — 미선언 시 빈 집합(inert)
+#   - 어떤 format/binding 이 존재하나 = 코어 registry(_SCOPE_FORMATS/planner._SCOPE_BINDINGS)
+#   계약=코드 · 선택=데이터. D1 진실소스: SCOPE_PARAMS 이름은 여기 1곳에서 파생.
+
+
+@dataclass(frozen=True)
+class ScopeSpec:
+    """스코프 param 1개의 선언 (scope_params.yaml 의 한 항목)."""
+    format: str | None = None       # 형식검증기 이름 (_SCOPE_FORMATS 키). None=검증 없음(자유값)
+    binding: str | None = None      # 결정론 바인딩 전략 이름 (planner._SCOPE_BINDINGS 키). None=바인딩 없음
+    source: str = "extra_filters"   # cognitive 가 값 싣는 경로 힌트 ("period" | "extra_filters")
+    ask: str | None = None          # 누락 시 되묻기 문구. None=중립 기본
+    example: str | None = None
+
+
+def _load_scope_specs() -> dict[str, "ScopeSpec"]:
+    """schemas/scope_params.yaml → {param: ScopeSpec}. 부재/빈/오류 → {} (inert, 절대 raise 안 함)."""
+    path = Path(__file__).parent / "scope_params.yaml"
+    try:
+        raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        params = raw.get("params") or {}
+        return {n: ScopeSpec(**(s or {})) for n, s in params.items()}
+    except Exception:
+        return {}
+
+
+_SCOPE_SPECS: dict[str, "ScopeSpec"] = _load_scope_specs()
+# 하위호환 이름 · R1 단일 진실소스. 미선언(빈 yaml) = frozenset() → 전 소비자 루프 no-op.
+SCOPE_PARAMS = frozenset(_SCOPE_SPECS)
+
+# 형식검증기 registry (계약=코드). 도메인은 scope_params.yaml 에서 이름만 참조.
+# year_month = 구 executor 의 YYYY-MM 정규식을 이관한 것.
+_SCOPE_FORMATS: dict[str, "re.Pattern[str]"] = {
+    "year_month": re.compile(r"^\d{4}-(0[1-9]|1[0-2])$"),
+}
+
+
+def scope_specs() -> dict[str, "ScopeSpec"]:
+    """스코프 선언 전체(public accessor). planner 등 하류가 binding 이름 등을 순회할 때 사용."""
+    return _SCOPE_SPECS
+
+
+def validate_scope_value(param: str, value: str) -> bool:
+    """선언된 format 으로 검증. 미선언 param / 미등록 format = 항상 True(수용).
+
+    범위 표기 'a/b'(예: 기간 A/B) 는 세그먼트별로 검사.
+    """
+    spec = _SCOPE_SPECS.get(param)
+    if spec is None or spec.format is None:
+        return True
+    pat = _SCOPE_FORMATS.get(spec.format)
+    if pat is None:
+        return True
+    parts = str(value).split("/")
+    return 1 <= len(parts) <= 2 and all(pat.match(p) for p in parts)
+
+
+def scope_ask_text(param: str) -> tuple[str, str | None]:
+    """(되묻기 문구, 예시) — responder 용. spec.ask 없으면 중립 기본."""
+    spec = _SCOPE_SPECS.get(param)
+    ask = (spec.ask if spec else None) or f"'{param}' 값을 알려주세요."
+    return ask, (spec.example if spec else None)
 
 
 # ────────────────────────────────────────────────────────────────

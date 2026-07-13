@@ -17,15 +17,17 @@
 """
 
 from app.dream_agent.models.enums import (
+    KNOWN_TOOL_CATEGORIES,
     ToolCategory,
     ToolParameterType,
 )
 from app.dream_agent.models.execution import ExecutionContext
-from app.dream_agent.models.tool import StoragePolicy, ToolParameter, ToolSpec
+from app.dream_agent.models.tool import DisplaySpec, StoragePolicy, ToolParameter, ToolSpec
 
 __all__ = [
-    # ── Enums ──
+    # ── Enums / 관례 ──
     "ToolCategory",
+    "KNOWN_TOOL_CATEGORIES",
     "ToolParameterType",
     # ── Execution (Tool 컨텍스트) ──
     "ExecutionContext",
@@ -33,4 +35,5 @@ __all__ = [
     "ToolSpec",
     "ToolParameter",
     "StoragePolicy",
+    "DisplaySpec",
 ]

@@ -11,8 +11,9 @@ import yaml
 
 from app.core.logging import get_logger
 from app.dream_agent.models import (
+    KNOWN_TOOL_CATEGORIES,
+    DisplaySpec,
     StoragePolicy,
-    ToolCategory,
     ToolParameter,
     ToolParameterType,
     ToolSpec,
@@ -72,21 +73,22 @@ class ToolRegistry:
         if not data or not data.get("name"):
             return None
 
-        # Category 파싱 (정본 = enums.py ToolCategory 11 멤버, 작업 ④-L5 C2)
-        # strict: 알 수 없는 카테고리 = 즉시 raise (yaml 박제 오류 silent 통과 방지)
-        category_str = data.get("category")
-        if not category_str:
+        # Category 파싱 — open-vocab (2026-07-02): 검증된 자유 문자열.
+        # non-empty 만 강제(누락/빈 = raise → load() try/except 가 해당 tool 만 스킵=honest degrade,
+        # 거부-우선·강제변환 금지). 값 공간은 개방 — 미지 카테고리도 수용(raise 안 함).
+        # KNOWN_TOOL_CATEGORIES = 문서화된 관례(조직화/요약용). 관례 밖 = debug 로그만.
+        category = data.get("category")
+        if not isinstance(category, str) or not category.strip():
             raise ValueError(
-                f"Missing 'category' in {path}. "
-                f"Valid = {[c.value for c in ToolCategory]}"
+                f"Missing/empty 'category' in {path}. "
+                f"category = non-empty string (관례값: {sorted(KNOWN_TOOL_CATEGORIES)})"
             )
-        try:
-            category = ToolCategory(category_str)
-        except ValueError as e:
-            raise ValueError(
-                f"Unknown category '{category_str}' in {path}. "
-                f"Valid = {[c.value for c in ToolCategory]}"
-            ) from e
+        category = category.strip()
+        if category not in KNOWN_TOOL_CATEGORIES:
+            logger.debug(
+                "Non-conventional tool category accepted (open-vocab)",
+                category=category, file=str(path.relative_to(CATALOG_DIR)),
+            )
 
         # Parameters 파싱
         parameters = []
@@ -111,6 +113,10 @@ class ToolRegistry:
         storage_data = data.get("storage")
         storage = StoragePolicy.model_validate(storage_data) if storage_data else None
 
+        # Display 메타 파싱 (Response 표시). 미선언 = None = inert.
+        display_data = data.get("display")
+        display = DisplaySpec.model_validate(display_data) if display_data else None
+
         return ToolSpec(
             name=data.get("name"),
             description=data.get("description", ""),
@@ -125,6 +131,7 @@ class ToolRegistry:
             has_cost=data.get("has_cost", False),
             estimated_cost_usd=data.get("estimated_cost", 0.0),
             storage=storage,
+            display=display,
         )
 
     def get(self, name: str) -> Optional[ToolSpec]:

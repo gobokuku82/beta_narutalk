@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from app.core.logging import get_logger
 from app.dream_agent.llm_manager import get_llm_client
-from app.dream_agent.schemas.structured_query import SCOPE_PARAMS, StructuredQuery, TaskType
+from app.dream_agent.schemas.structured_query import SCOPE_PARAMS, StructuredQuery, scope_specs
 
 logger = get_logger(__name__)
 
@@ -288,33 +288,56 @@ def _resolved_month(sq) -> str | None:
     return None
 
 
-def bind_temporal_params(plan: Plan, sq, tool_index: dict) -> Plan:
-    """시간 param 결정론 바인딩 — stage3 LLM 이 놓친 period / period_a·period_b 를 쿼리 기간으로 채운다.
+# ───────────────────────────────────────────────────────
+# 스코프 바인딩 전략 registry (2026-07-02 — bind_temporal_params 를 전략화)
+#
+# "스코프 param 결정론 바인딩" = stage3 LLM 이 놓친 스코프 값을 쿼리에서 채움. 과거엔 월(月)
+# 산술이 코어에 하드코딩됐다. 이제 '이름 붙은 전략'으로 감싸 도메인이 scope_params.yaml 에서
+# binding 이름으로 선택한다(계약=코드, 선택=데이터). 미선언 = 바인딩 전략 공집합 → 완전 no-op.
+# 각 전략은 date 아닌 값(_resolved_month=None)이면 이미 no-op → 'date 형식일 때만 동작' 자동 충족.
+# ───────────────────────────────────────────────────────
 
-    · period 필수/선택 tool      → period   = 쿼리 절대월 (선택도 바인딩 — R-1, 무언 전체기간 확장 방지)
-    · period_a·period_b 필수(MoM) → period_b = 쿼리월 / period_a = 직전 달 (MoM = 정의상 전월 대비)
+def _bind_month_current(plan: Plan, sq, tool_index: dict) -> Plan:
+    """binding=month_current — period 필수/선택 tool 에 쿼리 절대월 setdefault (R-1 무언 전체기간 방지)."""
+    month = _resolved_month(sq)
+    if not month:
+        return plan
+    for t in plan.todos:
+        meta = tool_index.get(t.tool or "", {})
+        if "period" in meta.get("params_required", []) or "period" in meta.get("params_optional", []):
+            t.tool_params.setdefault("period", month)
+    return plan
 
-    날짜 산술은 LLM 보다 결정론이 정확 → 여기서 결정론으로. setdefault 라 LLM 이 이미 채운 값은
-    안 덮음(멱등). 쿼리월이 절대화 안됐으면(YYYY-MM 아님) 건너뜀 → gap 유지(정직, B2 reference-date 대기).
-    Pure-ish — plan.todos[].tool_params 만 보강, 구조 불변. (R3 param 바인딩, 2026-06-09)
-    """
+
+def _bind_month_mom(plan: Plan, sq, tool_index: dict) -> Plan:
+    """binding=month_mom — period_a/period_b 필수 tool(MoM)에 전월/당월 pair setdefault."""
     month = _resolved_month(sq)
     if not month:
         return plan
     prev = _prev_month(month)
     for t in plan.todos:
-        meta = tool_index.get(t.tool or "", {})
-        required = meta.get("params_required", [])
-        optional = meta.get("params_optional", [])
-        if "period_a" in required and "period_b" in required:
+        req = tool_index.get(t.tool or "", {}).get("params_required", [])
+        if "period_a" in req and "period_b" in req:
             t.tool_params.setdefault("period_b", month)
             if prev:
                 t.tool_params.setdefault("period_a", prev)
-        elif "period" in required or "period" in optional:
-            # optional period 도 결정론 바인딩 (적대 리뷰 R-1, 2026-06-12): 구버전에선 상류
-            # 데이터 주입(폐지된 'all' 오염 경로)이 우연히 월-정합을 전파했음 — 월 쿼리에서
-            # optional tool 이 무언 전체기간으로 넓어지지 않게 정공법으로 대체. 값은 쿼리에서만(R2).
-            t.tool_params.setdefault("period", month)
+    return plan
+
+
+# binding 이름 → 전략 함수 (계약=코드). 도메인은 scope_params.yaml 에서 이름만 참조.
+_SCOPE_BINDINGS = {"month_current": _bind_month_current, "month_mom": _bind_month_mom}
+
+
+def bind_scope_params(plan: Plan, sq, tool_index: dict) -> Plan:
+    """선언된 스코프 바인딩 전략을 순서대로 적용 — 미선언(scope_params.yaml 빈) 시 완전 no-op.
+
+    setdefault 라 LLM 이 이미 채운 값은 안 덮음(멱등). 날짜 산술은 LLM 보다 결정론이 정확.
+    (구 bind_temporal_params 를 전략 registry 로 일반화 — 2026-07-02. R3 param 바인딩)
+    """
+    for name in sorted({s.binding for s in scope_specs().values() if s.binding}):
+        fn = _SCOPE_BINDINGS.get(name)
+        if fn:
+            plan = fn(plan, sq, tool_index)
     return plan
 
 
@@ -387,7 +410,17 @@ def complete_dataflow_chain(plan: Plan, catalog: dict) -> Plan:
 
 # 해석(LLM 추론) tool — 계산된 분석 산출을 *먹어야* 함. 도메인무관(consumes 미선언)이라
 # complete_dataflow_chain 이 못 챙김 → 별도 feeding 안전망(아래).
-_INTERPRETATION_TOOLS = frozenset({"insight_extractor", "diagnoser", "forecaster"})
+# 어느 tool 이 '해석'인지는 카탈로그가 tool 에 `role: interpretation` 으로 선언한다 (2026-07-02
+# — 하드코딩 tool 이름 폐지). 미선언/빈 카탈로그 = 빈 set → feeding 게이트 dormant(no-op).
+def _interpretation_tools(catalog: dict) -> frozenset[str]:
+    """role: interpretation 선언 tool 이름 집합 — 미선언 시 빈 set(게이트 dormant)."""
+    names: set[str] = set()
+    for team in (catalog.get("teams") or {}).values():
+        for agent in (team.get("agents") or {}).values():
+            for t in (agent.get("tools") or []):
+                if t.get("role") == "interpretation" and t.get("name"):
+                    names.add(t["name"])
+    return frozenset(names)
 # 도메인 → 그 도메인의 대표(headline) metric tool 매핑은 카탈로그가 선언한다 (도메인 무관):
 #   catalog["domain_headline_metric"] = {<domain>: <metric_tool_name>}
 # 해석 tool 이 raw 만 받는 plan 에 대표 metric 을 결정론 보강할 때 사용. 미선언/매핑밖 = 무발동.
@@ -405,14 +438,15 @@ def ensure_interpretation_fed(plan: Plan, sq: StructuredQuery, catalog: dict) ->
     EMPTY. metric tool 은 self.fetch 로 독립 데이터 로드 → 단독 삽입 가능
     (collector 불요, period 는 bind_temporal 이 채움).
     """
-    interp = [t for t in plan.todos if (t.tool or "") in _INTERPRETATION_TOOLS]
+    interp_tools = _interpretation_tools(catalog)
+    interp = [t for t in plan.todos if (t.tool or "") in interp_tools]
     if not interp:
         return plan
 
     tool_index = _build_tool_index(catalog)
 
     def _is_computed(tool: str | None) -> bool:
-        if not tool or tool in _INTERPRETATION_TOOLS:
+        if not tool or tool in interp_tools:
             return False
         return tool_index.get(tool, {}).get("task_type", "") in _COMPUTED_TASKS
 
@@ -645,95 +679,54 @@ class Planner:
         hay = f"{raw} {kw}"
         return any(m in hay for m in _SUBJECT_INTENT_MARKERS)
 
-    @staticmethod
-    def _is_qa(sq: StructuredQuery) -> bool:
-        """질의응답(factual_lookup) 쿼리인가 — 결정론 QA 라우팅 신호.
+    def _short_circuit_plan(self, sq: StructuredQuery) -> Plan | None:
+        """카탈로그 `routing:` 선언 기반 결정론 단락 — LLM 스테이지 우회 (2026-07-02).
 
-        cognitive 가 개념정의·시스템메타·대화 질문에 tasks=[factual_lookup] 을 emit
-        (domain=[] 이라 intent_shim 미작동 → LLM tasks 보존). 설계서 §3.
-        단 *단일 의도*일 때만 — 복합(sub_intents≥2)이면 우회(Stage3 가 다의도 처리, stage2 ⒟).
+        과거엔 factual_lookup→qa_responder, recommendation→recommender 팀/agent/tool 이름이
+        코드에 하드코딩됐다. 이제 team_catalog.yaml 의 `routing.<trigger_task>.{team,agent,tool,
+        question_param?,rationale?}` 에서 읽는다. 미선언(빈 카탈로그) → None → 단락 비활성,
+        3-stage LLM 플래너가 처리. 복합 다의도(sub_intents≥2)는 단락 우회(Stage3 체인 컴파일).
         """
+        routing = self._catalog.get("routing") or {}
+        if not routing:
+            return None
         if sq.intent and len(sq.intent.sub_intents) >= 2:
-            return False
-        return any(t.id == TaskType.FACTUAL_LOOKUP for t in sq.tasks)
-
-    @staticmethod
-    def _build_qa_plan(sq: StructuredQuery) -> Plan:
-        """질의응답 결정론 plan — LLM 팀/agent 선택 우회, qa_responder 단일 todo.
-
-        질문을 tool_params 로 주입(ExecutionContext 엔 user_input 부재 — 설계서 §4).
-        Status: complete — 단일 QA 결정론 라우팅(질의응답_설계서_260610.md §3).
-        """
-        question = (sq.meta.raw_input or sq.meta.cleaned or "").strip()
-        todo = PlannedTodo(
-            id="todo_qa_001",
-            task_type=TaskType.FACTUAL_LOOKUP.value,
-            team="qa_team",
-            agent="qa_agent",
-            tool="qa_responder",
-            tool_params={"question": question},
-            depends_on=[],
-            priority=1,
-            rationale="질의응답 — 지식·메타·대화 답변(데이터 파이프 우회)",
-        )
-        return Plan(
-            teams_selected=["qa_team"],
-            todos=[todo],
-            dag={"todo_qa_001": []},
-            plan_notes="질의응답(factual_lookup) — qa_responder 단일 todo 결정론 라우팅",
-        )
-
-    @staticmethod
-    def _is_recommendation(sq: StructuredQuery) -> bool:
-        """의사결정 추천(recommendation) 쿼리인가 — 결정론 라우팅 신호.
-
-        cognitive operation=recommend → intent_shim RECOMMENDATION task. 의사결정_설계서 §4.
-        단 *단일 의도*일 때만 — 복합(sub_intents≥2, 예 "분석 후 추천")이면 우회 →
-        Stage3 가 선행 분석+추천 체인을 컴파일(lv4 붕괴 해소, stage2 근원귀속 ⒟).
-        """
-        if sq.intent and len(sq.intent.sub_intents) >= 2:
-            return False
-        return any(t.id == TaskType.RECOMMENDATION for t in sq.tasks)
-
-    @staticmethod
-    def _build_recommendation_plan(sq: StructuredQuery) -> Plan:
-        """의사결정 결정론 plan — recommender 단일 todo (mock).
-
-        mock 은 상류 분석 무시·fixture 반환 → 데이터 파이프 없이 작동(큰틀 구동). LLM 스테이지
-        우회(Stage3 가 recommender 대신 분석 파이프를 짜는 비결정성 회피).
-        Status: complete — 실모델 swap 시 분석 산출 feeding 은 추후.
-        """
-        todo = PlannedTodo(
-            id="todo_rec_001",
-            task_type=TaskType.RECOMMENDATION.value,
-            team="decision_team",
-            agent="decision_agent",
-            tool="recommender",
-            tool_params={},
-            depends_on=[],
-            priority=1,
-            rationale="의사결정 추천 — recommender(ml_model mock)",
-        )
-        return Plan(
-            teams_selected=["decision_team"],
-            todos=[todo],
-            dag={"todo_rec_001": []},
-            plan_notes="의사결정(recommendation) — recommender 단일 todo 결정론 라우팅",
-        )
+            return None
+        task_ids = {t.id for t in sq.tasks}
+        for trigger in sorted(routing):          # 결정론 순서
+            if trigger not in task_ids:
+                continue
+            route = routing[trigger] or {}
+            tool = route.get("tool")
+            if not tool:
+                continue                          # 불완전 선언 → 스킵(honest degrade)
+            params: dict[str, Any] = {}
+            qparam = route.get("question_param")
+            if qparam:
+                params[qparam] = (sq.meta.raw_input or sq.meta.cleaned or "").strip()
+            tid = f"route_{trigger}"
+            logger.info("planning short-circuit (catalog routing)", trigger=trigger, tool=tool)
+            return Plan(
+                teams_selected=[route["team"]] if route.get("team") else [],
+                todos=[PlannedTodo(
+                    id=tid, task_type=trigger, team=route.get("team"),
+                    agent=route.get("agent"), tool=tool, tool_params=params,
+                    depends_on=[], priority=1,
+                    rationale=route.get("rationale", f"단락 라우팅 — {trigger} → {tool}"),
+                )],
+                dag={tid: []},
+                plan_notes=f"routing short-circuit: {trigger} → {tool} (카탈로그 선언)",
+            )
+        return None
 
     async def plan(
         self,
         structured_query: StructuredQuery,
     ) -> tuple[Plan | None, list[str]]:
-        # ── 질의응답 short-circuit: factual_lookup → qa_responder 결정론 (LLM 스테이지 우회) ──
-        if self._is_qa(structured_query):
-            logger.info("planning QA short-circuit (factual_lookup → qa_responder)")
-            return self._build_qa_plan(structured_query), []
-
-        # ── 의사결정 short-circuit: recommendation → recommender 결정론 (mock=상류 불필요) ──
-        if self._is_recommendation(structured_query):
-            logger.info("planning recommendation short-circuit (recommendation → recommender)")
-            return self._build_recommendation_plan(structured_query), []
+        # ── 카탈로그 routing 결정론 단락 (LLM 스테이지 우회). 미선언 시 None → 아래 3-stage ──
+        sc_plan = self._short_circuit_plan(structured_query)
+        if sc_plan is not None:
+            return sc_plan, []
 
         sq_json = json.dumps(
             structured_query.model_dump(mode="json"),
@@ -782,10 +775,10 @@ class Planner:
         # raw 만 받으면 도메인 대표 metric 삽입. 도메인무관(consumes 미선언)이라 위 chain 이 못 챙김.
         plan = ensure_interpretation_fed(plan, structured_query, self._catalog)
 
-        # 시간 param 결정론 바인딩 — stage3 LLM 이 놓친 period / period_a·period_b(MoM)를 쿼리 기간으로
-        # 채운다(전월=정의상 도출, 날짜 산술은 결정론). 미바인딩 → 실행 시 ValueError 방지. (R3)
+        # 스코프 param 결정론 바인딩 — 선언된 바인딩 전략(scope_params.yaml)으로 stage3 LLM 이
+        # 놓친 스코프 값을 쿼리에서 채운다. 미선언 시 no-op. (R3 param 바인딩)
         _tool_index = _build_tool_index(self._catalog)
-        plan = bind_temporal_params(plan, structured_query, _tool_index)
+        plan = bind_scope_params(plan, structured_query, _tool_index)
 
         if not allow_text:
             logger.info("planning subject-coherence gate active (텍스트 의도 없음 → 리뷰-데이터 tool 제외)")

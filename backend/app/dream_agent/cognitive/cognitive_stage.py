@@ -202,7 +202,7 @@ async def cognitive_stage(state: AgentState) -> Command[Any]:
         operation=(sq.intent.operation if sq.intent else None),
         domain=(sq.intent.domain if sq.intent else None),
         depth=sq.goal.depth.value,
-        tasks=[t.id.value for t in sq.tasks],
+        tasks=[t.id for t in sq.tasks],  # Task.id는 프레임 추출 후 자유 문자열(str) — .value 접근은 AttributeError
         cleaned=sq.meta.cleaned,      # 에이전트가 이해한 의도 재진술 (관측·진단용)
     )
     return Command(

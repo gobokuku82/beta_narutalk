@@ -5,13 +5,12 @@
 
 Sprint 10 Phase 2: EventBus callback으로 todo_start/todo_complete/progress 실시간 전달.
 
-Reference: docs/agent_specs/system_architecture_spec_v1.5.md §2.4
+Reference: docs/agent_specs/10_system_architecture_v1.9.md
 """
 
 from __future__ import annotations
 
 import asyncio
-import re
 import time
 from typing import Any
 
@@ -24,7 +23,8 @@ from app.dream_agent.schemas.execution_result import (
     TodoResult,
     TodoStatus,
 )
-from app.dream_agent.schemas.structured_query import SCOPE_PARAMS
+from app.dream_agent.schemas.structured_query import SCOPE_PARAMS, validate_scope_value
+from app.dream_agent.tools.shared.display import resolve as _resolve_display
 
 logger = get_logger(__name__)
 
@@ -39,7 +39,12 @@ logger = get_logger(__name__)
 # ────────────────────────────────────────────────────────
 
 def _generate_summary(tool_name: str, data: dict, is_mock: bool, status: str) -> str:
-    """Tool 결과에서 UI용 1줄 요약 생성."""
+    """Tool 결과에서 UI용 1줄 요약 — tool 카탈로그의 display.summary_template 로 디스패치 (2026-07-02).
+
+    과거엔 tool 이름별 if/elif(collector/sentiment_analyzer/... 마케팅 도메인)로 하드코딩됐다.
+    이제 도메인이 tool 에 `display.summary_template` 을 선언하면 그 템플릿을 data 로 채운다
+    (누락 키는 '?'). 미선언/미주입 tool = 일반 '완료' (비-load-bearing 화면 요약, 환각 아님).
+    """
     if status == "failed":
         return "실패"
     if status == "skipped":
@@ -47,47 +52,17 @@ def _generate_summary(tool_name: str, data: dict, is_mock: bool, status: str) ->
 
     mock_tag = " (mock)" if is_mock else ""
 
-    if "collector" in tool_name:
-        count = data.get("count") or len(data.get("raw_reviews", []))
-        return f"{count}건 수집{mock_tag}"
+    template = _resolve_display(tool_name).summary_template
+    if template:
+        class _D(dict):
+            def __missing__(self, key):  # noqa: D401 — 템플릿 누락 키 안전 치환
+                return "?"
+        try:
+            return template.format_map(_D(data if isinstance(data, dict) else {})) + mock_tag
+        except Exception:
+            pass   # 잘못된 템플릿이 UI 요약(비-load-bearing) 때문에 실행을 멈추면 안 됨
 
-    if tool_name == "text_preprocessor":
-        before = data.get("before_count", 0)
-        after = data.get("after_count", 0)
-        dropped = before - after
-        return f"{after}건 정제 ({dropped}건 제거)"
-
-    if tool_name == "sentiment_analyzer":
-        sd = data.get("sentiment_distribution", {})
-        return f"긍정 {sd.get('positive', 0)}% / 중립 {sd.get('neutral', 0)}% / 부정 {sd.get('negative', 0)}%"
-
-    if tool_name == "keyword_extractor":
-        kws = data.get("top_keywords", [])
-        if kws:
-            names = [k.get("keyword", k) if isinstance(k, dict) else str(k) for k in kws[:3]]
-            return f"상위: {', '.join(names)}"
-        return f"{data.get('unique', '?')}개 키워드"
-
-    if tool_name == "insight_extractor":
-        count = len(data.get("insights", [])) or data.get("count", "?")
-        return f"인사이트 {count}개"
-
-    if tool_name == "report_writer":
-        length = data.get("length") or len(data.get("report_markdown", ""))  # D5: report_text→report_markdown
-        return f"보고서 {length}자"
-
-    if tool_name == "summary_generator":
-        length = data.get("length") or len(data.get("summary", ""))
-        return f"요약 {length}자"
-
-    if tool_name == "pdf_renderer":
-        return f"PDF {data.get('pages', '?')}p{mock_tag}"
-
-    # (2026-06-12) 도메인 요약 분기 4종 삭제 — 해당 팀 폐기와 짝 단위.
-
-    if is_mock:
-        return f"완료{mock_tag}"
-    return "완료"
+    return f"완료{mock_tag}" if is_mock else "완료"
 
 
 # ────────────────────────────────────────────────────────
@@ -115,20 +90,9 @@ def _json_safe(obj: Any) -> Any:
 
 # ────────────────────────────────────────────────────────
 # 슬라이스 1 (헌법 19 D2·D3) — param 경계: 위반 = 거부(정직 SKIPPED), coerce 금지
+# 스코프 param 형식검증은 schemas.validate_scope_value 로 위임 (2026-07-02) — 도메인이
+# scope_params.yaml 에 선언한 format(예 year_month)만 검사. 미선언 param = 항상 통과(inert).
 # ────────────────────────────────────────────────────────
-
-_PERIOD_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
-
-
-def _is_valid_period_value(value: str) -> bool:
-    """'YYYY-MM' 또는 'YYYY-MM/YYYY-MM'(범위)만. 'all'·'3months'·'2026-13' 류 거부.
-
-    strip 없이 raw 검증 — 공백 표기는 호출 측(_param_boundary_issue)이 lexical 정규화 후
-    같은 값을 tool 에 전달한다 (적대 리뷰 R-7: 검증값≠실행값이면 startswith 0건 silent-0 재발).
-    """
-    parts = str(value).split("/")
-    return 1 <= len(parts) <= 2 and all(_PERIOD_RE.match(p) for p in parts)
-
 
 def _param_boundary_issue(
     meta: dict | None,
@@ -139,8 +103,9 @@ def _param_boundary_issue(
 
       1. 카탈로그 params_required 누락 — detect_plan_gaps(plan 자가평가)와 같은 진실을
          실행 경계에서도 강제 (gap 이 새어 들어와도 거짓 실행 안 함).
-      2. 스코프 param(SCOPE_PARAMS) 형식 — YYYY-MM(또는 /범위)만. 'all' 이 흘러들어
-         startswith('all') 0건 → 거짓 COMPLETED 가 되던 G2 경로 차단.
+      2. 스코프 param(SCOPE_PARAMS) 형식 — validate_scope_value(도메인 선언 format)로 검사.
+         'all' 이 흘러들어 startswith('all') 0건 → 거짓 COMPLETED 가 되던 G2 경로 차단.
+         미선언(빈 scope_params.yaml) = SCOPE_PARAMS 공집합 → 이 루프 0회(inert).
       3. ToolSpec.validate_params — required + type (per-tool yaml 계약. ⑷ 2026-06-01
          "Executor 가 execute 전 호출" 설계가 미배선이었음 — 슬라이스 1-④에서 배선).
     """
@@ -156,9 +121,9 @@ def _param_boundary_issue(
         norm = "/".join(seg.strip() for seg in str(v).split("/"))
         if norm != v:
             params[p] = norm   # 공백 표기 정리(의미 불변 — coerce 아님). tool 도 이 정규화 값을 받는다.
-        if not _is_valid_period_value(norm):
+        if not validate_scope_value(p, norm):
             return {"reason": "invalid_param", "param": p, "value": norm,
-                    "detail": f"'{p}'={norm!r} — YYYY-MM(또는 YYYY-MM/YYYY-MM) 형식 아님"}
+                    "detail": f"'{p}'={norm!r} — 선언된 스코프 형식 아님"}
     valid, errors = tool_inst.validate_params(params)
     if not valid:
         return {"reason": "invalid_param", "param": "", "detail": "; ".join(errors)}
@@ -240,8 +205,8 @@ async def _run_single_todo(
                 )
             data = await tool_inst.execute(params, ctx)
         else:
-            # (2026-06-12 stub 0) mock_result "되는 척" 경로 폐기 — 오너 결정 "구현하면서
-            # 줄이자"의 완결. 비구현 tool 이 카탈로그에 다시 들어오면 조용한 mock 대신
+            # (2026-06-12 stub 0) mock_result "되는 척" 경로 폐기 — "구현하면서 줄이자"
+            # 원칙의 완결. 비구현 tool 이 카탈로그에 다시 들어오면 조용한 mock 대신
             # 시끄러운 실패 (헌법 I1). mock_tools.py 삭제 — 복원은 git 히스토리.
             raise RuntimeError(
                 f"Tool '{tool_name}' under agent '{agent_name}' is not implemented "
@@ -337,5 +302,5 @@ async def execute_phase(
 # (작업 ⑬, 2026-05-31) Executor 클래스 폐기 — 死코드
 # 활성 entry = execute_phase 함수 (위, line 226).
 # 폐기 사유: Grep 결과 활성 `Executor()` 인스턴스화 0 hit (_old/_domains 만 매치).
-# 사용자 원칙 [死코드 즉시 폐기] 정합. 본질 진단 workflow Q3 검증.
+# [死코드 즉시 폐기] 원칙 정합.
 # ────────────────────────────────────────────────────────

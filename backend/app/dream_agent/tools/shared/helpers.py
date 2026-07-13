@@ -1,52 +1,15 @@
-"""POC Tool 공통 헬퍼.
+"""Tool 공통 헬퍼.
 
-- find_in_previous: 이전 Todo 결과에서 특정 produces 키 탐색
-- normalize_channel: 매체명 정규화 (네이버→naver 등)
-- normalize_sentiment: 감성 라벨 정규화
-- parse_percent: "12.3%" 문자열 → 12.3 float
+- find_in_previous: 이전 Todo 결과에서 특정 produces 키 탐색 (data_gate + tool 공용)
 
 참고: load_mock_csv + MOCK_DATA_DIR 死코드는 활성 호출자 0 으로 이미 폐기됨.
-사용자 [死코드 즉시 폐기] 원칙.
+(2026-07-02) CHANNEL_MAP·SENTIMENT_MAP·normalize_channel·normalize_sentiment·parse_percent
+제거 — 구 마케팅 도메인 잔재 + 호출자 0. 죽은 코드는 즉시 폐기한다.
 """
 
 from __future__ import annotations
 
 from typing import Any, Optional
-
-
-CHANNEL_MAP: dict[str, str] = {
-    # 한글
-    "네이버": "naver",
-    "카카오": "kakao",
-    "메타": "meta",
-    "페이스북": "meta",
-    "인스타": "meta",
-    "인스타그램": "meta",
-    "구글": "google",
-    "유튜브": "youtube",
-    "쿠팡": "coupang",
-    "올리브영": "oliveyoung",
-    # 영문 (이미 정규화됨 or 변형)
-    "naver": "naver",
-    "kakao": "kakao",
-    "meta": "meta",
-    "facebook": "meta",
-    "instagram": "meta",
-    "google": "google",
-    "youtube": "youtube",
-    "coupang": "coupang",
-    "oliveyoung": "oliveyoung",
-}
-
-
-SENTIMENT_MAP: dict[str, str] = {
-    "긍정": "positive",
-    "중립": "neutral",
-    "부정": "negative",
-    "positive": "positive",
-    "neutral": "neutral",
-    "negative": "negative",
-}
 
 
 def find_in_previous(
@@ -84,42 +47,6 @@ def find_in_previous(
     return None
 
 
-def normalize_channel(value: Optional[str]) -> Optional[str]:
-    """매체명을 정규화된 영문 키로 변환.
-
-    예: "네이버" → "naver", "Meta" → "meta", "unknown" → "unknown" (lower).
-    """
-    if value is None:
-        return None
-    key = str(value).strip()
-    return CHANNEL_MAP.get(key, key.lower())
-
-
-def normalize_sentiment(value: Optional[str]) -> Optional[str]:
-    """감성 라벨을 정규화: 긍정/중립/부정 → positive/neutral/negative."""
-    if value is None:
-        return None
-    return SENTIMENT_MAP.get(str(value).strip(), value)
-
-
-def parse_percent(value: Any) -> Optional[float]:
-    """\"12.3%\" / \"12.3\" / 12.3 → 12.3 (float). 실패 시 None."""
-    if value is None:
-        return None
-    if isinstance(value, (int, float)):
-        return float(value)
-    try:
-        s = str(value).strip().rstrip("%").strip()
-        return float(s)
-    except (ValueError, AttributeError):
-        return None
-
-
 __all__ = [
-    "CHANNEL_MAP",
-    "SENTIMENT_MAP",
     "find_in_previous",
-    "normalize_channel",
-    "normalize_sentiment",
-    "parse_percent",
 ]

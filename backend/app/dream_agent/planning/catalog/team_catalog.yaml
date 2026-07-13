@@ -20,16 +20,35 @@
 #             consumes: ["<artifact>", ...]    # 이 도구가 먹는 산출물
 #             params_required: ["<param>", ...]
 #             params_optional: ["<param>", ...]
+#             role: interpretation             # (선택) 해석(LLM 추론) 도구 표시 — G04 feeding 게이트 키
 #
-# ── (선택) Planning 게이트 설정 — 도메인 무관 게이트의 도메인 바인딩. 미선언 시 해당 게이트 dormant ──
+# ── (선택) Planning 게이트/라우팅 설정 — 도메인 무관 장치의 도메인 바인딩. 미선언 시 dormant ──
+#
+# routing: (2026-07-02) — 결정론 단락(短絡): 특정 task 를 3-stage LLM 우회해 단일 tool 로 직행.
+#   <trigger_task>(단일 의도일 때만 발동; sub_intents≥2 복합은 우회) 가 들어오면 지정 team/agent/tool
+#   단일-todo plan 을 만든다. 미선언 = 단락 비활성(3-stage 플래너가 처리). 예:
+# routing:
+#   factual_lookup:
+#     team: <qa_team>
+#     agent: <qa_agent>
+#     tool: <qa_tool>
+#     question_param: question       # (선택) sq.raw_input 을 담을 tool_param 키
+#     rationale: "질의응답 — 지식·메타 답변(데이터 파이프 우회)"
+#   recommendation:
+#     team: <decision_team>
+#     agent: <decision_agent>
+#     tool: <recommender_tool>
 #
 # G02 subject-coherence: 텍스트 의도 없는 쿼리서 주제-결속(텍스트) 도구를 plan 에서 제외(F2).
 #   식별 = 도구의 produces/consumes/params_required 가 아래 산출물과 겹치면 (이름 휴리스틱 아님, 데이터 계약 기반).
 # subject_bound_artifacts: ["<text_artifact>", ...]
 #
-# G04 ensure_interpretation_fed: 해석 도구(insight_extractor/diagnoser/forecaster)가 계산 metric 없이
-#   raw 만 받을 때 도메인 대표(headline) metric 도구를 결정론 삽입(빈입력 EMPTY 차단).
+# G04 ensure_interpretation_fed: 해석 도구(role: interpretation)가 계산 metric 없이 raw 만 받을 때
+#   도메인 대표(headline) metric 도구를 결정론 삽입(빈입력 EMPTY 차단).
 # domain_headline_metric:
 #   <domain>: <metric_tool_name>
+#
+# ── 표시 메타(display)는 tool 카탈로그(tools/catalog/*.yaml)의 ToolSpec 에 선언한다. ──
+#   여기(team_catalog)가 아니라 거기가 단일 authoring 위치 — tools/catalog/_schema.yaml 참조.
 
 teams: {}

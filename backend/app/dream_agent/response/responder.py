@@ -12,7 +12,13 @@ from urllib.parse import quote
 from app.core.logging import get_logger
 from app.dream_agent.schemas.execution_result import ExecutionResult, TodoStatus
 from app.dream_agent.schemas.response_payload import Attachment, ResponseFormat, ResponsePayload
-from app.dream_agent.schemas.structured_query import DEGRADE_OPS, SCOPE_PARAMS, StructuredQuery
+from app.dream_agent.schemas.structured_query import (
+    DEGRADE_OPS,
+    SCOPE_PARAMS,
+    StructuredQuery,
+    scope_ask_text,
+)
+from app.dream_agent.tools.shared.display import is_infra, resolve as _resolve_display
 
 logger = get_logger(__name__)
 
@@ -81,7 +87,7 @@ def build_insufficient_data_payload(
 
     순수 함수(LLM 무관). build_degrade_payload(미구현 기능)의 데이터 계약 버전 —
     criteria_map C3 정직 degrade. 데이터 0건을 결정론으로 정직히 답해, 표시 dispatcher 가
-    빈 결과를 오해석할 위험을 차단. collector 판별 convention = tool 명에 'collector' 미포함.
+    빈 결과를 오해석할 위험을 차단. 인프라 tool 판별 = display.infra (구 'collector' 규약 대체).
     """
     todos = exec_result.todos
     if not todos:
@@ -94,9 +100,9 @@ def build_insufficient_data_payload(
     ]
     if not skipped_insuf:
         return None
-    # collector 외 COMPLETED 산출이 있으면 부분 성공 → LLM 이 요약 (결정론 degrade 아님)
+    # 인프라 외 COMPLETED 산출이 있으면 부분 성공 → LLM 이 요약 (결정론 degrade 아님)
     produced = any(
-        r.status == TodoStatus.COMPLETED and r.tool and "collector" not in r.tool
+        r.status == TodoStatus.COMPLETED and r.tool and not is_infra(r.tool)
         for r in todos.values()
     )
     if produced:
@@ -113,18 +119,18 @@ def build_insufficient_data_payload(
     )
 
 
-def build_missing_period_payload(
+def build_missing_scope_payload(
     exec_result: ExecutionResult,
 ) -> ResponsePayload | None:
-    """기간(스코프 param) 미바인딩/비정형으로 실행이 막힌 경우 결정론 되묻기 (슬라이스 1-⑤, 헌법 D3).
+    """스코프 param 미바인딩/비정형으로 실행이 막힌 경우 결정론 되묻기 (슬라이스 1-⑤, 헌법 D3).
 
     None 반환 = 정상 경로. 발동: executor param 경계가 SKIPPED 처리한 todo 중
-    data.reason ∈ {missing_param, invalid_param} 이고 data.param ∈ SCOPE_PARAMS(period 류).
-    자동 기본월 금지(D3) — 가정한 숫자(구버전의 0값 silent-0 포함) 대신 기간을 묻는다.
-    부분 완료가 있어도 발동 — "기간 없는 질문에 숫자를 단정하지 않는다"가 G2 의 DoD.
-    이미 생성된 attachment(PDF 등)도 의도적으로 미표시 — 무스코프 수치가 든 산출물 제시는 같은 위반.
-    단 실행이 FAILED 면 양보 — 실패 고지(ERROR 경로)가 우선, ask 가 실패를 가리면 안 됨 (I1, 리뷰 R-5).
-    순수 함수(LLM 무관) — degrade/insufficient 게이트와 같은 결.
+    data.reason ∈ {missing_param, invalid_param} 이고 data.param ∈ SCOPE_PARAMS.
+    되묻기 문구는 scope_ask_text(param) (scope_params.yaml 의 spec.ask). 미주입(빈 SCOPE_PARAMS)
+    이면 blocked=[] → None → 일반 경로(inert). 자동 기본값 금지(D3) — 가정한 값 대신 되묻는다.
+    부분 완료가 있어도 발동 — "스코프 없는 질문에 값을 단정하지 않는다"가 G2 의 DoD.
+    이미 생성된 attachment 도 의도적으로 미표시 — 무스코프 수치가 든 산출물 제시는 같은 위반.
+    단 실행이 FAILED 면 양보 — 실패 고지(ERROR 경로)가 우선 (I1, 리뷰 R-5). 순수 함수(LLM 무관).
     """
     if exec_result.overall_status == TodoStatus.FAILED:
         return None
@@ -138,32 +144,27 @@ def build_missing_period_payload(
     if not blocked:
         return None
 
-    # M1-S2 (2026-06-12, 계획_멀티쿼리 v2 — G19 의도 단위화): ask 가 응답 *전체*를 점령해
-    # 완료된 비스코프 의도(추천·키워드·PDF)까지 침묵시키던 M0 실측(축2)의 수술.
-    # ask 선두 불변(D3 — 스코프 수치 단정 금지 유지) + 완료 **서술** 산출과 파일만 뒤에 공존.
-    # 스코프 미정 *수치*(_render_metrics)는 의도적으로 계속 미표시 — 무스코프 숫자 단정이 원죄.
-    ask = (
-        "기간을 알려주세요 (예: 2026년 4월). "
-        "요청에서 분석할 기간(월)을 찾지 못해, 수치를 가정하는 대신 기간을 여쭤봅니다."
-    )
+    # M1-S2 (2026-06-12, G19 의도 단위화): ask 가 응답 *전체*를 점령해 완료된 비스코프 의도까지
+    # 침묵시키던 M0 실측(축2)의 수술. ask 선두 불변(D3 — 스코프 값 단정 금지) + 완료 **서술**
+    # 산출·파일만 뒤에 공존. 스코프 미정 *수치*(_render_metrics)는 의도적으로 계속 미표시.
+    blocked_params = sorted({r.data.get("param") for r in blocked if r.data.get("param")})
+    ask_lines: list[str] = []
+    for p in blocked_params:
+        text, ex = scope_ask_text(p)          # 도메인 선언 문구(scope_params.yaml spec.ask)
+        ask_lines.append(text + (f" (예: {ex})" if ex else ""))
+    ask = " ".join(ask_lines) + " 값을 가정하는 대신 여쭤봅니다."
+
     blocked_tools = sorted({r.tool for r in blocked if r.tool})
     parts = [ask]
 
-    completed_sections: list[str] = []
-    for key in ("report_markdown", "answer", "recommendation_text"):
-        completed_sections += [
-            v for v in _find_artifacts(exec_result, key) if v not in completed_sections
-        ]
-    insights_text = _render_insights(exec_result)   # S1c — insight 계열도 완료 서술
-    if insights_text:
-        completed_sections.append(insights_text)
+    completed_sections = _narrative_sections(exec_result)   # display.narrative_keys 로 완료 서술 수집
     if completed_sections:
         parts.append(
-            "기간 지정과 무관하게 완료된 결과를 먼저 전해 드립니다:\n\n"
+            "지정과 무관하게 완료된 결과를 먼저 전해 드립니다:\n\n"
             + "\n\n".join(completed_sections)
         )
-    parts.append("⏸ 기간이 필요해 보류된 분석: " + ", ".join(blocked_tools))
-    # S3 합류: 스코프 외 사유(드롭·데이터 부족)로 안 돈 분석도 G19 경로에서 침묵 금지 (G8 "사유 명시")
+    parts.append("⏸ 값이 필요해 보류된 분석: " + ", ".join(blocked_tools))
+    # S3 합류: 스코프 외 사유(드롭·데이터 부족)로 안 돈 분석도 침묵 금지 (G8 "사유 명시")
     skipped_note = _render_skipped_note(exec_result, exclude=set(blocked_tools))
     if skipped_note:
         parts.append(skipped_note)
@@ -172,18 +173,19 @@ def build_missing_period_payload(
     return ResponsePayload(
         format=ResponseFormat.TEXT,
         text="\n\n".join(parts),
-        next_actions=["기간을 포함해 다시 요청 (예: '2026년 4월 채널별 CAC')"],
+        next_actions=["필요한 값을 포함해 다시 요청"],
         attachments=atts,
         meta={
             "degraded": True,
-            "reason": "missing_period",
+            "reason": "missing_scope",
             "blocked_tools": blocked_tools,
+            "blocked_params": blocked_params,
         },
     )
 
 
 # ── 결정론 표시 dispatcher (2c, 2026-06-09) — 받은 산출물 종류로 분류해 시각화 (LLM 0) ──
-# 사용자 모델: response = 표시 결정자. 서술은 tool(report_writer/summary_generator), response 는
+# 설계 모델: response = 표시 결정자. 서술은 tool(report_writer/summary_generator), response 는
 # "있는 산출물을 종류별로 시각화"(text/excel/pdf/ppt/chart)만. 정직 degrade 는 앞 게이트가 처리.
 
 # OutputFormat(structured_query) → ResponseFormat 직매핑 (거의 1:1).
@@ -198,14 +200,8 @@ _OUTPUT_TO_RESPONSE_FORMAT = {
     "mixed": ResponseFormat.MIXED,
 }
 
-# 파일 산출 artifact → attachment kind (포맷 카테고리 산출물 — Phase3 에서 실파일).
-_FILE_ARTIFACTS = {
-    "pdf_file_path": "pdf",
-    "excel_file_path": "excel",
-    "pptx_file_path": "ppt",
-    "designed_pptx_path": "ppt",
-    "word_file_path": "word",
-}
+# (2026-07-02) 파일 산출 artifact → kind 하드코딩 맵 제거 — attachment 는 tool 의
+# display.attachment([{key,kind,multi}]) 선언에서 온다(_collect_attachments).
 
 # metric 결정론 렌더에서 제외할 구조 노이즈 (표시 대상 아님).
 _RENDER_NOISE = frozenset({
@@ -227,18 +223,25 @@ def _find_artifact(exec_result: ExecutionResult, key: str) -> Any:
     return None
 
 
-def _find_artifacts(exec_result: ExecutionResult, key: str) -> list[str]:
-    """produces key 의 **모든** non-empty 문자열 값 (todo 순서 보존·중복 제거).
+# (2026-07-02) _find_artifacts(복수 키 스캔) 제거 — 서술 수집이 _narrative_sections
+# (display.narrative_keys 기반)로 대체되어 호출자 0. _find_artifact(단수, summary floor)는 유지.
 
-    M1-S1 (2026-06-12, 계획_멀티쿼리 v2): 첫 일치만 반환하던 _find_artifact 가
-    복합 의도의 두 번째 산출을 침묵시키던 기전(M0 실측 ④표출 47%)의 수술 재료.
+
+def _narrative_sections(exec_result: ExecutionResult) -> list[str]:
+    """완료 todo 의 서술형 산출을 per-todo display.narrative_keys 로 수집 (2026-07-02).
+
+    과거엔 report_markdown/answer/recommendation_text 고정 키를 전역 스캔했다. 이제 각 tool 이
+    display.narrative_keys 로 '어떤 산출 키가 서술인지' 선언한다. 미선언 tool = 서술 0 (honest
+    floor 는 _render_metrics/summary). 순서 = todo 순서 × 선언 키 순서, 중복 제거.
     """
     out: list[str] = []
     for r in exec_result.todos.values():
-        data = r.data if isinstance(r.data, dict) else {}
-        v = data.get(key)
-        if isinstance(v, str) and v and v not in out:
-            out.append(v)
+        if r.status != TodoStatus.COMPLETED or not isinstance(r.data, dict):
+            continue
+        for key in _resolve_display(r.tool).narrative_keys:
+            v = r.data.get(key)
+            if isinstance(v, str) and v and v not in out:
+                out.append(v)
     return out
 
 
@@ -250,14 +253,15 @@ def _render_breakdowns(exec_result: ExecutionResult) -> str:
 
     or-체인·스칼라 한정 렌더가 차원분해 결과를 통째 침묵시키던 M0 실측
     (차원별 질의 — breakdown tool completed 인데 표출 0%, 3/3런)의 수술.
-    행 수 cap 으로 단일 의도 응답을 시끄럽게 만들지 않음 (계획 리스크 §5).
+    행 수 cap 으로 단일 의도 응답을 시끄럽게 만들지 않음.
     """
     lines: list[str] = []
     for r in exec_result.todos.values():
         if r.status != TodoStatus.COMPLETED or not isinstance(r.data, dict):
             continue
         d = r.data
-        rows = d.get("rows")
+        table_key = _resolve_display(r.tool).table_key   # 표(행) 산출 키 (미선언=None)
+        rows = d.get(table_key) if table_key else None
         if isinstance(rows, list) and rows and all(isinstance(x, dict) for x in rows):
             for row in rows[:_MAX_BREAKDOWN_LINES]:
                 cells = " · ".join(
@@ -288,17 +292,18 @@ def _render_insights(exec_result: ExecutionResult) -> str:
     for r in exec_result.todos.values():
         if r.status != TodoStatus.COMPLETED or not isinstance(r.data, dict):
             continue
-        ins = r.data.get("insights")
-        if not isinstance(ins, list):
-            continue
-        for it in ins[:5]:
-            if isinstance(it, dict):
-                title = it.get("title") or ""
-                desc = it.get("description") or ""
-                if title or desc:
-                    lines.append(f"- {title}{': ' if title and desc else ''}{desc}")
-            elif isinstance(it, str) and it:
-                lines.append(f"- {it}")
+        for key in _resolve_display(r.tool).insight_keys:   # 인사이트 산출 키 (미선언=없음)
+            ins = r.data.get(key)
+            if not isinstance(ins, list):
+                continue
+            for it in ins[:5]:
+                if isinstance(it, dict):
+                    title = it.get("title") or ""
+                    desc = it.get("description") or ""
+                    if title or desc:
+                        lines.append(f"- {title}{': ' if title and desc else ''}{desc}")
+                elif isinstance(it, str) and it:
+                    lines.append(f"- {it}")
     return ("주요 인사이트·제안\n" + "\n".join(lines)) if lines else ""
 
 
@@ -312,10 +317,10 @@ _SKIP_REASON_KO = {
 
 
 def _render_skipped_note(exec_result: ExecutionResult, exclude: set[str] | None = None) -> str:
-    """실행되지 않은 분석 단계의 결정론 고지 한 줄 (collector 는 인프라라 제외)."""
+    """실행되지 않은 분석 단계의 결정론 고지 한 줄 (인프라 tool = display.infra 는 제외)."""
     items: list[str] = []
     for r in exec_result.todos.values():
-        if r.status != TodoStatus.SKIPPED or not r.tool or "collector" in r.tool:
+        if r.status != TodoStatus.SKIPPED or not r.tool or is_infra(r.tool):
             continue
         if exclude and r.tool in exclude:
             continue
@@ -367,19 +372,26 @@ def _download_url(local_path: str) -> str | None:
 
 
 def _collect_attachments(exec_result: ExecutionResult) -> list[Attachment]:
-    """파일 산출(pdf/excel/ppt/word/chart)을 attachment 로 분류 + 다운로드 url 부여."""
+    """파일 산출을 attachment 로 분류 + 다운로드 url 부여 (tool 의 display.attachment 선언 기반).
+
+    display.attachment = [{key, kind, multi}]. multi=True 면 그 키가 경로 list(예 차트 여러 장),
+    아니면 단일 경로. 미선언 tool = 첨부 0 (honest). data/ 하위 경로만 다운로드 url 부여.
+    """
     atts: list[Attachment] = []
     for r in exec_result.todos.values():
         data = r.data if isinstance(r.data, dict) else {}
-        for key, kind in _FILE_ARTIFACTS.items():
-            p = data.get(key)
-            if p:
-                atts.append(Attachment(kind=kind, path=str(p), url=_download_url(str(p))))
-        charts = data.get("chart_image_paths")
-        if isinstance(charts, list):
+        for att in _resolve_display(r.tool).attachment:
+            key = att.get("key")
+            if not key:
+                continue
+            kind = att.get("kind", "link")
+            val = data.get(key)
+            if not val:
+                continue
+            paths = val if (att.get("multi") and isinstance(val, list)) else [val]
             atts.extend(
-                Attachment(kind="chart", path=str(c), url=_download_url(str(c)))
-                for c in charts if c
+                Attachment(kind=kind, path=str(p), url=_download_url(str(p)))
+                for p in paths if p
             )
     return atts
 
@@ -404,15 +416,13 @@ def build_display_payload(
         of_val = of.value if hasattr(of, "value") else (of or "text")
         fmt = _OUTPUT_TO_RESPONSE_FORMAT.get(of_val, ResponseFormat.TEXT)
 
-    summary = _find_artifact(exec_result, "summary")
+    summary = _find_artifact(exec_result, "summary")   # 'summary' = 프레임 공통 floor 키(도메인 무관)
 
-    # M1-S1 (2026-06-12, 계획_멀티쿼리 v2 — M0 실측 ④표출 47% 수술): or-체인 단일선택 →
-    # 의도별 **합성**. 서술 산출(report/answer/recommendation)을 전부 모으고, 수치·분해 렌더를
-    # 서술에 없는 것만 덧붙인다. summary 는 서술이 하나도 없을 때만 본문 승격 (payload.summary 별도).
-    sections = _find_artifacts(exec_result, "report_markdown")
-    for key in ("answer", "recommendation_text"):
-        sections += [v for v in _find_artifacts(exec_result, key) if v not in sections]
-    insights_text = _render_insights(exec_result)   # S1c — insights 도 서술 산출
+    # M1-S1 (2026-06-12): or-체인 단일선택 → 의도별 **합성**. 서술 산출은 tool 의
+    # display.narrative_keys 선언에서 수집(구 report_markdown/answer/... 고정키 대체).
+    # 수치·분해 렌더를 서술에 없는 것만 덧붙인다. summary 는 서술이 없을 때만 본문 승격.
+    sections = _narrative_sections(exec_result)
+    insights_text = _render_insights(exec_result)   # S1c — insights(display.insight_keys)도 서술 산출
     if insights_text:
         sections.append(insights_text)
     if not sections and isinstance(summary, str) and summary:
@@ -453,14 +463,17 @@ def build_display_payload(
         error_msg = exec_result.halt_reason or note
     elif artifact_text:
         text = artifact_text
-    elif exec_result.todos and any(
+    elif not exec_result.todos:
+        # 실행된 todo 자체가 0 (빈 카탈로그·미주입·팀선택 0) → 거짓 "완료" 금지 (헌법 I1).
+        text = "실행된 분석 단계가 없습니다."
+    elif any(
         r.status == TodoStatus.SKIPPED for r in exec_result.todos.values()
     ) and not any(
-        r.status == TodoStatus.COMPLETED and r.tool and "collector" not in r.tool
+        r.status == TodoStatus.COMPLETED and r.tool and not is_infra(r.tool)
         for r in exec_result.todos.values()
     ):
-        # 분석 산출 없이 "완료" 둔갑 금지 (헌법 I1, 슬라이스 1 + 리뷰 R-6) — collector 만 완료된
-        # 채 분석 단계가 전부 건너뜀이어도 발동. collector 판별 = insufficient 게이트와 동일 convention.
+        # 분석 산출 없이 "완료" 둔갑 금지 (헌법 I1, 슬라이스 1 + 리뷰 R-6) — 인프라 tool 만 완료된
+        # 채 분석 단계가 전부 건너뜀이어도 발동. 인프라 판별 = display.infra (구 collector convention).
         skipped_n = sum(
             1 for r in exec_result.todos.values() if r.status == TodoStatus.SKIPPED
         )
@@ -497,14 +510,14 @@ class Responder:
                         operation=degrade.meta.get("operation"))
             return degrade
 
-        # 기간 미바인딩/비정형으로 막힌 경우 — 숫자 가정 대신 결정론 되묻기 (슬라이스 1-⑤, D3).
-        # insufficient 보다 먼저: period SKIP 의 하류 cascade 가 data_insufficient 로도 잡히는데,
-        # 원인(기간 없음)이 증상(데이터 0건)보다 정확한 안내라서.
-        period_ask = build_missing_period_payload(exec_result)
-        if period_ask is not None:
-            logger.info("response honest-ask (missing period, deterministic)",
-                        blocked=period_ask.meta.get("blocked_tools"))
-            return period_ask
+        # 스코프 param 미바인딩/비정형으로 막힌 경우 — 값 가정 대신 결정론 되묻기 (슬라이스 1-⑤, D3).
+        # insufficient 보다 먼저: 스코프 SKIP 의 하류 cascade 가 data_insufficient 로도 잡히는데,
+        # 원인(스코프 없음)이 증상(데이터 0건)보다 정확한 안내라서. 미주입(빈 SCOPE_PARAMS)=inert.
+        scope_ask = build_missing_scope_payload(exec_result)
+        if scope_ask is not None:
+            logger.info("response honest-ask (missing scope, deterministic)",
+                        blocked=scope_ask.meta.get("blocked_tools"))
+            return scope_ask
 
         # 데이터 불충분(0건/부재)으로 전 분석이 막힌 경우도 결정론 정직 degrade (B2.1 게이트 cascade).
         insufficient = build_insufficient_data_payload(exec_result)

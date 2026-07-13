@@ -1,0 +1,28 @@
+# 스코프 파라미터 선언 (도메인 플러그, 2026-07-02)
+#
+# "스코프 param" = 값이 반드시 쿼리(사용자)에서 와야 하는 param — 상류 tool 산출로 주입 금지,
+# 상류 artifact 로 충족 간주 금지, 경계 형식검사 대상. (헌법 19 D3·R2)
+#
+# 이 파일은 도메인 데이터(선택). 어떤 format/binding 이 존재하는가(계약)는 코드에 있다:
+#   - format  → schemas/structured_query.py `_SCOPE_FORMATS` (예: year_month)
+#   - binding → planning/planner.py `_SCOPE_BINDINGS` (예: month_current, month_mom)
+#
+# 미선언(현재 params: {}) = SCOPE_PARAMS 빈 집합 = 프레임 비활성(inert):
+#   YYYY-MM 강제 없음 · 결정론 바인딩 없음 · 스코프 누락 되묻기 없음.
+#   → period 등은 그냥 일반 optional param 으로 취급된다.
+#
+# 도메인 주입 예시 (구 마케팅 도메인의 월(月) 스코프를 복원하는 경우):
+#   params:
+#     period:
+#       format: year_month       # _SCOPE_FORMATS 키. 생략=자유값(검증 없음)
+#       binding: month_current   # _SCOPE_BINDINGS 키. 생략=바인딩 없음
+#       source: period           # 값 경로 힌트: date 계열=period / 그 외=extra_filters
+#       ask: "기간을 알려주세요 (예: 2026년 4월)."
+#       example: "2026-04"
+#     period_a: { format: year_month, binding: month_mom, source: period }
+#     period_b: { format: year_month, binding: month_mom, source: period }
+#
+# 다른 도메인은 시간이 아닌 스코프(지역/업종/단계/예산 등)를 선언할 수 있다:
+#   format 이 없으면 자유값 수용, binding 이 없으면 자동 채움 없이 "누락 시 되묻기"만.
+
+params: {}

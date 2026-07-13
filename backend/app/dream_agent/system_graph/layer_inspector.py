@@ -32,6 +32,33 @@ _LOG_PATH = _REPO_ROOT / "logs" / "layer_guard.jsonl"
 _LOG_LOCK = threading.Lock()
 
 
+# ── '유의미 쿼리' 판정 보강 필드 (2026-07-02 — 도메인 중립화) ──────────────
+# 과거엔 cognitive 가드가 targets.brand / intent.domain 같은 도메인 필드로 '유의미'를 판정해
+# brand 없는 정상 쿼리를 COGNITIVE_EMPTY_QUERY(fatal)로 오판할 수 있었다. 이제 구조적 유효성
+# (tasks 또는 intent 존재)만 본다. 추가 신호가 필요한 도메인은 settings.MEANINGFUL_QUERY_FIELDS
+# (dotted-path 목록)로만 확장한다 — 미설정(기본 [])이면 순수 구조적 검사(도메인 필드 요구 0).
+_DEFAULT_MEANINGFUL_FIELDS: list[str] = []
+
+
+def _meaningful_query_fields() -> list[str]:
+    """설정 구동 보강 필드 목록. 미설정=[] → 순수 구조적 검사. lazy import(순환 안전·inert)."""
+    try:
+        from app.core.config import settings
+        return getattr(settings, "MEANINGFUL_QUERY_FIELDS", _DEFAULT_MEANINGFUL_FIELDS) or []
+    except Exception:
+        return _DEFAULT_MEANINGFUL_FIELDS
+
+
+def _dig(data: Any, dotted: str) -> Any:
+    """sq(dict)에서 dotted-path(예 'targets.brand') 값 조회. 경로 부재 시 None(무해)."""
+    cur = data
+    for part in dotted.split("."):
+        if not isinstance(cur, dict):
+            return None
+        cur = cur.get(part)
+    return cur
+
+
 def inspect_layer_output(node: str, data: dict[str, Any]) -> list[dict[str, Any]]:
     """Layer별 출력 검증. 발견된 문제 목록 반환 (빈 리스트면 OK).
 
@@ -50,15 +77,14 @@ def inspect_layer_output(node: str, data: dict[str, Any]) -> list[dict[str, Any]
         if "structured_query" not in data:
             return []
         sq = data["structured_query"] or {}
-        # brand 는 targets 안에 있다 (top-level 아님 — 과거 sq.get("brand") 는 항상 None 이라
-        # tasks 만으로 판정 → diagnose 등 degrade(tasks=[]) 가 모두 COGNITIVE_EMPTY_QUERY 로
-        # fatal 중단되던 버그, 2026-06-10 수정). intent.domain 도 "의미 있는 쿼리" 신호 —
-        # honest degrade 는 brand/domain 있고 tasks 만 빈 정상 쿼리다.
-        targets = sq.get("targets") or {}
-        intent = sq.get("intent") or {}
-        has_brand = bool(targets.get("brand") or sq.get("brand"))
-        has_domain = bool(isinstance(intent, dict) and intent.get("domain"))
-        if not sq or (not has_brand and not sq.get("tasks") and not has_domain):
+        # (2026-07-02) 유의미 = 구조적 유효성만: tasks 비어있지 않음 OR intent 존재.
+        # 과거의 brand/intent.domain 하드코딩 제거 — brand 없는 정상 쿼리 오판 방지. honest
+        # degrade(tasks 만 빈 정상 쿼리)는 intent 존재로 통과. 추가 신호는 설정으로만 확장.
+        has_tasks = bool(sq.get("tasks"))
+        intent = sq.get("intent")
+        has_intent = isinstance(intent, dict) and bool(intent)
+        has_configured = any(bool(_dig(sq, p)) for p in _meaningful_query_fields())
+        if not sq or (not has_tasks and not has_intent and not has_configured):
             errors.append({
                 **ErrorCodes.COGNITIVE_EMPTY_QUERY,
                 "detail": {"structured_query": sq},
@@ -149,16 +175,20 @@ def summarize_state(final_state: dict[str, Any]) -> dict[str, Any]:
         if t.get("team")
     })
 
-    # (2026-06-11) brand 는 targets 중첩 — inspect 쪽(:55-57)은 06-10 에 고쳐졌으나
-    # 본 요약 함수가 top-level 만 읽어 JSONL 의 brand 가 항상 null 이던 잔존 사본 수정.
-    targets = sq.get("targets") or {}
-    return {
-        "brand": targets.get("brand") or sq.get("brand"),
+    # (2026-07-02) 하드코딩 brand 제거 → 도메인 중립 구조 요약. 설정 선언 필드만 값 있으면 로깅.
+    intent = sq.get("intent") if isinstance(sq.get("intent"), dict) else {}
+    summary: dict[str, Any] = {
         "tasks": sq.get("tasks"),
+        "intent_operation": intent.get("operation"),
         "plan_todos": len(plan.get("todos", [])),
         "plan_teams": teams,
         "execution_todos_total": len(er.get("todos", [])) if er else 0,
     }
+    for path in _meaningful_query_fields():
+        val = _dig(sq, path)
+        if val:
+            summary[path] = val
+    return summary
 
 
 def append_guard_log(entry: dict[str, Any]) -> None:
