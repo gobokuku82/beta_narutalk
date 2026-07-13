@@ -1,7 +1,7 @@
 /**
  * HITL store — /ws/hitl 수신 메시지 (hitl_request / hitl_ack).
  *
- * (2026-06-12 멈춤 수술 ①) D5 자동승인 폐기 — 오너 정정: "검토 ON = 사람이 확인 후 실행"
+ * (2026-06-12 멈춤 수술 ①) D5 자동승인 폐기 — 정정: "검토 ON = 사람이 확인 후 실행"
  * 이 원래 의도. 자동 approve 가 PlanReviewModal 을 dormant 로 만들었고, 판단 없는 자동
  * 왕복이 WS 순단(1초 재연결 창)과 겹치면 서버가 HITL_RESUME_TIMEOUT_SEC(30분)을 침묵
  * 대기하는 간헐 멈춤(~1/20)의 원인이었음. 검토 없이 빠르게 돌리려면 토글 OFF

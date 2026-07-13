@@ -1,5 +1,5 @@
 /**
- * useBubbleProgress — Active User Bubble (C1) 진행률 selector.
+ * useBubbleProgress — Active User Bubble 진행률 selector.
  *
  * 사용자 메시지 박스 자체를 progress bar 로 시각화 (배경 왼쪽 → 오른쪽 채워짐).
  * 진행률 = phase 기반 base + tool 완료 비율 (workflow tool 갯수 / 완료 갯수).
@@ -121,7 +121,7 @@ export function useBubbleProgress(isLastUser: boolean): BubbleProgress {
     prevTurnIdRef.current = turnId;
   }
 
-  // Static User Bubble — 이전 turn 의 user 메시지 (Q6=a 결정: 정적, 액센트만)
+  // Static User Bubble — 이전 turn 의 user 메시지 (확정: 정적, 액센트만)
   if (!isLastUser) return { percent: 0, state: 'idle' };
 
   const lastNode =

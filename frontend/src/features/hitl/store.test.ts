@@ -68,7 +68,7 @@ describe('hitl store — D5 자동승인 폐기', () => {
     useHitl.getState().handleWSMessage(ack(false, 'approve', 'turn_not_active'));
     expect(useHitl.getState().pending).not.toBeNull();
     expect(toast.error).toHaveBeenCalledOnce();
-    expect(String(vi.mocked(toast.error).mock.calls[0][0])).toContain('turn_not_active');
+    expect(String(vi.mocked(toast.error).mock.calls[0]?.[0])).toContain('turn_not_active');
   });
 
   it('todo 편집 ack(accepted:false)는 승인 토스트 경로를 타지 않는다 (소음 방지)', () => {

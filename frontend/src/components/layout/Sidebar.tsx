@@ -15,7 +15,6 @@ import {
   MessageSquare,
   DollarSign,
   FileText,
-  Settings as SettingsIcon,
   TrendingUp,
   GitBranch,
   Brain,
@@ -42,7 +41,6 @@ const ICON_MAP: Record<string, LucideIcon> = {
   MessageSquare,
   DollarSign,
   FileText,
-  Settings: SettingsIcon,
   TrendingUp,
   GitBranch,
   Brain,
@@ -130,18 +128,8 @@ export function Sidebar() {
           )}
           <span className="leading-tight">{isExpanded ? '접기' : '펼치기'}</span>
         </button>
-        <button
-          type="button"
-          onClick={() => navigate({ to: '/settings' })}
-          className={cn(
-            'flex w-full items-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
-            isExpanded ? 'gap-3 px-4 py-2 text-sm' : 'flex-col gap-1 px-2 py-2 text-2xs',
-          )}
-          title={isExpanded ? undefined : '설정'}
-        >
-          <SettingsIcon className="h-4 w-4 shrink-0" />
-          <span className="leading-tight">설정</span>
-        </button>
+        {/* (2026-07-02) 설정 버튼 제거 — /settings 라우트 미존재(프레임 추출 잔재)로
+            tsc -b TS2322 유발. 설정 페이지가 생기면 라우트 등록과 함께 복원. */}
       </div>
     </aside>
   );

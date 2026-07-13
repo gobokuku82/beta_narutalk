@@ -33,10 +33,10 @@ import { askAgent, type AskAgentResult, type CardContext } from './actions';
 
 const FAIL_MESSAGE: Record<Exclude<AskAgentResult, { ok: true }>['reason'], string> = {
   not_connected: '서버에 연결되어 있지 않습니다. 잠시 후 다시 시도하세요.',
-  no_client: 'client가 선택되지 않았습니다. 상단에서 선택하세요.',
   busy: '에이전트가 작업 중입니다. 완료 후 다시 시도하세요.',
   send_failed: '송신에 실패했습니다. 연결 상태를 확인하세요.',
 };
+// (2026-07-02) no_client 사유 폐지 — workspace(구 client) 미해석 시에도 generic 모드로 전송.
 
 interface Props {
   context: CardContext;
@@ -63,9 +63,9 @@ export function CardAsk({ context, disabled, children }: Props) {
       {!disabled && (
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger asChild>
-            {/* 항상 보이는 '에이전트' 필 — hover 전용은 발견 불가(오너 피드백 2026-06-12).
+            {/* 항상 보이는 '에이전트' 필 — hover 전용은 발견 불가(2026-06-12 확정).
                 카드 모서리 플로팅 = 카드 자체 아이콘(우상단)·tooltip ⓘ(우하단)와 충돌 회피.
-                채운 accent-action(코발트) 1색·플랫, 아이콘 없음 (오너 결정 — 그라데이션/glow 금지 디자인시스템). */}
+                채운 accent-action(코발트) 1색·플랫, 아이콘 없음 (그라데이션/glow 금지 — 디자인시스템 원칙). */}
             <button
               type="button"
               aria-label={`${metric} — 에이전트에게 물어보기`}

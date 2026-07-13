@@ -1,7 +1,7 @@
 /**
  * GlobalLayout — TopBar + Sidebar + Outlet + SideChatPanel.
  *
- * v1 GlobalLayout.tsx 의 Zustand 포팅. 사용자 통찰 "동료 화면 + 채팅 지시" UX.
+ * v1 GlobalLayout.tsx 의 Zustand 포팅. "동료 화면 + 채팅 지시" UX.
  * spec: 61 §2.3 / 66 §2.1
  */
 import { useEffect, useState, type ReactNode } from 'react';

@@ -1,8 +1,8 @@
 /**
- * UserBubble — Active/Static User Bubble (C1 진행바 메시지 박스).
+ * UserBubble — Active/Static User Bubble (진행바 메시지 박스).
  *
  * 마지막 user 메시지 = Active User Bubble (진행바 오버레이 + 텍스트 stack).
- * 이전 turn 의 user 메시지 = Static User Bubble (액센트만, 진행바 없음, Q6=a 결정).
+ * 이전 turn 의 user 메시지 = Static User Bubble (액센트만, 진행바 없음 — 확정).
  *
  * 디자인 시스템 정합:
  *  - PALETTE §8.2 J — 좌측 중립 잉크 액센트 (border-l-2 border-steel) 유지

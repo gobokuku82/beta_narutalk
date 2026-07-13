@@ -1,7 +1,7 @@
 /**
  * PauseBox — 실행 일시정지 시 채팅창에 표시되는 5 액션 박스.
  *
- * Phase 1 (P1-8) — 사용자 이미지 정합:
+ * Phase 1 (P1-8) — 디자인 시안 정합:
  *  1. 자연어 textarea ─ "예: 3번 삭제" → ⚡ 적용 (sendTodoEditNl)
  *  2. 🔗 워크플로우에서 수정 (/workflow 라우팅)
  *  3. ▶ 계속 (sendResume)

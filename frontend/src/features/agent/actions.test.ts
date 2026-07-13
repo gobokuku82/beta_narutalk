@@ -64,10 +64,12 @@ describe('askAgent', () => {
     expect(sendQuery).not.toHaveBeenCalled();
   });
 
-  it('가드: client 미해석이면 송신 안 함', () => {
+  it('client(→workspace) 미해석이어도 generic 모드로 송신', () => {
     const r = askAgent({ prompt: 'x', client: undefined });
-    expect(r).toEqual({ ok: false, reason: 'no_client' });
-    expect(sendQuery).not.toHaveBeenCalled();
+    expect(r).toEqual({ ok: true });
+    expect(sendQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ clientId: undefined }),   // 와이어에서 자동 탈락 → cognitive generic 분기
+    );
   });
 
   it('가드: 실행 중(turnBusy)이면 차단 — SideChatPanel 과 동일 규칙', () => {

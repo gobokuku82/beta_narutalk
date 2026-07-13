@@ -50,7 +50,10 @@ export function SideChatPanel() {
 
   const [input, setInput] = useState('');
   const connected = connectionStatus === 'connected';
-  const client = useCurrentClient();   // ⑪.D — ADR-022 helper-B fail-fast 정합 (undefined 시 disabled)
+  // (2026-07-02) client → workspace 개념 전환(사용자 1:N, DB 설계 후 rename 예정).
+  // undefined = generic 모드로 전송(clientId 와이어 자동 탈락 → cognitive generic 분기) — 게이트 폐지.
+  // 워크스페이스 목록 API 가 생기면 useCurrentClient 가 값을 돌려주며 자동으로 다시 실린다.
+  const client = useCurrentClient();
   const turnId = useSession((s) => s.turnId);
   const requireReview = useSession((s) => s.requireReview);
   const setRequireReview = useSession((s) => s.setRequireReview);
@@ -64,7 +67,7 @@ export function SideChatPanel() {
 
   const handleSend = () => {
     const text = input.trim();
-    if (!text || !connected || !client) return;   // ⑪.D — client undefined 시 silent return (disabled 가드)
+    if (!text || !connected) return;   // (2026-07-02) client 게이트 폐지 — undefined 는 generic 모드 전송
     if (isRunning) return;   // 세션연속성 ② — 실행 중 신규 송신 차단 (동시 turn 방지, 백엔드 concurrency 거부 선제)
 
     // P1-2 — turn_id 자동 생성 + conversation_id localStorage 영속.
@@ -200,7 +203,7 @@ export function SideChatPanel() {
                   <Attachments items={m.attachments} />
                 </>
               ) : (
-                // Active/Static User Bubble (C1 진행바) — VOCABULARY.md §1 / useBubbleProgress hook
+                // Active/Static User Bubble (진행바) — VOCABULARY.md §1 / useBubbleProgress hook
                 <UserBubble content={m.content} isLastUser={i === lastUserIdx} />
               )}
               {i === lastUserIdx && (
@@ -258,20 +261,18 @@ export function SideChatPanel() {
             placeholder={
               !connected
                 ? '연결 대기 중...'
-                : !client
-                ? 'client 미선택 — 좌측 상단 드롭다운에서 선택'
                 : isRunning
                 ? '작업 중… 완료 후 입력할 수 있어요 (중지하려면 위 버튼)'
                 : 'AI 에게 무엇이든... (Enter 송신 / Shift+Enter 줄바꿈)'
             }
-            disabled={!connected || !client || isRunning}
+            disabled={!connected || isRunning}
             className="w-full resize-none rounded-input border border-input bg-background px-3 py-2 pr-10 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             rows={3}
           />
           <button
             type="button"
             onClick={handleSend}
-            disabled={!connected || !client || !input.trim() || isRunning}
+            disabled={!connected || !input.trim() || isRunning}
             className="absolute bottom-2 right-2 p-2 rounded-button bg-accent-action text-accent-action-foreground hover:bg-accent-action-deep transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             title="송신 (Enter)"
           >

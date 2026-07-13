@@ -31,7 +31,9 @@ export interface CardContext {
 
 export type AskAgentResult =
   | { ok: true }
-  | { ok: false; reason: 'not_connected' | 'no_client' | 'busy' | 'send_failed' };
+  | { ok: false; reason: 'not_connected' | 'busy' | 'send_failed' };
+// (2026-07-02) 'no_client' 사유 폐지 — client(→workspace) 는 옵셔널.
+// undefined 면 generic 모드로 전송(clientId 와이어 자동 탈락 → cognitive generic 분기).
 
 /** 카드 컨텍스트를 user_input 접두로 임베드 — 대화이력에 `[전체 count 0.30× · 2026-04] 왜...` 로 박제. */
 export function buildUserInput(prompt: string, context?: CardContext): string {
@@ -43,7 +45,8 @@ export function buildUserInput(prompt: string, context?: CardContext): string {
  * 카드 → 에이전트 질문 송신. 성공 시 채팅 패널 자동 열림 + 사용자 버블 즉시 표시(빈 대기 금지 §2.2).
  *
  * 가드(SideChatPanel handleSend 와 동일 규칙):
- *  - WS 미연결 / client 미해석 / 실행 중(turnBusy) 이면 송신하지 않고 사유 반환 → 팝업이 피드백.
+ *  - WS 미연결 / 실행 중(turnBusy) 이면 송신하지 않고 사유 반환 → 팝업이 피드백.
+ *  - client(→workspace) 는 옵셔널 — undefined 면 generic 모드 전송 (2026-07-02).
  */
 export function askAgent(params: {
   prompt: string;
@@ -54,9 +57,6 @@ export function askAgent(params: {
 
   if (useSession.getState().connectionStatus !== 'connected') {
     return { ok: false, reason: 'not_connected' };
-  }
-  if (!client) {
-    return { ok: false, reason: 'no_client' };
   }
   // 실행 중 차단 — isRunning(turn 있음 + 미완료 + 비일시정지) 은 신규 query 금지 (세션연속성 ②와 동일)
   const { turnId: activeTurn } = useSession.getState();
