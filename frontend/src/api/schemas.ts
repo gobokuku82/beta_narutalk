@@ -49,7 +49,7 @@ export type Plan = z.infer<typeof PlanSchema>;
 // Memory Entry — spec 35
 // ─────────────────────────────────────────────────────────────────
 
-export const MemoryScopeSchema = z.enum(['session', 'user', 'org', 'global']);
+export const MemoryScopeSchema = z.enum(['session', 'user', 'workspace', 'global']);
 export const MemoryTypeSchema = z.enum([
   'conversation',
   'fact',

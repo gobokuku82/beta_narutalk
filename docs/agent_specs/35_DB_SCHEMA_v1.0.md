@@ -51,7 +51,7 @@ PostgreSQL DB 의 **테이블 / 인덱스 / ERD / 의미적 관계** 정식 spec
 | summary 생성 방법 변경 | ✅ 0 (writer 만 변경) |
 | schema 구조 큰 변경 (v1 → v2) | 🟡 reader 분기 + 신규 writer. 기존 v1 row 그대로 유지 |
 | 새 memory type 추가 (예: feedback) | 🟡 CHECK constraint + Pydantic Literal 갱신 (1 마이그레이션) |
-| scope 확장 (org / global 활용) | ✅ 0 (Sprint 16+ 그대로 사용) |
+| scope 확장 (workspace / global 활용) | ✅ 0 (Sprint 16+ 그대로 사용) |
 | 테이블 분리 (turns vs messages) | 🔴 큰 마이그레이션. **단 schema_version 필드로 v2 부터 분리** 가능 |
 
 → 대부분 변경 = **0 비용** (JSONB + append-only). 큰 구조 변경만 schema_version 으로 v1/v2 분기.
@@ -204,7 +204,7 @@ Sprint 16+ 에서 Conversation 안에 Multi-turn 컨텍스트 본격 분리 가�
 |------|------|------|------|
 | `id` | UUID | NOT | PK, default uuid4 |
 | `type` | VARCHAR(32) | NOT | memory type (§4) |
-| `scope_type` | VARCHAR(16) | NOT | global / org / user / session |
+| `scope_type` | VARCHAR(16) | NOT | global / workspace / user / session — (2026-07-13) org→workspace 개명 |
 | `scope_id` | VARCHAR(255) | NOT | scope_type 별 식별자 |
 | `key` | VARCHAR(255) | NOT | unique key within scope |
 | `content` | JSONB | NOT | flexible content (§5) |
@@ -218,7 +218,7 @@ Sprint 16+ 에서 Conversation 안에 Multi-turn 컨텍스트 본격 분리 가�
 ```sql
 CHECK (type IN ('preference', 'conversation', 'conversation_meta', 'plan',
                 'pattern', 'knowledge', 'session', 'tool_cache'))
-CHECK (scope_type IN ('global', 'org', 'user', 'session'))
+CHECK (scope_type IN ('global', 'workspace', 'user', 'session'))
 CHECK (source IN ('explicit', 'implicit', 'extracted'))
 CHECK (confidence >= 0.0 AND confidence <= 1.0)
 UNIQUE (scope_type, scope_id, type, key)
@@ -246,8 +246,8 @@ UNIQUE (scope_type, scope_id, type, key)
 | `conversation_meta` | 대화 메타 (sidebar 표시) | user | 무한 | Sprint 15 P0 (E2-5) |
 | `plan` | plan 이력 | user | 무한 | Sprint 15 P0 |
 | `session` | 세션 단기 컨텍스트 | session | 24h | Sprint 15 P0 |
-| `pattern` | 추출된 패턴 | user / org | 무한 | Sprint 17+ |
-| `knowledge` | 도메인 지식 | user / org | 무한 | Sprint 16+ |
+| `pattern` | 추출된 패턴 | user / workspace | 무한 | Sprint 17+ |
+| `knowledge` | 도메인 지식 | user / workspace | 무한 | Sprint 16+ |
 | `tool_cache` | tool 결과 cache | global / user | 1~7일 | Sprint 16+ |
 
 ---
@@ -369,7 +369,7 @@ UNIQUE (scope_type, scope_id, type, key)
 | scope_type | scope_id 의미 | 예시 |
 |----------|------------|------|
 | `global` | 빈 문자열 또는 "default" | system-wide |
-| `org` | 기업 ID | "acme_corp" (Sprint 16+) |
+| `workspace` | 워크스페이스 ID (workspaces.id) | "ws_a1b2c3" (Sprint 16+) |
 | `user` | 사용자 ID | "user_demo" |
 | `session` | 세션 (turn) ID | "turn_xyz" |
 
@@ -407,7 +407,7 @@ FROM memory_entries
 WHERE
   (scope_type = 'session' AND scope_id = $session_id) OR
   (scope_type = 'user'    AND scope_id = $user_id)    OR
-  (scope_type = 'org'     AND scope_id = $org_id)     OR
+  (scope_type = 'workspace' AND scope_id = $workspace_id) OR
   (scope_type = 'global'  AND scope_id = '')
   AND (expires_at IS NULL OR expires_at > NOW());
 ```
@@ -437,7 +437,7 @@ WHERE scope_type = 'user' AND scope_id = $1
 - **별도 `patterns` 테이블** (Sprint 17+): 패턴 추출 시 정규화 — confidence / sample_size 등 검색 빈도 시
 - **별도 `tool_cache` 테이블** (Sprint 16+): cache 가 많아지면 hot path 분리
 - **별도 `audit_log` 테이블** (MVP): 감사 로그
-- **별도 `users` / `orgs` 테이블** (MVP): 정식 user / org 관리
+- **별도 `users` / `workspaces` 테이블**: 정식 user / workspace 관리 — (2026-07-13) setup_checkpointer.py에 DDL 선구현(users/auth_sessions/workspaces/workspace_members/conversations)
 
 ### 8.2 PlannedTodo lifecycle 확장 (ADR-010 D 단일화 후)
 
