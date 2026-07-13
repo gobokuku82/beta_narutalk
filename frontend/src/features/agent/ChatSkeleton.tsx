@@ -10,21 +10,21 @@ export function ChatSkeleton() {
     <div className="space-y-3" role="status" aria-label="이전 대화를 불러오는 중">
       {/* user 말풍선 (우측, 좁음) */}
       <div className="flex justify-end">
-        <div className="h-9 w-2/5 animate-pulse rounded-lg bg-muted" />
+        <div className="h-9 w-2/5 animate-pulse rounded-card bg-muted" />
       </div>
       {/* assistant 말풍선 (좌측, 여러 줄) */}
-      <div className="mr-8 space-y-1.5 rounded-lg bg-muted/40 px-3 py-2">
-        <div className="h-3.5 w-3/4 animate-pulse rounded bg-muted" />
-        <div className="h-3.5 w-full animate-pulse rounded bg-muted" />
-        <div className="h-3.5 w-1/2 animate-pulse rounded bg-muted" />
+      <div className="mr-8 space-y-2 rounded-panel bg-muted/40 px-3 py-2">
+        <div className="h-3.5 w-3/4 animate-pulse rounded-control bg-muted" />
+        <div className="h-3.5 w-full animate-pulse rounded-control bg-muted" />
+        <div className="h-3.5 w-1/2 animate-pulse rounded-control bg-muted" />
       </div>
       {/* 한 쌍 더 — 패널을 적당히 채워 로딩감 전달 */}
       <div className="flex justify-end">
-        <div className="h-9 w-1/3 animate-pulse rounded-lg bg-muted" />
+        <div className="h-9 w-1/3 animate-pulse rounded-card bg-muted" />
       </div>
-      <div className="mr-8 space-y-1.5 rounded-lg bg-muted/40 px-3 py-2">
-        <div className="h-3.5 w-2/3 animate-pulse rounded bg-muted" />
-        <div className="h-3.5 w-5/6 animate-pulse rounded bg-muted" />
+      <div className="mr-8 space-y-2 rounded-panel bg-muted/40 px-3 py-2">
+        <div className="h-3.5 w-2/3 animate-pulse rounded-control bg-muted" />
+        <div className="h-3.5 w-5/6 animate-pulse rounded-control bg-muted" />
       </div>
     </div>
   );

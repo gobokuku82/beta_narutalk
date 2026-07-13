@@ -27,7 +27,7 @@ function StatusIcon({ status }: { status: TodoView['runtime_status'] }) {
     case 'completed':
       return <Check className="h-4 w-4 text-success" aria-label="완료" />;
     case 'running':
-      return <Loader2 className="h-4 w-4 animate-spin text-primary" aria-label="진행 중" />;
+      return <Loader2 className="h-4 w-4 animate-spin text-accent-action" aria-label="진행 중" />;
     case 'failed':
       return <AlertCircle className="h-4 w-4 text-destructive" aria-label="실패" />;
     case 'skipped':
@@ -50,19 +50,19 @@ export function ChatTodoCard({
   const totalCount = progress?.total ?? todos.length;
 
   return (
-    <div className="rounded-lg border border-border bg-card shadow-sm overflow-hidden">
+    <div className="rounded-card border border-border bg-card overflow-hidden">
       {/* Header */}
       <div className="px-3 py-2 border-b border-border flex items-center justify-between bg-muted/30">
         <div className="flex items-center gap-2 text-sm font-medium">
           <span aria-hidden>⌃≡</span>
           <span>작업 단계</span>
           {isPaused && (
-            <span className="rounded-full bg-warning/15 text-warning px-2 py-1 text-xs">
+            <span className="rounded-full bg-warning text-warning-foreground px-2 py-1 text-xs">
               일시정지
             </span>
           )}
           {isCompleted && (
-            <span className="rounded-full bg-success/15 text-success px-2 py-1 text-xs">
+            <span className="rounded-full bg-success text-success-foreground px-2 py-1 text-xs">
               완료
             </span>
           )}
@@ -83,7 +83,7 @@ export function ChatTodoCard({
               t.runtime_status === 'failed' && 'text-destructive',
             )}
           >
-            <span className="mt-0.5 shrink-0">
+            <span className="mt-1 shrink-0">
               <StatusIcon status={t.runtime_status} />
             </span>
             <div className="flex-1 min-w-0">

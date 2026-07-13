@@ -15,6 +15,10 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
+        // Meta 시맨틱 배지 (DESIGN-meta-적용계획 §3.5). 노랑 계열은 dark-ink foreground (흰 텍스트 illegible 방지).
+        success: "border-transparent bg-success text-success-foreground",
+        warning: "border-transparent bg-warning text-warning-foreground",
+        attention: "border-transparent bg-attention text-attention-foreground",
       },
     },
     defaultVariants: {

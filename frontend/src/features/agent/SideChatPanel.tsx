@@ -102,14 +102,14 @@ export function SideChatPanel() {
                 'w-2 h-2 rounded-full',
                 connectionStatus === 'connected' && 'bg-success animate-pulse',
                 connectionStatus === 'reconnecting' && 'bg-warning',
-                connectionStatus === 'closed' && 'bg-gray-400',
+                connectionStatus === 'closed' && 'bg-stone',
               )}
             />
             <span
               className={cn(
                 'text-xs font-medium',
                 connectionStatus === 'connected' && 'text-success',
-                connectionStatus === 'reconnecting' && 'text-warning',
+                connectionStatus === 'reconnecting' && 'text-charcoal',
                 connectionStatus === 'closed' && 'text-muted-foreground',
               )}
             >
@@ -127,9 +127,9 @@ export function SideChatPanel() {
             type="button"
             onClick={() => setRequireReview(!requireReview)}
             className={cn(
-              'flex items-center gap-1 px-2 py-1 rounded-lg transition-colors text-xs font-medium',
+              'flex items-center gap-1 px-2 py-1 rounded-button transition-colors text-xs font-medium',
               requireReview
-                ? 'bg-success/10 text-success hover:bg-success/15'
+                ? 'bg-accent-action/10 text-accent-action hover:bg-accent-action/15'
                 : 'bg-muted text-muted-foreground hover:bg-muted/80',
             )}
             title={
@@ -148,7 +148,7 @@ export function SideChatPanel() {
           <button
             type="button"
             onClick={close}
-            className="p-2 hover:bg-muted rounded-lg transition-colors"
+            className="p-2 hover:bg-muted rounded-full transition-colors"
             title="닫기"
           >
             <X className="w-4 h-4 text-muted-foreground" />
@@ -194,7 +194,7 @@ export function SideChatPanel() {
               ) : m.role === 'assistant' ? (
                 // 그 외 에이전트 응답 → 마크다운 렌더 (근본수정: 날것 `**`/`#` 제거) + 다운로드 칩
                 <>
-                  <div className="mr-8 rounded-lg bg-muted px-3 py-2 text-sm">
+                  <div className="mr-8 rounded-panel bg-muted px-3 py-2 text-sm">
                     <Markdown>{m.content}</Markdown>
                   </div>
                   <Attachments items={m.attachments} />
@@ -243,7 +243,7 @@ export function SideChatPanel() {
           <button
             type="button"
             onClick={() => turnId && sendPause(turnId)}
-            className="w-full flex items-center justify-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
+            className="w-full flex items-center justify-center gap-2 rounded-button border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
             title="실행 일시중단"
           >
             <Pause className="w-4 h-4" />
@@ -265,14 +265,14 @@ export function SideChatPanel() {
                 : 'AI 에게 무엇이든... (Enter 송신 / Shift+Enter 줄바꿈)'
             }
             disabled={!connected || !client || isRunning}
-            className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full resize-none rounded-input border border-input bg-background px-3 py-2 pr-10 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             rows={3}
           />
           <button
             type="button"
             onClick={handleSend}
             disabled={!connected || !client || !input.trim() || isRunning}
-            className="absolute bottom-2 right-2 p-2 rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+            className="absolute bottom-2 right-2 p-2 rounded-button bg-accent-action text-accent-action-foreground hover:bg-accent-action-deep transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             title="송신 (Enter)"
           >
             <CornerDownLeft className="w-4 h-4" />

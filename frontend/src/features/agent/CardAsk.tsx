@@ -65,15 +65,15 @@ export function CardAsk({ context, disabled, children }: Props) {
           <DropdownMenuTrigger asChild>
             {/* 항상 보이는 '에이전트' 필 — hover 전용은 발견 불가(오너 피드백 2026-06-12).
                 카드 모서리 플로팅 = 카드 자체 아이콘(우상단)·tooltip ⓘ(우하단)와 충돌 회피.
-                채운 primary 1색·플랫, 아이콘 없음 (오너 결정 — 그라데이션/glow 금지 디자인시스템). */}
+                채운 accent-action(코발트) 1색·플랫, 아이콘 없음 (오너 결정 — 그라데이션/glow 금지 디자인시스템). */}
             <button
               type="button"
               aria-label={`${metric} — 에이전트에게 물어보기`}
               title="에이전트에게 물어보기"
-              className={`absolute -right-1.5 -top-1.5 z-10 rounded-full px-2.5 py-0.5 text-xs font-medium shadow-sm transition-colors duration-150 ${
+              className={`absolute -right-2 -top-2 z-10 rounded-full px-2 py-1 text-xs font-medium transition-colors duration-150 ${
                 open
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground'
+                  ? 'bg-accent-action text-accent-action-foreground'
+                  : 'bg-accent-action/10 text-accent-action hover:bg-accent-action hover:text-accent-action-foreground'
               }`}
             >
               에이전트
@@ -85,7 +85,7 @@ export function CardAsk({ context, disabled, children }: Props) {
               <div className="text-sm">
                 {metric} <span className="font-bold">{value}</span>
               </div>
-              <div className="mt-0.5 text-xs font-normal text-muted-foreground">
+              <div className="mt-1 text-xs font-normal text-muted-foreground">
                 {period}
                 {context.methodology ? ` · ${context.methodology}` : ''}
               </div>

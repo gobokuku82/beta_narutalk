@@ -108,7 +108,7 @@ export function WorkflowPage() {
           >
             {paletteOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
           </Button>
-          <h1 className="text-xl font-bold tracking-tight">워크플로우 캔버스</h1>
+          <h1 className="text-heading-sm font-display">워크플로우 캔버스</h1>
           <Badge variant={editable ? 'default' : 'secondary'}>
             {editable ? 'W2 · 편집 가능' : 'W1 · 읽기 전용'}
           </Badge>

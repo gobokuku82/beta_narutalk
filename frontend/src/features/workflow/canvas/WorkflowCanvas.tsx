@@ -127,7 +127,7 @@ export function WorkflowCanvas({
           onNodeDragEnd?.(n.id, { x: n.position.x, y: n.position.y });
         }}
       >
-        <Background gap={16} className="!bg-background" />
+        <Background gap={16} className="!bg-card" />
         <Controls showInteractive={false} />
         <MiniMap
           pannable

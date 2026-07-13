@@ -71,9 +71,9 @@ function PersonaCard({ persona }: { persona: Persona }) {
   return (
     <article
       className={cn(
-        'flex flex-col gap-2 rounded-lg border bg-card p-4 shadow-sm transition duration-200',
+        'flex flex-col gap-2 rounded-card border bg-card p-4 transition duration-200',
         persona.active
-          ? 'border-border border-l-2 border-l-primary hover:-translate-y-0.5 hover:bg-primary/4 hover:ring-1 hover:ring-primary/40'
+          ? 'border-border hover:bg-muted/60 hover:ring-1 hover:ring-border'
           : 'border-border opacity-60',
       )}
       aria-current={persona.active ? 'true' : undefined}
@@ -83,7 +83,7 @@ function PersonaCard({ persona }: { persona: Persona }) {
           <Icon
             className={cn(
               'h-4 w-4 shrink-0',
-              persona.active ? 'text-primary' : 'text-muted-foreground',
+              persona.active ? 'text-accent-action' : 'text-muted-foreground',
             )}
             aria-hidden
           />
@@ -92,7 +92,7 @@ function PersonaCard({ persona }: { persona: Persona }) {
           </p>
         </div>
         {!persona.active && (
-          <span className="rounded-sm border border-border bg-muted/40 px-2 py-1 font-mono text-2xs uppercase tracking-wider text-muted-foreground">
+          <span className="rounded-full border border-border bg-muted/40 px-2 py-1 font-mono text-2xs uppercase tracking-wider text-muted-foreground">
             예정
           </span>
         )}

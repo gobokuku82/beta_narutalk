@@ -139,7 +139,7 @@ export function ConversationsPage() {
           type="button"
           onClick={startNew}
           disabled={!client}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex shrink-0 items-center gap-2 rounded-button bg-accent-action px-3 py-2 text-sm font-medium text-accent-action-foreground transition-colors hover:bg-accent-action-deep disabled:cursor-not-allowed disabled:opacity-50"
           title="새 대화 시작"
         >
           <Plus className="h-4 w-4" />
@@ -169,28 +169,28 @@ export function ConversationsPage() {
                 onClick={() => restore(c)}
               >
                 <CardContent className="flex items-start gap-4 p-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-accent text-accent-foreground">
                     <MessageSquare className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-bold">{c.title}</p>
+                      <p className="truncate text-sm font-semibold">{c.title}</p>
                       <Badge variant={meta.variant} className="shrink-0">
                         <Icon className="mr-1 h-3 w-3" />
                         {meta.label}
                       </Badge>
                     </div>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
                       {c.preview}
                     </p>
-                    <p className="mt-1.5 text-2xs text-muted-foreground">
+                    <p className="mt-2 text-2xs text-muted-foreground">
                       {c.turn_count}개 턴 · {fmtDate(c.updated_at)}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={(e) => remove(e, c)}
-                    className="shrink-0 rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                    className="shrink-0 rounded-full p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                     title="대화 삭제"
                   >
                     <Trash2 className="h-4 w-4" />

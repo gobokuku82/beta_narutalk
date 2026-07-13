@@ -3,203 +3,45 @@
 @tailwind utilities;
 
 /*
- * 디자인 토큰 — PALETTE.md (본 파일 옆) 5 룰 기반.
- * 비주얼: "2026 Warm Neutral" — 따뜻한 모래/스톤 뉴트럴 + 옥스블러드 액센트 1개.
+ * 디자인 토큰 — DESIGN-meta.md 적용 (docs/_claude/pivot/DESIGN-meta-적용계획.md).
+ * 비주얼: Meta 커머스 언어 — 스타크 화이트 캔버스 + 코발트 액션 + 블랙 필 + cool 잉크 + flat.
  *
- * 모든 토큰 값 변경 시 frontend/src/styles/PALETTE.md §3 현 토큰 매핑도 동시 갱신.
- * 새 토큰 추가 시 PALETTE.md §5 절차 (segment 결정 → S/L 범위 검증 → hue 충돌 확인 → 다크 모드 invert).
+ * ★ 2026-06-20 재구축: warm "2026 Warm Neutral" baseline 폐기, Meta 를 :root 기준점으로 승격.
+ *   - :root        = Meta 라이트 (앱 기본)
+ *   - [data-theme='dark'] = Meta 다크 (D5: cool/cobalt 재유도)
+ *   - radius/shadow 는 config 에서 static Meta 값 (테마 게이팅 없음).
  *
- * ── Meta 테마 (DESIGN-meta.md 적용, docs/_claude/pivot/DESIGN-meta-적용계획.md) ──
- * P1(ADD-only): 아래 :root/dark 는 그대로(warm). [data-theme='meta'] / [data-theme='meta-dark']
- * 블록은 활성화(루트 엘리먼트에 data-theme 설정) 전까지 완전 비활성 → warm 화면 시각 변화 0.
- * 구조(radius/shadow)도 CSS 변수(--radius-*, --shadow-*)로 테마 전환되게 설계 → 프리미티브가
- * rounded-button/rounded-card/shadow-card 를 쓰면 테마에 따라 자동 전환.
+ * 토큰 값 변경 시 frontend/src/styles/PALETTE.md / RADIUS.md 등도 동시 갱신 (박제 lockstep).
  */
 
 @layer base {
   :root {
-    /* 베이스 — 따뜻한 뉴트럴 (라이트) */
-    --background: 39 38% 96%;
-    --foreground: 20 8% 15%;
-
-    /* 카드는 순백 — 따뜻한 배경과 또렷이 분리 */
-    --card: 0 0% 100%;
-    --card-foreground: 20 8% 15%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 20 8% 15%;
-
-    /* 액센트 1개 — 마호가니/옥스블러드 (살짝 더 선명하게) */
-    --primary: 350 55% 38%;
-    --primary-foreground: 40 33% 98%;
-
-    --secondary: 38 25% 92%;
-    --secondary-foreground: 20 8% 22%;
-
-    --muted: 40 24% 93%;
-    --muted-foreground: 34 9% 42%;
-
-    --accent: 350 35% 93%;
-    --accent-foreground: 350 55% 36%;
-
-    /* status — warm dusty (채도 통일 2026-06-08): destructive 60→38, warning 80→42, success warm shift */
-    --destructive: 6 38% 44%;
-    --destructive-foreground: 40 33% 98%;
-
-    --success: 142 24% 40%;
-    --success-foreground: 40 33% 98%;
-
-    --warning: 32 42% 44%;
-    --warning-foreground: 40 33% 98%;
-
-    --border: 38 23% 88%;
-    --input: 38 23% 88%;
-    --ring: 350 55% 38%;
-
-    --radius: 0.5rem;
-
-    /* 매체별 컬러 — 차분하되 살아있는 카테고리 컬러 (brand segment, S 36~58%) */
-    --channel-naver: 140 36% 40%;
-    --channel-kakao: 40 58% 48%;
-    --channel-meta: 214 40% 48%;
-    --channel-google: 8 52% 50%;
-
-    /* 차트 팔레트 — 비채널 다계열용 (Warm Dusty family, 2026-06-08).
-     * 채도 14~32% / 명도 40~54% 로 통일 → warm neutral 배경과 같은 톤.
-     * 액센트(--primary 옥스블러드)·채널 색과 겹치지 않는 절제된 5색.
-     * 채널 분해 차트는 --channel-* 사용, 비채널 다계열은 이 팔레트. */
-    --chart-1: 210 25% 48%;
-    --chart-2: 20 32% 50%;
-    --chart-3: 160 22% 40%;
-    --chart-4: 285 14% 54%;
-    --chart-5: 34 14% 50%;
-
-    /* 의미적 토큰 — Workflow Canvas (spec 62) */
-    --node-task: 38 20% 90%;
-    --node-branch: 40 60% 70%;
-    --node-start: 138 24% 40%;
-    --node-end: 350 45% 42%;
-    --node-running: 32 62% 48%;
-    --node-completed: 138 24% 34%;
-    --node-failed: 6 60% 46%;
-    --node-invalidated: 6 50% 92%;
-
-    --edge-default: 34 12% 65%;
-    --edge-invalidated: 6 60% 50%;
-
-    /* ───────────────────────────────────────────────────────────────
-     * Meta 적용 P1 — ADD-only 신규 토큰 (DESIGN-meta-적용계획.md §3).
-     * warm 컴포넌트는 미사용 → 정의해도 시각 변화 0. Meta 테마에서 소비.
-     * ─────────────────────────────────────────────────────────────── */
-    /* 잉크 6단 ramp (cool/neutral). --foreground=ink, --muted-foreground=steel 매핑(테마별). */
-    --ink-deep: 198 39% 6%;
-    --charcoal: 215 8% 29%;
-    --slate: 225 3% 30%;
-    --steel: 210 14% 42%;
-    --stone: 209 15% 58%;          /* ⚠ 텍스트 금지(대비 3.07) — 아이콘/edge/장식 전용 */
-    /* cool 표면 (warm 값으로 두어 warm 테마서도 톤 일관; meta 에서 cool override) */
-    --surface-soft: 40 24% 93%;
-    --hairline-soft: 38 23% 90%;
-    /* 액션 액센트(코발트) — Meta 1차 액션. warm 미사용. */
-    --accent-action: 213 100% 44%;
-    --accent-action-deep: 215 96% 41%;
-    --accent-action-soft: 206 100% 50%; /* ⚠ 텍스트/링크 금지(대비 3.23) — info tint 배경만 */
-    --accent-action-foreground: 0 0% 100%;
-    /* 4번째 시맨틱 — attention (warning 과 구분). foreground=dark ink (노랑 위 흰 텍스트 금지). */
-    --attention: 40 89% 52%;
-    --attention-foreground: 198 39% 6%;
-
-    /* 구조 토큰 (테마 전환) — warm 현재값. 프리미티브가 rounded-*/shadow-* 로 참조. */
-    --radius-button: 0.375rem;     /* 현 button rounded-md(6px) */
-    --radius-card: 0.5rem;         /* 현 card rounded-lg(8px) */
-    --radius-input: 0.375rem;      /* 현 input rounded-md(6px) */
-    --radius-control: 0.25rem;     /* 현 rounded-sm(4px) */
-    --radius-panel: 0.5rem;        /* 현 dialog/sheet rounded-lg(8px) */
-    --shadow-card: 0 1px 2px 0 rgb(41 37 36 / 0.06);
-    --shadow-panel: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --card-hover-lift: -0.25rem;   /* warm: 4px lift. meta: 0 (no-hover) */
-  }
-
-  [data-theme='dark'] {
-    /* 베이스 — 따뜻한 다크 */
-    --background: 28 10% 9%;
-    --foreground: 38 14% 90%;
-
-    --card: 28 9% 12%;
-    --card-foreground: 38 14% 90%;
-
-    --popover: 28 9% 12%;
-    --popover-foreground: 38 14% 90%;
-
-    --primary: 350 55% 58%;
-    --primary-foreground: 28 10% 9%;
-
-    --secondary: 28 8% 18%;
-    --secondary-foreground: 38 14% 90%;
-
-    --muted: 28 8% 17%;
-    --muted-foreground: 34 8% 60%;
-
-    --accent: 350 25% 22%;
-    --accent-foreground: 350 50% 82%;
-
-    /* status — 다크 invert (라이트 L+12, S+2, hue 동일 — PALETTE.md R5 다크 변환 룰) */
-    --destructive: 6 40% 56%;
-    --destructive-foreground: 28 10% 9%;
-
-    --success: 142 26% 52%;
-    --success-foreground: 28 10% 9%;
-
-    --warning: 32 44% 56%;
-    --warning-foreground: 28 10% 9%;
-
-    --border: 30 8% 20%;
-    --input: 30 8% 20%;
-    --ring: 350 55% 58%;
-
-    /* 차트 팔레트 다크 — 라이트 invert (L+12, S+2, hue 동일) */
-    --chart-1: 210 27% 60%;
-    --chart-2: 20 34% 62%;
-    --chart-3: 160 24% 52%;
-    --chart-4: 285 16% 66%;
-    --chart-5: 34 16% 62%;
-
-    /* 의미적 토큰 다크 — 일부 조정 */
-    --node-task: 28 8% 24%;
-    --node-invalidated: 6 45% 28%;
-    --edge-default: 30 8% 42%;
-  }
-
-  /* ═══════════════════════════════════════════════════════════════════
-   * Meta 테마 (DESIGN-meta.md) — [data-theme='meta'] (라이트)
-   * 스타크 화이트 + 코발트 액션 + 블랙 필 + cool 잉크/hairline.
-   * 활성화: document.documentElement.dataset.theme = 'meta'
-   * ═══════════════════════════════════════════════════════════════════ */
-  [data-theme='meta'] {
     /* 베이스 — 스타크 화이트 + cool surface. 카드=배경 → hairline+radius 로 분리. */
     --background: 0 0% 100%;
     --foreground: 216 8% 12%;          /* ink */
+
     --card: 0 0% 100%;
     --card-foreground: 216 8% 12%;
+
     --popover: 0 0% 100%;
     --popover-foreground: 216 8% 12%;
 
-    /* 액센트 — primary=블랙(마케팅/보조 필), accent-action=코발트(1차 액션). */
+    /* 액센트 — primary=블랙(마케팅/보조 필), accent-action=코발트(1차 액션·선택). */
     --primary: 0 0% 0%;
     --primary-foreground: 0 0% 100%;
     --accent-action: 213 100% 44%;
     --accent-action-deep: 215 96% 41%;
-    --accent-action-soft: 206 100% 50%;
+    --accent-action-soft: 206 100% 50%; /* ⚠ 텍스트/링크 금지(대비 3.23) — info tint 배경만 */
     --accent-action-foreground: 0 0% 100%;
 
     --secondary: 213 20% 92%;
     --secondary-foreground: 216 8% 12%;
-    --muted: 210 27% 96%;              /* surface-soft 와 동일 톤 */
+    --muted: 210 27% 96%;              /* surface-soft 톤 */
     --muted-foreground: 210 14% 42%;   /* steel */
-    --accent: 210 20% 94%;             /* 중립 cool (옥스블러드 tint 제거) */
+    --accent: 210 20% 94%;             /* 중립 cool */
     --accent-foreground: 216 8% 12%;
 
-    /* 잉크 ramp (cool) */
+    /* 잉크 6단 ramp (cool). ⚠ stone 은 텍스트 금지(대비 3.07) — 아이콘/edge/장식 전용. */
     --ink-deep: 198 39% 6%;
     --charcoal: 215 8% 29%;
     --slate: 225 3% 30%;
@@ -208,22 +50,24 @@
     --surface-soft: 210 27% 96%;
     --hairline-soft: 213 20% 89%;
 
-    /* 시맨틱 — Meta 채도(밝음). 노랑 계열 foreground=dark ink(흰 텍스트 illegible 방지). */
+    /* 시맨틱 — Meta 채도(밝음). 노랑 계열 foreground=dark ink (흰 텍스트 illegible 방지). */
     --success: 134 54% 41%;
-    --success-foreground: 198 39% 6%;  /* 흰 텍스트 3.28 미달 → dark ink(5.7) */
+    --success-foreground: 198 39% 6%;
     --destructive: 350 79% 51%;        /* critical #e41e3f */
-    --destructive-foreground: 0 0% 100%; /* 흰 3.9(AA-large) — P5 QA서 large 한정/약간 darken 검토 */
+    --destructive-foreground: 0 0% 100%;
     --warning: 42 93% 56%;
-    --warning-foreground: 198 39% 6%;  /* ★ dark ink 필수 (흰 1.76=불가) */
+    --warning-foreground: 198 39% 6%;  /* ★ dark ink 필수 */
     --attention: 40 89% 52%;
-    --attention-foreground: 198 39% 6%; /* ★ dark ink 필수 (흰 2.01=불가) */
+    --attention-foreground: 198 39% 6%; /* ★ dark ink 필수 */
 
     /* hairline — cool 2단 (#ced0d4 강 / #dee3e9 약) */
     --border: 220 7% 82%;
     --input: 220 7% 82%;
     --ring: 213 100% 44%;              /* 코발트 = 유일 인가 focus 액센트 */
 
-    /* 채널/차트 — KEEP(도메인 데이터 색). channel-meta↔cobalt 1° 충돌은 defer(죽은 코드). */
+    --radius: 1rem;                    /* base (config 가 radius 스케일을 static 으로 재정의) */
+
+    /* 채널/차트 — KEEP(도메인 데이터 색). 차트 미배선 상태 — 후속 결정. */
     --channel-naver: 140 36% 40%;
     --channel-kakao: 40 58% 48%;
     --channel-meta: 214 40% 48%;
@@ -234,34 +78,24 @@
     --chart-4: 285 14% 54%;
     --chart-5: 34 14% 50%;
 
-    /* 워크플로 node/edge — Meta 시맨틱 remap (cobalt 제외). node-foreground 대비는 컴포넌트서 처리. */
-    --node-task: 210 27% 96%;          /* surface-soft (위 텍스트=ink) */
-    --node-branch: 40 89% 52%;         /* attention (위 텍스트=dark ink) */
-    --node-start: 134 54% 41%;         /* success */
-    --node-end: 350 79% 51%;           /* critical 계열 (cobalt 아님) */
-    --node-running: 40 89% 52%;        /* attention */
-    --node-completed: 134 50% 32%;     /* success darker */
-    --node-failed: 350 79% 51%;        /* critical */
-    --node-invalidated: 350 60% 95%;   /* critical tint */
-    --edge-default: 209 15% 58%;       /* stone/steel cool */
+    /* 워크플로 node/edge — Meta 시맨틱 (cobalt 제외). */
+    --node-task: 210 27% 96%;
+    --node-branch: 40 89% 52%;
+    --node-start: 134 54% 41%;
+    --node-end: 350 79% 51%;
+    --node-running: 40 89% 52%;
+    --node-completed: 134 50% 32%;
+    --node-failed: 350 79% 51%;
+    --node-invalidated: 350 60% 95%;
+    --edge-default: 209 15% 58%;
     --edge-invalidated: 350 79% 51%;
 
-    /* 구조 — Meta: pill 버튼 / 32px 카드 / flat / commerce 그림자 */
-    --radius-button: 9999px;           /* pill */
-    --radius-card: 2rem;               /* 32px */
-    --radius-input: 0.5rem;            /* 8px */
-    --radius-control: 9999px;          /* 배지/칩 pill */
-    --radius-panel: 1.5rem;            /* 24px */
-    --shadow-card: none;               /* FLAT */
-    --shadow-panel: 0 1px 4px 0 hsl(220 13% 9% / 0.3); /* commerce sticky 패널 */
-    --card-hover-lift: 0rem;           /* no-hover: lift 제거 */
+    /* 그림자 base — commerce sticky 패널용 (config shadow-panel 이 참조) */
+    --shadow-panel: 0 1px 4px 0 hsl(220 13% 9% / 0.3);
   }
 
-  /* ═══════════════════════════════════════════════════════════════════
-   * Meta 다크 (D5: 유지 + cool/cobalt 재유도). 고채도 액센트는 손튜닝(§3.6).
-   * 활성화: data-theme = 'meta-dark'
-   * ═══════════════════════════════════════════════════════════════════ */
-  [data-theme='meta-dark'] {
+  /* ═══ Meta 다크 (D5: 유지 + cool/cobalt 재유도). 고채도 액센트 손튜닝. ═══ */
+  [data-theme='dark'] {
     --background: 216 28% 7%;
     --foreground: 210 16% 92%;
     --card: 216 24% 10%;
@@ -269,9 +103,9 @@
     --popover: 216 24% 10%;
     --popover-foreground: 210 16% 92%;
 
-    --primary: 0 0% 100%;              /* 다크선 블랙 필 → 화이트 필 반전 */
+    --primary: 0 0% 100%;              /* 다크: 블랙 필 → 화이트 필 반전 */
     --primary-foreground: 216 28% 7%;
-    --accent-action: 213 90% 62%;      /* 코발트 손튜닝(S↓ L↑, 과발광 방지) */
+    --accent-action: 213 90% 62%;
     --accent-action-deep: 213 88% 54%;
     --accent-action-soft: 206 90% 64%;
     --accent-action-foreground: 216 28% 7%;
@@ -325,14 +159,7 @@
     --edge-default: 216 12% 44%;
     --edge-invalidated: 350 72% 64%;
 
-    --radius-button: 9999px;
-    --radius-card: 2rem;
-    --radius-input: 0.5rem;
-    --radius-control: 9999px;
-    --radius-panel: 1.5rem;
-    --shadow-card: none;
     --shadow-panel: 0 1px 4px 0 hsl(0 0% 0% / 0.5);
-    --card-hover-lift: 0rem;
   }
 
   * {
@@ -341,12 +168,13 @@
 
   body {
     @apply bg-background text-foreground;
+    /* tnum = 표 숫자 정렬. Meta 본문 음수 자간은 Latin 한정(한글 보호) → 전역 미적용. */
     font-feature-settings: 'tnum';
   }
 }
 
 @layer components {
-  /* 카드 hover — 그림자 대신 보더 강조 (절제) */
+  /* 카드 hover — flat Meta: 그림자/lift 없이 보더 강조 (절제). */
   .card-hover {
     @apply transition-colors duration-150 hover:border-foreground/20;
   }

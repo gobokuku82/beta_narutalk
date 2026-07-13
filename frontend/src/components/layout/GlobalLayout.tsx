@@ -70,8 +70,8 @@ export function GlobalLayout({ children, currentPath: _currentPath, onNavigate: 
             role="separator"
             aria-orientation="vertical"
             className={cn(
-              'fixed top-16 h-[calc(100vh-4rem)] w-1 bg-border hover:bg-primary transition-colors cursor-col-resize z-50',
-              isResizing && 'bg-primary',
+              'fixed top-16 h-[calc(100vh-4rem)] w-1 bg-border hover:bg-accent-action transition-colors cursor-col-resize z-50',
+              isResizing && 'bg-accent-action',
             )}
             style={{ right: `${chatPanelWidth}px` }}
             onMouseDown={(e) => {
@@ -84,7 +84,7 @@ export function GlobalLayout({ children, currentPath: _currentPath, onNavigate: 
         {/* SideChatPanel (우측, 호출형) */}
         <aside
           className={cn(
-            'fixed top-16 right-0 h-[calc(100vh-4rem)] bg-card shadow-lg border-l border-border transition-transform duration-300 ease-in-out',
+            'fixed top-16 right-0 h-[calc(100vh-4rem)] bg-card shadow-panel border-l border-border transition-transform duration-300 ease-in-out',
             chatPanelOpen ? 'translate-x-0' : 'translate-x-full',
           )}
           style={{ width: `${chatPanelWidth}px` }}

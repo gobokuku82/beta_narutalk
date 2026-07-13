@@ -34,7 +34,7 @@ interface AgentLayerDiagramProps {
 
 export function AgentLayerDiagram({ className }: AgentLayerDiagramProps) {
   return (
-    <div className={cn('rounded-lg border border-border bg-card p-6', className)}>
+    <div className={cn('rounded-card border border-border bg-card p-6', className)}>
       <div className="mb-4 flex items-baseline justify-between gap-2">
         <h3 className="text-sm font-semibold text-foreground">데이터분석가</h3>
         <span className="text-xs text-muted-foreground">
@@ -70,7 +70,7 @@ function ArrowFragment({ layer, isLast }: { layer: Layer; isLast: boolean }) {
 
 function LayerNode({ layer }: { layer: Layer }) {
   return (
-    <div className="rounded-md border-l-2 border-primary bg-muted/40 p-3 transition duration-200 hover:bg-primary/4">
+    <div className="rounded-card border border-border bg-muted/40 p-3 transition duration-200 hover:bg-muted/60">
       <p className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">
         {layer.label}
       </p>

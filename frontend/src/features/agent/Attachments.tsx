@@ -36,7 +36,7 @@ export function Attachments({ items }: { items?: ChatAttachment[] }) {
           download
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
+          className="inline-flex items-center gap-1 rounded-control border border-border bg-background px-2 py-1 text-xs font-medium text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
           title={a.caption ?? `${label(a.kind)} 다운로드`}
         >
           <Download className="h-3.5 w-3.5 text-muted-foreground" />

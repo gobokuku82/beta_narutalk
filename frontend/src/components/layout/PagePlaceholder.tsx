@@ -19,7 +19,7 @@ export function PagePlaceholder({
   return (
     <div className="p-8 max-w-5xl mx-auto">
       <div className="flex items-center gap-3 mb-2">
-        <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+        <h1 className="text-heading-md font-display">{title}</h1>
         <Badge variant="secondary">{sprintTarget}</Badge>
       </div>
       <p className="text-muted-foreground">{description}</p>

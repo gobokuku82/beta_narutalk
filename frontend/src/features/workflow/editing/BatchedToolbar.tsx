@@ -46,7 +46,7 @@ export function BatchedToolbar({ editable }: BatchedToolbarProps) {
   };
 
   return (
-    <div className="absolute top-3 right-[16.5rem] z-10 flex items-center gap-2 rounded-md border border-border bg-card/95 backdrop-blur px-2 py-2 shadow-sm">
+    <div className="absolute top-3 right-[16.5rem] z-10 flex items-center gap-2 rounded-panel border border-border bg-card/95 backdrop-blur px-2 py-2 shadow-panel">
       <Button
         type="button"
         variant={isBatched ? 'default' : 'outline'}

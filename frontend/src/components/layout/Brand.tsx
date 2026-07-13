@@ -1,13 +1,13 @@
 /**
- * Brand — DreamAgent 워드마크 (◈ DreamAgent ·).
+ * Brand — DreamAgent 워드마크 (◈ DreamAgent).
  *
- * 2026-06-09 Phase 4 신설. PALETTE §8.2 C (typography 위계) + 브랜드 액센트 dot.
+ * 2026-06-09 Phase 4 신설. PALETTE §8.2 C (typography 위계).
  * 2026-06-10 v2: Link to="/" 추가 — 외부 프레임 좌상단 Brand 클릭 시 첫 진입 (PortfolioPage).
+ * 2026-06-19 Meta 적용: 옥스블러드 · dot 제거 (Meta 톤 — 워드마크 font-display + ink).
  *
  * 구성:
  *   ◈ (Diamond)  — text-muted-foreground/60, h-3.5 w-3.5 (브랜드 마크)
- *   DreamAgent      — text-foreground, font-semibold tracking-tight
- *   ·            — text-primary, 옥스블러드 dot (브랜드 색 표시)
+ *   DreamAgent      — text-foreground, font-display font-semibold tracking-tight
  *
  * size: 'sm' (TopBar) / 'md' (확장 footer 등)
  */
@@ -25,15 +25,15 @@ interface BrandProps {
 export function Brand({ size = 'sm', compact = false, className }: BrandProps) {
   const wordmarkClass =
     size === 'sm'
-      ? 'text-base font-semibold tracking-tight'
-      : 'text-lg font-semibold tracking-tight';
+      ? 'font-display text-base font-semibold tracking-tight'
+      : 'font-display text-lg font-semibold tracking-tight';
   const iconClass = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4';
 
   return (
     <Link
       to="/"
       className={cn(
-        'inline-flex items-center gap-2 rounded-md transition-opacity duration-200 hover:opacity-80',
+        'inline-flex items-center gap-2 rounded-control transition-opacity duration-200 hover:opacity-80',
         className,
       )}
       aria-label="DreamAgent 홈으로"
@@ -46,14 +46,6 @@ export function Brand({ size = 'sm', compact = false, className }: BrandProps) {
         />
       )}
       <span className={cn('text-foreground', wordmarkClass)}>DreamAgent</span>
-      {!compact && (
-        <span
-          aria-hidden
-          className={cn('font-semibold leading-none text-primary', size === 'sm' ? 'text-base' : 'text-lg')}
-        >
-          ·
-        </span>
-      )}
     </Link>
   );
 }

@@ -8,11 +8,11 @@
  */
 export function WelcomeHero() {
   return (
-    <section className="flex flex-col gap-3 border-l-2 border-primary py-3 pl-6">
+    <section className="flex flex-col gap-3 border-l-2 border-accent-action py-3 pl-6">
       <p className="font-mono text-2xs uppercase tracking-wider text-muted-foreground">
         Agent · Framework
       </p>
-      <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+      <h1 className="text-hero font-display tracking-tight text-foreground">
         DreamAgent
       </h1>
       <p className="text-lg font-semibold text-foreground md:text-xl">

@@ -63,7 +63,7 @@ export function ContextMenu() {
       role="menu"
       aria-label="노드 동작"
       className={cn(
-        'fixed z-50 min-w-[160px] rounded-md border border-border bg-card shadow-md',
+        'fixed z-50 min-w-[160px] rounded-panel border border-border bg-card shadow-panel',
         'py-1 text-sm',
       )}
       style={{ left: x, top: y }}

@@ -64,16 +64,16 @@ export function TopBar() {
         <Brand size="sm" />
 
         {/* 컨텍스트 전환 토글 */}
-        <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+        <div className="flex items-center gap-1 rounded-full bg-muted p-1">
           {CONTEXTS.map((c) => (
             <button
               key={c.value}
               type="button"
               onClick={() => switchContext(c.value, c.path)}
               className={cn(
-                'rounded-md px-3 py-1 text-xs font-medium transition-colors',
+                'rounded-full px-3 py-1 text-xs font-medium transition-colors',
                 context === c.value
-                  ? 'bg-card text-foreground shadow-sm'
+                  ? 'bg-accent-action text-accent-action-foreground'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
@@ -107,7 +107,7 @@ export function TopBar() {
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              'h-1.5 w-1.5 rounded-full',
+              'h-2 w-2 rounded-full',
               connectionStatus === 'connected' && 'bg-success animate-pulse',
               connectionStatus === 'reconnecting' && 'bg-warning',
               connectionStatus === 'closed' && 'bg-muted-foreground',
@@ -125,29 +125,29 @@ export function TopBar() {
         {/* 알림 */}
         <button
           type="button"
-          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           title="알림"
         >
           <Bell className="h-4 w-4" />
         </button>
 
-        {/* 에이전트 채팅 토글 — hover 강화 (2026-06-10): bg-primary/8 옅은 옥스블러드 + dot 페이드인 + 아이콘 옥스블러드 */}
+        {/* 에이전트 채팅 토글 — hover 강화 (2026-06-10): 중립 hover + dot 페이드인 + 아이콘 코발트 */}
         <button
           type="button"
           onClick={toggleChatPanel}
           className={cn(
-            'group flex items-center gap-2 rounded-md p-2 transition-colors duration-200',
+            'group flex items-center gap-2 rounded-full p-2 transition-colors duration-200',
             chatPanelOpen
               ? 'bg-accent text-foreground'
-              : 'text-muted-foreground hover:bg-primary/8 hover:text-foreground',
+              : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
           )}
           title="에이전트 채팅 (열기/닫기)"
         >
-          <MessageSquare className="h-4 w-4 transition-colors duration-200 group-hover:text-primary" />
+          <MessageSquare className="h-4 w-4 transition-colors duration-200 group-hover:text-accent-action" />
           <span className="text-xs font-medium">에이전트</span>
           <span
             aria-hidden
-            className="font-semibold leading-none text-primary opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+            className="font-semibold leading-none text-accent-action opacity-0 transition-opacity duration-200 group-hover:opacity-100"
           >
             ·
           </span>

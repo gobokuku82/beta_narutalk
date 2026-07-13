@@ -11,7 +11,7 @@ export function ToolPalette() {
   const [search, setSearch] = useState('');
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-card">
       <div className="px-3 py-2 border-b border-border flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-wide">Tool Palette</h3>
@@ -23,7 +23,7 @@ export function ToolPalette() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="이름·설명 검색"
-            className="w-full h-7 pl-7 pr-2 text-2xs rounded-sm border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-full h-7 pl-7 pr-2 text-2xs rounded-input border border-input bg-card focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
       </div>

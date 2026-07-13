@@ -22,9 +22,9 @@ export function PageHeader({ title, description, badge, icon: Icon, actions }: P
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           {Icon && <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />}
-          <h1 className="text-base font-semibold tracking-tight text-foreground">{title}</h1>
+          <h1 className="text-heading-sm font-display text-foreground">{title}</h1>
           {badge && (
-            <span className="rounded-md bg-muted px-2 py-1 text-2xs font-medium text-muted-foreground">
+            <span className="rounded-control bg-muted px-2 py-1 text-2xs font-medium text-muted-foreground">
               {badge}
             </span>
           )}

@@ -100,7 +100,7 @@ export function PlanReviewModal() {
               {plan.todos.map((todo, idx) => (
                 <li
                   key={todo.id}
-                  className="rounded-lg border border-border px-3 py-2 text-sm"
+                  className="rounded-input border border-border px-3 py-2 text-sm"
                 >
                   <div className="flex items-center gap-2">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">

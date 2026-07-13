@@ -96,7 +96,7 @@ export function Sidebar() {
               {isActive && (
                 <span
                   aria-hidden
-                  className="absolute inset-y-1 left-0 w-0.5 rounded-r-sm bg-primary"
+                  className="absolute inset-y-1 left-0 w-0.5 rounded-r-sm bg-steel"
                 />
               )}
               <Icon className={cn('shrink-0', isExpanded ? 'h-4 w-4' : 'h-4 w-4')} />

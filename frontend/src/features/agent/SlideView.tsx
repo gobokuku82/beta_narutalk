@@ -47,7 +47,7 @@ export function SlideView({ markdown }: { markdown: string }) {
       {slides.map((s, i) => (
         <section
           key={i}
-          className={cn('rounded-lg border border-border bg-card px-4 py-3', s.cover && 'bg-primary/5')}
+          className={cn('rounded-card border border-border bg-card px-4 py-3', s.cover && 'bg-surface-soft')}
         >
           <h3
             className={cn('font-semibold text-foreground', s.cover ? 'text-base' : 'text-sm')}

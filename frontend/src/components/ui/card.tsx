@@ -12,7 +12,8 @@ const Card = React.forwardRef<
       // VOCABULARY.md §5.1 H1~H4 — 외곽 카드 hover (v2 2026-06-10 lift 강화: 2px → 4px):
       //  ring (외곽선 굵음) + bg-primary/4 (옅은 옥스블러드 tint) + -translate-y-1 (4px lift)
       // 'transition' (Tailwind default, 다중 property) — MOTION M3 (transition-all 회피) 정합
-      "rounded-lg border border-border bg-card text-card-foreground shadow-[0_1px_2px_0_rgb(41_37_36_/_0.06)] transition duration-200 hover:-translate-y-1 hover:bg-primary/4 hover:ring-1 hover:ring-primary/40",
+      // Meta 카드 — rounded-card(32px) + flat(shadow-card=none) + hairline. no-hover-lift, 보더 강조만.
+      "rounded-card border border-border bg-card text-card-foreground shadow-card transition-colors duration-200 hover:bg-muted/40 hover:ring-1 hover:ring-border",
       className
     )}
     {...props}

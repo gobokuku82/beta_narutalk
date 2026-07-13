@@ -23,3 +23,52 @@ export async function saveDesign(design: ErdDesign): Promise<ErdDesign> {
 export async function listDesigns(): Promise<{ names: string[] }> {
   return (await rest.get('/api/db-design')) as { names: string[] };
 }
+
+// ── 실제 DB 빌드 & 검증 (SQLite) ──────────────────────────────────────────────
+export interface BuildTableReport {
+  name: string;
+  source: 'data' | 'distinct' | 'empty';
+  received: number;
+  loaded: number;
+  dropped_duplicates: number;
+}
+export interface IntegrityViolation {
+  child: string;
+  column: string;
+  parent: string;
+  parent_column: string;
+  orphans: number;
+  samples: (string | number)[];
+}
+export interface BuildReport {
+  db_path: string;
+  order: string[];
+  tables: BuildTableReport[];
+  integrity: IntegrityViolation[];
+}
+export interface QueryResult {
+  columns: string[];
+  rows: (string | number | null)[][];
+  truncated: boolean;
+}
+
+/** 설계 + 엑셀 추출 행 → SQLite 빌드 + 무결성 리포트. datasets = {테이블명: [{칼럼:값}]}. */
+export async function buildDb(
+  name: string,
+  design: ErdDesign,
+  datasets: Record<string, Record<string, unknown>[]>,
+): Promise<BuildReport> {
+  return (await rest.post(`/api/db-design/${encodeURIComponent(name)}/build`, {
+    name: design.name,
+    tables: design.tables,
+    datasets,
+  })) as BuildReport;
+}
+
+/** 빌드된 DB 에 SELECT 쿼리(조립 미리보기). */
+export async function queryDb(name: string, sql: string, maxRows = 200): Promise<QueryResult> {
+  return (await rest.post(`/api/db-design/${encodeURIComponent(name)}/query`, {
+    sql,
+    max_rows: maxRows,
+  })) as QueryResult;
+}

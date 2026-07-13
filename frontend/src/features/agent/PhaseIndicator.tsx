@@ -28,7 +28,7 @@ interface PhaseIndicatorProps {
 export function PhaseIndicator({ phase }: PhaseIndicatorProps) {
   if (!phase) return null;
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+    <div className="flex items-center gap-2 px-3 py-2 rounded-panel bg-muted/50 text-sm text-muted-foreground">
       <Loader2 className="h-4 w-4 animate-spin shrink-0" />
       <span>{PHASE_TEXT[phase]}</span>
     </div>

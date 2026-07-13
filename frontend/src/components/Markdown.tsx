@@ -11,9 +11,9 @@ import remarkGfm from 'remark-gfm';
 import remarkCjkFriendly from 'remark-cjk-friendly';
 
 const components: Components = {
-  h1: ({ children }) => <h3 className="mb-1 mt-2 text-base font-semibold text-foreground">{children}</h3>,
-  h2: ({ children }) => <h4 className="mb-1 mt-2 text-sm font-semibold text-foreground">{children}</h4>,
-  h3: ({ children }) => <h5 className="mb-0.5 mt-1.5 text-sm font-semibold text-foreground">{children}</h5>,
+  h1: ({ children }) => <h3 className="mb-1 mt-2 text-base font-semibold font-display text-foreground">{children}</h3>,
+  h2: ({ children }) => <h4 className="mb-1 mt-2 text-sm font-semibold font-display text-foreground">{children}</h4>,
+  h3: ({ children }) => <h5 className="mb-1 mt-2 text-sm font-semibold font-display text-foreground">{children}</h5>,
   p: ({ children }) => <p className="my-1 text-sm leading-relaxed text-foreground/90">{children}</p>,
   ul: ({ children }) => (
     <ul className="my-1 list-disc space-y-1 pl-5 text-sm text-foreground/90 marker:text-muted-foreground/60">
@@ -27,7 +27,7 @@ const components: Components = {
   strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
   a: ({ children, href }) => (
-    <a href={href} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2">
+    <a href={href} target="_blank" rel="noreferrer" className="text-accent-action-deep underline underline-offset-2">
       {children}
     </a>
   ),
