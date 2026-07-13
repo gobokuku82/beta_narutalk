@@ -383,7 +383,7 @@ async def _graph_runner_with_resume(
         # Sprint 14 A3 Phase 4 (2026-04-23): data 에도 turn_id 를 일관 포함
         # (클라이언트가 fallback 없이 단일 경로로 읽을 수 있도록 — POC 시나리오 100% 보장)
         if intr_type == "plan_review":
-            # Sprint 14 A3 Phase 5 (2026-04-24): 사용자 §9.1 P1 "hitl=pause 같은 개념".
+            # Sprint 14 A3 Phase 5 (2026-04-24): "hitl=pause 같은 개념" 확정.
             # plan_review 진입 시 편집 가능한 임시 progress 생성 → ws_hitl 이 pause 분기로 단일 처리.
             # planning_stage L88-92 modify 분기가 승인 시 value 로 plan 교체.
             plan_dict = intr_value.get("plan") or final_state.get("plan") or {}
@@ -696,5 +696,5 @@ async def stream_endpoint(
 # 폐기 사유:
 #   - frontend api/ws.ts 에 `type: 'start'` 송신 0 hit (Grep 재확인)
 #   - legacy Sprint 12 진입점, Sprint 13 query/resume_query 경로로 대체됨
-#   - 사용자 원칙 [死코드 즉시 폐기] 정합
+#   - [死코드 즉시 폐기] 원칙 정합
 # 활성 진입점 = _graph_runner_with_resume + run_turn (line 478+)

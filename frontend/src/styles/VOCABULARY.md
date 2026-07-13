@@ -3,7 +3,7 @@
 > 페이지 구조 + 단위 어휘 단일 진실. 코드/문서/대화/PR 어휘 통일.
 > spec 64 §1 정체성 보완.
 
-## 1. 핵심 어휘 2 개 (사용자 결정 2026-06-10)
+## 1. 핵심 어휘 2 개 (2026-06-10 확정)
 
 | 영문 | 한국어 | 정의 |
 |---|---|---|
@@ -23,8 +23,8 @@
 | **Cell** | **셀** | Strip 안의 개별 단위 (Card 보다 작음) | grid 안 cell |
 | **Frame** | **프레임** | 차트의 셸 (제목 + 차트 컨테이너) | `ChartFrame` |
 | **Chain** | **체인** | 인과 관계로 묶인 메트릭 사슬 | `MetricChainStrip` (count→total→rate) |
-| **Active User Bubble** | **액티브 버블** | 진행 중 사용자 메시지 박스 (C1 진행바 오버레이). 마지막 user 메시지에만 적용. state ∈ {analyzing, planning, executing, responding, paused} | `UserBubble` (isLastUser=true) |
-| **Static User Bubble** | **스태틱 버블** | 이전 turn 의 정적 사용자 메시지. 진행바 없음 (Q6=a 결정). 좌측 액센트 + bg-muted/40 만 유지 | `UserBubble` (isLastUser=false) |
+| **Active User Bubble** | **액티브 버블** | 진행 중 사용자 메시지 박스 (진행바 오버레이). 마지막 user 메시지에만 적용. state ∈ {analyzing, planning, executing, responding, paused} | `UserBubble` (isLastUser=true) |
+| **Static User Bubble** | **스태틱 버블** | 이전 turn 의 정적 사용자 메시지. 진행바 없음 (확정). 좌측 액센트 + bg-muted/40 만 유지 | `UserBubble` (isLastUser=false) |
 | **Bubble Fill** | **버블 채움** | Active User Bubble 내부 absolute 진행 채움. `bg-primary/15` (paused 시 `bg-warning/15`), `transform: scaleX(percent/100)`, `transition-transform duration-200 ease-out`. 부모 `overflow-hidden` 으로 rounded 경계 흡수 | `UserBubble.tsx` 의 fill div |
 | **Welcome Hero** | **웰컴 히어로** | 첫 진입 화면 상단 강조 섹션. 시스템 정체성 (Brand 워드마크 + 한 줄 가치). 좌측 액센트 strip (PALETTE J) 1군데. 차분한 결 (Apple/Stripe 결) | `WelcomeHero.tsx` |
 | **Layer Diagram** | **레이어 다이어그램** | 4-Layer Agent 작동 시각화 (Cognitive→Planning→Execution→Response). inline SVG 화살표 + 노드 4 | `AgentLayerDiagram.tsx` |
@@ -49,7 +49,7 @@ Cell (Strip 안 단위)
 |---|---|
 | **V1** | 코드 (컴포넌트 명·props·변수) 에서 위 어휘 사용 — `Card`, `Hero`, `Strip` 등 |
 | **V2** | 문서 (spec·README·결과보고서) 에서 위 어휘 사용 — "보드 안 카드 hover" 등 |
-| **V3** | 대화 (Claude ↔ 사용자) 에서 위 어휘 사용 — 일관성 |
+| **V3** | 대화 (리뷰·논의) 에서 위 어휘 사용 — 일관성 |
 | **V4** | 새 단위 추가 시 본 문서 §1/§2 확장 + spec 64 §6 자취 갱신 |
 
 ## 5. Hover State 룰 (Card · Hero · ChartFrame · Stage · Cell · Row)
@@ -67,7 +67,7 @@ Cell (Strip 안 단위)
 
 | 룰 | 값 |
 |---|---|
-| **H5** | **Cell (Strip 안)** hover = `ring-2 ring-inset ring-primary/40` (안쪽 외곽선, 2px) **만**. bg/lift 없음. ring-inset = 외곽 카드 ring-1 (바깥) 과 위계 자연 분리 + 안쪽이 더 굵음 = 강조 ↑. **2026-06-10 v6 갱신: v5 ring-1 → v6 ring-2 — 외곽선 굵기 2배 (사용자 결정)** |
+| **H5** | **Cell (Strip 안)** hover = `ring-2 ring-inset ring-primary/40` (안쪽 외곽선, 2px) **만**. bg/lift 없음. ring-inset = 외곽 카드 ring-1 (바깥) 과 위계 자연 분리 + 안쪽이 더 굵음 = 강조 ↑. **2026-06-10 v6 갱신: v5 ring-1 → v6 ring-2 — 외곽선 굵기 2배 (확정)** |
 | **H6** | **Nested 카드 wrapper** hover 미적용 — DataTable in ChartFrame 처럼 외곽 카드가 강조 받으면 inner wrapper 는 정적. ring 짤림 회피 (유지) |
 | **H7** | **Stage (FunnelChart bar 같은 직접 viz 단위)** hover = `opacity 0.80 → 1.0` + `ring-2 ring-primary/40` (bar 자체 색 진해짐 + 외곽선). recharts 자동 hover 와 정신 동등. 2026-06-10 v2 신설 |
 
@@ -93,13 +93,13 @@ Cell (Strip 안 단위)
 - **2026-06-10 v1** : 보드/카드 어휘 박제 + Hover H1~H5 룰 (강화: ring + bg tint + -translate-y-0.5). Cell hover "미적용".
 - **2026-06-10 v2** : H2 lift 강화 (2px → 4px). H5 Cell hover 재정의 (미적용 → bg-primary/8 절제 적용). H7 Stage hover 신설 (FunnelChart 등 직접 viz). 적용 매트릭스 확장 (MomBar 등).
 - **2026-06-10 v3** : H5 Cell hover 강화 — bg-primary/8 단독 → bg-primary/15 + ring-1 ring-inset ring-primary/40. dense cell 영역 (Strip) 에서 인지 부족 해결. 외곽 카드 ring (바깥) ↔ Cell ring (안쪽) 위계 자연 분리.
-- **2026-06-10 v4** : H5 Cell hover bg 톤 절제 — bg-primary/15 → bg-primary/10. ring 이 메인 신호, bg 는 보조 역할로 정리 (사용자 결정).
-- **2026-06-10 v5** : H5 Cell hover bg 제거 — bg-primary/10 → 없음. primary ring-inset 단일 신호. 미니멀 (사용자 결정).
-- **2026-06-10 v6** : H5 Cell hover ring 굵기 2배 — ring-1 → ring-2. 외곽 카드 ring-1 (바깥) ↔ Cell ring-2 (안쪽, 굵음) 위계 강화 (사용자 결정).
-- **2026-06-10 v7** : Active/Static User Bubble + Bubble Fill 어휘 신설 — C1 사용자 메시지 박스 progress bar. progress % = phase base + (completed/total) × 65 (executing 구간). 단조 증가 + turnId 변화 시 리셋. 이전 turn user 메시지 = Static (정적). useBubbleProgress hook + UserBubble 컴포넌트 (사용자 결정 C1 + Q6=a + 권장 Q1/Q2/Q3/Q4/Q5/Q7).
+- **2026-06-10 v4** : H5 Cell hover bg 톤 절제 — bg-primary/15 → bg-primary/10. ring 이 메인 신호, bg 는 보조 역할로 정리 (확정).
+- **2026-06-10 v5** : H5 Cell hover bg 제거 — bg-primary/10 → 없음. primary ring-inset 단일 신호. 미니멀 (확정).
+- **2026-06-10 v6** : H5 Cell hover ring 굵기 2배 — ring-1 → ring-2. 외곽 카드 ring-1 (바깥) ↔ Cell ring-2 (안쪽, 굵음) 위계 강화 (확정).
+- **2026-06-10 v7** : Active/Static User Bubble + Bubble Fill 어휘 신설 — 사용자 메시지 박스 progress bar. progress % = phase base + (completed/total) × 65 (executing 구간). 단조 증가 + turnId 변화 시 리셋. 이전 turn user 메시지 = Static (정적). useBubbleProgress hook + UserBubble 컴포넌트 (확정).
 - **2026-06-10 v8** : Welcome Hero / Stage Strip / Layer Diagram / Page Group Card / Video Frame 어휘 신설 — PortfolioPage 첫 진입 화면 재설계 (시스템 설명 + 시각화). YouTube 임베드 (nocookie + rel=0 + modestbranding=1). 4-Layer Agent inline SVG. 그라데이션·glow 0.
 - **2026-06-10 v9** : Session Header / Overview Card / Mono Label 어휘 신설 — Mirofish 결 첫 진입 시각화 Phase 1. 상단 Brand·LIVE·UTC + 누적 큰 KPI + 4 small KPI + Top Highlight (배경 sparkline). 모노스페이스 폰트 라벨 (font-mono 2xs uppercase tracking-wider). 데이터 = 시뮬레이션+실데이터 혼합 (D3). Welcome Hero / Stage Strip 폐기.
 - **2026-06-10 v10** : Persona Tab / Feature Showcase / Showcase Media 어휘 신설 — Header 재구성 (시계 제거, DreamAgent 큰 워드마크 + 페르소나 탭). FeatureShowcase 신설 (데이터 표시·그래프·에이전트 워크플로우 3 카드, inline SVG 자동 애니메이션, shadow-lg ring-1 음영 강조). 향후 GIF/MP4 미디어 교체 자리 마련.
-- **2026-06-10 v11** : Feature Showcase / Showcase Media 어휘 폐기 + 컴포넌트 파일 삭제 — 사용자가 추후 개발 문서 작성 후 정확한 결로 재구현 예정. Persona Tab 어휘는 보존 (MirofishHeader 사용 중).
+- **2026-06-10 v11** : Feature Showcase / Showcase Media 어휘 폐기 + 컴포넌트 파일 삭제 — 추후 개발 문서 작성 후 정확한 결로 재구현 예정. Persona Tab 어휘는 보존 (MirofishHeader 사용 중).
 - **2026-06-12 v12** : 첫 진입 페이지 재설계 (계획서 docs/reports/계획_첫진입페이지_재설계_2026-06-12.md 적용). 폐기: Session Header / Overview Card / Stage Strip / Video Frame / Persona Tab. 신설/갱신: Welcome Hero v2 (차분한 Apple/Stripe 결) / **Persona Card** (3 카드 그리드, 1 활성 + N 예정). 컴포넌트 폐기 = MirofishHeader / OverviewCard / YouTubeEmbed (3 파일). 6 섹션 → 4 섹션 단순화 (Welcome Hero + 4-Layer Diagram + Page Group + Persona Cards).
 - **2026-05-22** (이전, 별도) : viz/* 컴포넌트 명명 — ChartFrame, MetricChainStrip, DataTable 등 (도메인 명사 위주)

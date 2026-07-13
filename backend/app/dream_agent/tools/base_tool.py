@@ -2,7 +2,7 @@
 
 도구 추상 기본 클래스.
 
-Step 4 (2026-05-27): DataSource DI 추가 (사용자 P1·P2 — tool 순수 기능, data 관절 분리).
+Step 4 (2026-05-27): DataSource DI 추가 (원칙 — tool 순수 기능, data 관절 분리).
 ②-a (2026-05-30): tool 들은 `self.fetch(source_id, context)` 헬퍼로 데이터 접근.
                   client 는 context.client_id 에서만 흐름. raw 파일 직접 로드 금지.
 ⑷ (2026-06-01): validate_params 강화 — required + type 검증.

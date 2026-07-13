@@ -97,7 +97,7 @@ def stem(key: str) -> str:
 
 
 def typed_table_name(layer: str, key: str) -> str:
-    """typed/표시 테이블명 = {stem}_{layer} 접미사 (오너 규칙, 2026-06-17).
+    """typed/표시 테이블명 = {stem}_{layer} 접미사 (2026-06-17 확정 규칙).
 
     예: layer='normalized', key='meta_ads_performance.json' → 'meta_ads_performance_normalized'.
     이전 prefix({layer}_{stem})에서 전환. read 측은 save_stream 마커가 테이블명을

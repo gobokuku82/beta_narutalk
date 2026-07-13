@@ -1,6 +1,6 @@
 # api/ — 백엔드 통신 계층
 
-진실 소스 = backend ([21 WS](../../../docs/agent_specs/21_WEBSOCKET_PROTOCOL_v1.4.md) / [20 REST](../../../docs/agent_specs/20_INTERFACE_CONTRACT_v1.1.md) / [22 Error](../../../docs/agent_specs/22_error_codes_v1.1.md))
+진실 소스 = backend ([21 WS](../../../docs/agent_specs/21_WEBSOCKET_PROTOCOL_v1.5.md) / [20 REST](../../../docs/agent_specs/20_INTERFACE_CONTRACT_v1.1.md) / [22 Error](../../../docs/agent_specs/22_error_codes_v1.1.md))
 spec: [63 Frontend Backend Contract](../../../docs/agent_specs/63_frontend_backend_contract_v1.0.md)
 
 ## 파일 가이드

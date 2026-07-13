@@ -520,8 +520,7 @@ def init_agent_state(
 | `MAX_HISTORY_LIMIT` | `10` | 과도 입력 방어 — history_injector에서 clip | `history_injector.inject` |
 | `MAX_CONCURRENT_TURNS_PER_USER` | `3` | ConcurrencyManager 슬롯 상한 | `ConcurrencyManager._get_max()` |
 | `MAX_WS_CONNECTIONS_PER_USER` | `5` | ConnectionManager 탭 수 제한 | `ConnectionManager._get_max()` |
-| `TITLE_SOURCE` | `"first_query"` | 대화 제목 소스 (Sprint 15 실사용) | Sprint 15 MemoryManager |
-| `TITLE_MAX_LENGTH` | `15` | 제목 최대 길이 | Sprint 15 MemoryManager |
+| ~~`TITLE_SOURCE`~~ · ~~`TITLE_MAX_LENGTH`~~ | — | (2026-07-13) 제거 — 코드 참조 0인 죽은 설정이었음 (MemoryManager 배선 시 재도입 검토) | — |
 
 비-Sprint 13 관련:
 | Settings | 기본값 | 용도 |

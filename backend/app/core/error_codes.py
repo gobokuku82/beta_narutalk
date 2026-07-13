@@ -3,8 +3,8 @@
 Sprint 13 I11-a에서 모든 error 이벤트에 `severity`/`layer` 필드 통일.
 이 모듈은 error code/layer/severity/message 의 **단일 진실 소스**.
 
-명세서: docs/agent_specs/22_error_codes_v1.0.md
-WS 포맷: docs/agent_specs/21_WEBSOCKET_PROTOCOL_v1.0.md §6
+명세서: docs/agent_specs/22_error_codes_v1.1.md
+WS 포맷: docs/agent_specs/21_WEBSOCKET_PROTOCOL_v1.5.md §6
 
 사용:
     from app.core.error_codes import ErrorCodes  # (2026-06-10 api→core 이전: 전송·에이전트 공용 중립 계약)

@@ -1,4 +1,4 @@
-"""DataSource — tool 과 data 사이 '관절' (사용자 표현, 2026-05-26).
+"""DataSource — tool 과 data 사이 '관절' (2026-05-26).
 
 표준 패턴: Repository (Martin Fowler 1990s) + Hexagonal Adapter (Cockburn 2005).
 *사서* 비유: tool (손님) 이 "orders 책 줘" 라고 사서 (Repository) 에게 부탁하면,

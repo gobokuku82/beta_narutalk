@@ -7,7 +7,7 @@ Sprint 13 Integration (I6) — 식별 체계 + 대화 컨텍스트 필드 추가
   - session_id (deprecated alias = turn_id)
   - conversation_history / history_limit (Cognitive 주입용)
 
-Reference: docs/agent_specs/main_graph_state_spec_v1.2.md
+Reference: docs/agent_specs/11_main_graph_state_v1.5.md
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""DataSource layer — tool ↔ data 사이의 '관절' (사용자 표현).
+"""DataSource layer — tool ↔ data 사이의 '관절'.
 
 위치: backend/app/data_layer/data_sources/ (dream_agent 형제 — agent + API 공유)
 표준 패턴: Repository (Fowler) + Adapter (Cockburn Hexagonal)

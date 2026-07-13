@@ -10,7 +10,7 @@
   ④ query_completer     (goal.depth + tasks[])
   ⑤ cognitive_validator (Pydantic 파싱)
 
-Reference: docs/agent_specs/system_architecture_spec_v1.5.md §2.2
+Reference: docs/agent_specs/10_system_architecture_v1.9.md §2.2
 """
 
 from __future__ import annotations

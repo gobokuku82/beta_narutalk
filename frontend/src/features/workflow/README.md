@@ -2,7 +2,7 @@
 
 DreamAgent 의 시각적 워크플로우 편집기 (`/workflow` 라우트).
 
-spec: [62](../../../../docs/agent_specs/62_workflow_canvas_design_v1.0.md) (디자인)
+spec: [62](../../../../docs/agent_specs/62_workflow_canvas_design_v1.2.md) (디자인)
 
 ## Layer 구성
 

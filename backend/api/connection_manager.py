@@ -9,7 +9,7 @@
 
 명세서:
 - docs/agent_specs/21_WEBSOCKET_PROTOCOL_v1.5.md §1.2 §1.3 §3.2
-- docs/agent_specs/adr/ADR-011_connection_channel_separation.md
+- ADR-011 채널 분리 (단독 파일 없음 — 21_WEBSOCKET_PROTOCOL_v1.5.md 에 결정 보존)
 """
 
 from typing import Any, Literal

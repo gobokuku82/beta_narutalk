@@ -207,7 +207,7 @@ async def _handle_hitl_response(websocket: WebSocket, data: dict) -> None:
     # Sprint 13 I9: run_turn task 깨우기 — 재개의 유일한 실제 메커니즘 (Queue 트랙).
     accepted = False
     if turn_id:
-        # Sprint 14 A3 Phase 5 (2026-04-24): 사용자 §9.1 P1 "hitl=pause 같은 개념".
+        # Sprint 14 A3 Phase 5 (2026-04-24): "hitl=pause 같은 개념" 확정.
         # plan_review 에서 편집된 임시 progress 가 있으면 approve → modify 로 변환 전달.
         # planning_stage L88-92 의 modify 분기가 value 로 plan 교체.
         # reject 는 원래대로 (편집 무시), approve 만 변환.
@@ -241,7 +241,7 @@ async def _handle_hitl_response(websocket: WebSocket, data: dict) -> None:
 async def _handle_todo_modify(websocket: WebSocket, data: dict) -> None:
     """todo_modify 처리 (Sprint 14 A3 Phase 5 — 통합 편집 경로).
 
-    Status: complete — Sprint 14 A3 Phase 5 (2026-04-24, 사용자 §9.1 P1 반영).
+    Status: complete — Sprint 14 A3 Phase 5 (2026-04-24, "hitl=pause 같은 개념" 반영).
 
     단일 경로: plan_review / execution_pause 모두 `_progress[turn_id]` 기반 처리.
     plan_review 시 `_graph_runner_with_resume` 가 임시 progress 생성 (status="paused").
@@ -321,7 +321,7 @@ async def _handle_todo_modify(websocket: WebSocket, data: dict) -> None:
 async def _handle_todo_delete(websocket: WebSocket, data: dict) -> None:
     """todo_delete — Sprint 14 A3 Phase 5 (통합 편집 경로).
 
-    Status: complete — Sprint 14 A3 Phase 5 (2026-04-24, 사용자 §9.1 P1 반영).
+    Status: complete — Sprint 14 A3 Phase 5 (2026-04-24, "hitl=pause 같은 개념" 반영).
     단일 경로: plan_review / execution_pause 모두 `_progress[turn_id]` 기반.
     """
     from app.core.error_codes import ErrorCodes

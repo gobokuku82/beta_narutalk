@@ -14,4 +14,4 @@ W2 (시각적 편집) 단계 — Stage 2~6 에서 채움.
 - `EditToolbar.tsx` — 캔버스 toolbar (+ 단계 추가 / 선택 삭제)
 - `useWorkflowEditing.ts` — 콜백 → ws 송신 hook
 
-상세: [ADR-012](../../../../docs/agent_specs/adr/ADR-012_workflow_canvas_w2_structure.md).
+상세: ADR-012 (단독 파일 없음 — [62_workflow_canvas_design_v1.2.md](../../../../docs/agent_specs/62_workflow_canvas_design_v1.2.md) 에 결정 보존).

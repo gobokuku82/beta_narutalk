@@ -1,4 +1,4 @@
-"""Workspace — tool 산출물 *공유 저장* layer (사용자 표현: "수십개 tool 끼리 데이터 전달").
+"""Workspace — tool 산출물 *공유 저장* layer ("수십개 tool 끼리 데이터 전달").
 
 DataSource (input 관절) 와 짝이 되는 OUTPUT 공유 공간:
     DataSource = 외부 → 시스템 (raw 데이터 가져옴)

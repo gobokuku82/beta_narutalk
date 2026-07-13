@@ -1,4 +1,4 @@
-"""Workspace layer — tool 산출물 공유 저장 (사용자 표현: "수십개 tool 끼리 데이터 전달").
+"""Workspace layer — tool 산출물 공유 저장 ("수십개 tool 끼리 데이터 전달").
 
 DataSource (input 관절) 와 짝:
     app/data_layer/data_sources/ — 외부 → 시스템 INPUT

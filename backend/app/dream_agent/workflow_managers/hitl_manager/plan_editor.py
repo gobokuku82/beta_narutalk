@@ -10,7 +10,7 @@ Phase 3 (D-13) 보존:
   - reorder action 신구현
 
 Reference:
-  - docs/agent_specs/adr/ADR-010_plan_schema_unification.md
+  - ADR-010 Plan 단일화 (단독 파일 없음 — 11_main_graph_state_v1.5.md 에 결정 보존)
 """
 
 import re

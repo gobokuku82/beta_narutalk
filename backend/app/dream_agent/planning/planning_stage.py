@@ -10,7 +10,7 @@
   ⑧ todo_builder   (Tool + params + DAG)
   ⑨ plan_validator (구조/DAG/논리 검증)
 
-Reference: docs/agent_specs/system_architecture_spec_v1.5.md §2.3
+Reference: docs/agent_specs/10_system_architecture_v1.9.md §2.3
 """
 
 from __future__ import annotations
